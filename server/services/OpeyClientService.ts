@@ -17,7 +17,7 @@ export default class OpeyClientService {
             authConfig: this.authConfig,
             paths: {
                 status: '/status',
-                stream: '/stream-langchain',
+                stream: '/stream',
                 invoke: '/invoke',
                 approve_tool: '/approve_tool/{thead_id}',
                 feedback: '/feedback',

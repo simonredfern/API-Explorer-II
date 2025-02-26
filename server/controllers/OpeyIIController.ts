@@ -60,21 +60,15 @@ export class OpeyController {
           return response.status(500).json({ error: 'Internal Server Error' })
         }
         
-        
 
         // Define a function to transform the response from Opey (which is a text stream) into a TS-Native langchain stream
-        const transformToLangchainJSNative = new TransformStream({
+        const frontendTransformer = new TransformStream({
           transform(chunk, controller) {
             // Decode the chunk to a string
             const decodedChunk = new TextDecoder().decode(chunk)
           
-            // Remove SSE event 'data:' prefix
-            const dataString = decodedChunk.split('data: ')[1]
-
-            // Wrangle into a Langchain StreamEvent *hope that it works*
-            const langchainChunk = dataString as unknown as StreamEvent
-            console.log(langchainChunk);
-            controller.enqueue(langchainChunk);
+            console.log("Sending chunk", decodedChunk)
+            controller.enqueue(decodedChunk);
           },
           flush(controller) {
             console.log('[flush]');
@@ -83,19 +77,6 @@ export class OpeyController {
           },
         });
 
-        // NOTE: To delete probably
-        const convertToVercelTansform = new TransformStream({
-          transform(chunk, controller) {
-            // Decode the chunk to a string
-            const decodedChunk = new TextDecoder().decode(chunk)
-            console.log(decodedChunk);
-            controller.enqueue(decodedChunk);
-          },
-          flush(controller) {
-            console.log('[flush]');
-            controller.terminate();
-          },
-        })
 
         let stream: ReadableStream | null = null
         
@@ -116,41 +97,20 @@ export class OpeyController {
 
         
         // wrangle our text stream into a langchain stream
-        const langchainStream: ReadableStream = stream.pipeThrough(transformToLangchainJSNative)
+        const frontendStream: ReadableStream = stream.pipeThrough(frontendTransformer)
         
-        // Tee the stream so we can log it to console
-        const streamTee = langchainStream.tee()
-        if (!streamTee) {
-          console.error("Stream is not tee'd")
-          return response.status(500).json({ error: 'Internal Server Error' })
-        }
-        const [stream1, stream2] = streamTee
+        // If we need to split the stream into two, we can use the tee method as below 
 
-        // Stream 2 we turn into a vercel Stream in order to log the result
-        const vercelDataStreamReader = LangChainAdapter.toDataStream(stream2).getReader();
+        // const streamTee = langchainStream.tee()
+        // if (!streamTee) {
+        //   console.error("Stream is not tee'd")
+        //   return response.status(500).json({ error: 'Internal Server Error' })
+        // }
+        // const [stream1, stream2] = streamTee
 
-        let charsReceived = 0;
-        const decoder = new TextDecoder();
-        // this is simply to log the stream to console
-        vercelDataStreamReader.read().then(function processText({ done, value }) {
-          // Result objects contain two properties:
-          // done  - true if the stream has already given you all its data.
-          // value - some data. Always undefined when done is true.
-          if (done) {
-            console.log("Stream complete");
-            return;
-          }
-      
-          // value for fetch streams is a Uint8Array
-          charsReceived += value.length;
-          const chunk = value;
-          console.log("Chunk from langchain: ", decoder.decode(chunk), "\n\nChars received: ", charsReceived);
-
-          return vercelDataStreamReader.read().then(processText);
-        })
-
-        const nodeStream = Readable.fromWeb(stream1 as WebReadableStream<any>)
         
+
+        const nodeStream = Readable.fromWeb(frontendStream as WebReadableStream<any>)
 
         response.setHeader('x-vercel-ai-data-stream', 'v1')
         response.setHeader('Content-Type', 'text/event-stream');

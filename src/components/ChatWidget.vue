@@ -4,11 +4,9 @@ placeholder for Opey II Chat widget
 <script>
 
 import { ref, reactive } from 'vue'
-import { useChat } from '@ai-sdk/vue'
 import { Close } from '@element-plus/icons-vue'
 import ChatMessage from './ChatMessage.vue';
 import { v4 as uuidv4 } from 'uuid';
-import { EventEmitter } from 'stream';
 
 export default {
     setup () {
@@ -19,8 +17,9 @@ export default {
             chatOpen: false,
             thread_id: uuidv4(),
             messages: ref([]),
-            status: ref('ready'),
-            input: ref(''),
+            status: 'ready',
+            input: '',
+            currentAssistantMessage: ref(null),
         }
     },
     components: {
@@ -31,43 +30,94 @@ export default {
             this.chatOpen = !this.chatOpen
         },
         async onSubmit(event) {
-
-            const response = await fetch('/api/opey/stream', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    thread_id: this.thread_id,
-                    message: this.input,
-                    is_tool_call_approval: false,
-                }),
-            })
-
-            const stream = response.body
-            console.log("Stream: ", stream)
-            const decoder = new TextDecoder();
-            const reader = stream.getReader();
-
+            // Add user message to the messages array
+            const userMessage = {
+                id: `user-${Date.now()}`,
+                role: 'user',
+                content: this.input
+            };
+            this.messages.push(userMessage);
+            
+            // Create a placeholder for the assistant's response
+            this.currentAssistantMessage = {
+                id: `assistant-${Date.now()}`,
+                role: 'assistant',
+                content: ''
+            };
+            this.messages.push(this.currentAssistantMessage);
+            
+            // Set status to loading
+            this.status = 'loading';
+            
+            const userInput = this.input;
+            // Clear input field after sending
+            this.input = '';
+            
             try {
-                reader.read().then(function logChunk({ done, value }) {
-                    if (done) {
-                        console.log('Stream complete');
-                        return;
-                    }
-
-                    console.log('Received', decoder.decode(value));
-                    // Do something with the data
-
-                    return reader.read().then(logChunk);
+                const response = await fetch('/api/opey/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        thread_id: this.thread_id,
+                        message: userInput,
+                        is_tool_call_approval: false,
+                    }),
                 });
 
+                const stream = response.body;
+                const decoder = new TextDecoder();
+                const reader = stream.getReader();
+
+                // Use an arrow function to preserve 'this' context
+                const processStream = async () => {
+                    try {
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            
+                            if (done) {
+                                console.log('Stream complete');
+                                this.status = 'ready';
+                                break;
+                            }
+                            
+                            const decodedValue = decoder.decode(value);
+                            console.log('Received:', decodedValue);
+                            
+                            // Parse the SSE data format
+                            const lines = decodedValue.split('\n');
+                            for (const line of lines) {
+                                if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                                    try {
+                                        const jsonStr = line.substring(6); // Remove 'data: '
+                                        const data = JSON.parse(jsonStr);
+                                        
+                                        if (data.type === 'token' && data.content) {
+                                            // Append content to the current assistant message
+                                            this.currentAssistantMessage.content += data.content;
+                                            // Force Vue to detect the change
+                                            this.messages = [...this.messages];
+                                        }
+                                    } catch (e) {
+                                        console.error('Error parsing JSON:', e);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Stream error:', error);
+                        this.status = 'ready';
+                    }
+                };
+                
+                // Start processing the stream
+                processStream();
+                
             } catch (error) {
                 console.error('Error:', error);
-                reader.releaseLock();
+                this.status = 'ready';
             }
-            
-            console.log("Status: ", this.status)
         },
     },
 }
