@@ -7,6 +7,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ChatMessage: typeof import('./src/components/ChatMessage.vue')['default']
     ChatWidget: typeof import('./src/components/ChatWidget.vue')['default']
     ChatWidgetII: typeof import('./src/components/ChatWidgetII.vue')['default']
     ChatWidgetOld: typeof import('./src/components/ChatWidgetOld.vue')['default']

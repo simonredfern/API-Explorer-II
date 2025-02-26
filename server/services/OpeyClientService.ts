@@ -1,7 +1,7 @@
 import { Service } from 'typedi'
 import { UserInput, StreamInput, OpeyConfig, AuthConfig } from '../schema/OpeySchema'
 import { Readable } from "stream"
-import fetch from 'node-fetch'
+//import fetch from 'node-fetch'
 
 @Service()
 export default class OpeyClientService {
@@ -17,7 +17,7 @@ export default class OpeyClientService {
             authConfig: this.authConfig,
             paths: {
                 status: '/status',
-                stream: '/stream',
+                stream: '/stream-langchain',
                 invoke: '/invoke',
                 approve_tool: '/approve_tool/{thead_id}',
                 feedback: '/feedback',
@@ -73,7 +73,7 @@ export default class OpeyClientService {
 
             console.log("Got response body: ", response.body) //DEBUG
 
-            return response.body
+            return response.body as unknown as ReadableStream<any>
         }
         catch (error) {
             throw new Error(`Error streaming from Opey: ${error}`)

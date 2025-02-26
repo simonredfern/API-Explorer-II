@@ -6,11 +6,26 @@ placeholder for Opey II Chat widget
 import { ref, reactive } from 'vue'
 import { useChat } from '@ai-sdk/vue'
 import { Close } from '@element-plus/icons-vue'
+import ChatMessage from './ChatMessage.vue';
+import { v4 as uuidv4 } from 'uuid';
 
 export default {
     setup () {
         const { messages, input, handleInputChange, handleSubmit, addToolResult, status } = useChat({
-            api:'/api/opey/stream'
+            api:'/api/opey/stream',
+            streamProtocol: 'data',
+            onMessage: (message) => {
+                console.log(`Message in useChat: ${message}`)
+            },
+            onError: (error) => {
+                console.log(`Error in useChat: ${error.message}`)
+            },
+            onFinish: () => {
+                console.log('Chat finished')
+                console.log('Messages:', messages);
+                
+            }
+            
         })
 
         return {
@@ -31,17 +46,26 @@ export default {
                 input_content: '',
                 thread_id: '',
             }),
+            thread_id: uuidv4(),
         }
+    },
+    components: {
+        ChatMessage,
     },
     methods: {
         toggleChat() {
             this.chatOpen = !this.chatOpen
         },
-        async onSubmit() {
-            this.handleSubmit(chatRequestOptions={
+        async onSubmit(event) {
 
+            this.handleSubmit(event, {
+                body: {
+                    thread_id: this.thread_id,
+                    is_tool_call_approval: false,
+                },
             })
-        }
+            console.log("Status: ", this.status)
+        },
     },
 }
 
@@ -65,9 +89,8 @@ export default {
                     <el-button type="danger" :icon="this.Close" @click="this.toggleChat" size="small" circle></el-button>
                 </el-header>
                 <el-main>
-                    <div v-for="message in messages" :key="message.id">
-                        <div>{{ message.role }}</div>
-                        <div>{{ message.content }}</div>
+                    <div class="messages-container">
+                        <ChatMessage v-for="message in messages" :key="message.id" :message="message" />
                     </div>
                 </el-main>
                 <el-footer>
@@ -157,4 +180,8 @@ export default {
     transform: rotate(180deg);
 }
 
+.messages-container {
+    padding-left: 10px;
+    padding-right: 10px;
+}
 </style>
