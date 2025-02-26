@@ -11,12 +11,23 @@ import (
 
 func main() {
 	// Define the host env variables to be replaced at build time
-	config := []string{"VITE_OBP_API_HOST", "VITE_OBP_API_MANAGER_HOST", "VITE_OBP_API_PORTAL_HOST", "VITE_OBP_LINKS_COLOR", "VITE_OBP_HEADER_LINKS_COLOR", "VITE_OBP_HEADER_LINKS_HOVER_COLOR", "VITE_OBP_HEADER_LINKS_BACKGROUND_COLOR", "VITE_OBP_LOGO_URL", "VITE_OBP_API_DEFAULT_RESOURCE_DOC_VERSION"}
+	url_config := []string{"VITE_OBP_API_HOST", "VITE_OBP_API_MANAGER_HOST", "VITE_OBP_API_PORTAL_HOST", "VITE_OBP_LOGO_URL"}
+	config := []string{"VITE_OBP_API_VERSION", "VITE_OBP_LINKS_COLOR", "VITE_OBP_HEADER_LINKS_COLOR", "VITE_OBP_HEADER_LINKS_HOVER_COLOR", "VITE_OBP_HEADER_LINKS_BACKGROUND_COLOR", "VITE_OBP_API_DEFAULT_RESOURCE_DOC_VERSION"}
 	configMap := make(map[string]string)
 
 	for _, key := range config {
+	    value := os.Getenv(key)
+	    if value == "" {
+            fmt.Printf("Skipping: Environment variable %s is not set\n", key)
+            continue
+        }
+		configMap[key] = value
+	}
+
+	for _, key := range url_config {
 		rawURL := os.Getenv(key)
 		if rawURL == "" {
+		    fmt.Printf("Skipping: Environment variable %s is not set\n", key)
 			continue
 		}
 		cleanURL := checkURL(rawURL)
