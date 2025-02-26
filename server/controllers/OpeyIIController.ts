@@ -96,7 +96,7 @@ export class OpeyController {
         }
 
         
-        // wrangle our text stream into a langchain stream
+        // Transform our stream if needed, right now this is just a passthrough
         const frontendStream: ReadableStream = stream.pipeThrough(frontendTransformer)
         
         // If we need to split the stream into two, we can use the tee method as below 

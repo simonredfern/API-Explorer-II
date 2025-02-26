@@ -83,7 +83,7 @@ export default {
                             }
                             
                             const decodedValue = decoder.decode(value);
-                            console.log('Received:', decodedValue);
+                            console.debug('Received:', decodedValue); //DEBUG
                             
                             // Parse the SSE data format
                             const lines = decodedValue.split('\n');
@@ -147,9 +147,9 @@ export default {
                     </div>
                 </el-main>
                 <el-footer>
-                    <el-form :inline="true">
+                    <el-form :inline="true" @submit.prevent>
                         <el-form-item label="Message">
-                            <el-input v-model="input" placeholder="Type your message..." :disabled="status !== 'ready'" clearable />
+                            <el-input v-model="input" placeholder="Type your message..." :disabled="status !== 'ready'" @keypress.enter="this.onSubmit" clearable />
                         </el-form-item>
                         <el-form-item>
                             <el-button type="primary" @click="this.onSubmit">Send</el-button>
