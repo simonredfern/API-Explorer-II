@@ -11,7 +11,7 @@ import (
 
 func main() {
 	// Define the host env variables to be replaced at build time
-	config := []string{"VITE_OBP_API_HOST", "VITE_OBP_API_MANAGER_HOST", "VITE_OBP_API_PORTAL_HOST"}
+	config := []string{"VITE_OBP_API_HOST", "VITE_OBP_API_MANAGER_HOST", "VITE_OBP_API_PORTAL_HOST", "VITE_OBP_LINKS_COLOR", "VITE_OBP_HEADER_LINKS_COLOR", "VITE_OBP_HEADER_LINKS_HOVER_COLOR", "VITE_OBP_HEADER_LINKS_BACKGROUND_COLOR", "VITE_OBP_LOGO_URL", "VITE_OBP_API_DEFAULT_RESOURCE_DOC_VERSION"}
 	configMap := make(map[string]string)
 
 	for _, key := range config {
