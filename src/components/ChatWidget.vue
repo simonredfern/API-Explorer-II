@@ -10,7 +10,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 export default {
     setup () {
-        return { Close }
+        return { 
+            Close,
+        }
     },
     data() {
         return {
@@ -19,7 +21,7 @@ export default {
             messages: ref([]),
             status: 'ready',
             input: '',
-            currentAssistantMessage: ref(null),
+            currentAssistantMessage: null,
         }
     },
     components: {
@@ -29,10 +31,10 @@ export default {
         toggleChat() {
             this.chatOpen = !this.chatOpen
         },
-        async onSubmit(event) {
+        async onSubmit() {
             // Add user message to the messages array
             const userMessage = {
-                id: `user-${Date.now()}`,
+                id: uuidv4(),
                 role: 'user',
                 content: this.input
             };
@@ -40,7 +42,7 @@ export default {
             
             // Create a placeholder for the assistant's response
             this.currentAssistantMessage = {
-                id: `assistant-${Date.now()}`,
+                id: uuidv4(),
                 role: 'assistant',
                 content: ''
             };
