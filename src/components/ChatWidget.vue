@@ -8,45 +8,19 @@ import { useChat } from '@ai-sdk/vue'
 import { Close } from '@element-plus/icons-vue'
 import ChatMessage from './ChatMessage.vue';
 import { v4 as uuidv4 } from 'uuid';
+import { EventEmitter } from 'stream';
 
 export default {
     setup () {
-        const { messages, input, handleInputChange, handleSubmit, addToolResult, status } = useChat({
-            api:'/api/opey/stream',
-            streamProtocol: 'data',
-            onMessage: (message) => {
-                console.log(`Message in useChat: ${message}`)
-            },
-            onError: (error) => {
-                console.log(`Error in useChat: ${error.message}`)
-            },
-            onFinish: () => {
-                console.log('Chat finished')
-                console.log('Messages:', messages);
-                
-            }
-            
-        })
-
-        return {
-            messages,
-            input,
-            handleInputChange,
-            handleSubmit,
-            addToolResult,
-            status,
-            Close
-        }
+        return { Close }
     },
     data() {
         return {
             chatOpen: false,
-            userInput: reactive({
-                user: '',
-                input_content: '',
-                thread_id: '',
-            }),
             thread_id: uuidv4(),
+            messages: ref([]),
+            status: ref('ready'),
+            input: ref(''),
         }
     },
     components: {
@@ -58,12 +32,41 @@ export default {
         },
         async onSubmit(event) {
 
-            this.handleSubmit(event, {
-                body: {
-                    thread_id: this.thread_id,
-                    is_tool_call_approval: false,
+            const response = await fetch('/api/opey/stream', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
                 },
+                body: JSON.stringify({
+                    thread_id: this.thread_id,
+                    message: this.input,
+                    is_tool_call_approval: false,
+                }),
             })
+
+            const stream = response.body
+            console.log("Stream: ", stream)
+            const decoder = new TextDecoder();
+            const reader = stream.getReader();
+
+            try {
+                reader.read().then(function logChunk({ done, value }) {
+                    if (done) {
+                        console.log('Stream complete');
+                        return;
+                    }
+
+                    console.log('Received', decoder.decode(value));
+                    // Do something with the data
+
+                    return reader.read().then(logChunk);
+                });
+
+            } catch (error) {
+                console.error('Error:', error);
+                reader.releaseLock();
+            }
+            
             console.log("Status: ", this.status)
         },
     },
@@ -94,7 +97,7 @@ export default {
                     </div>
                 </el-main>
                 <el-footer>
-                    <el-form :inline="true" :model="userInput">
+                    <el-form :inline="true">
                         <el-form-item label="Message">
                             <el-input v-model="input" placeholder="Type your message..." :disabled="status !== 'ready'" clearable />
                         </el-form-item>

@@ -1,10 +1,12 @@
 import { Controller, Session, Req, Res, Post, Get } from 'routing-controllers'
 import { Request, Response } from 'express'
-import { Transform, pipeline } from "node:stream"
+import { Transform, pipeline, Readable } from "node:stream"
+import { ReadableStream as WebReadableStream } from "stream/web"
 import { Service } from 'typedi'
 import OBPClientService from '../services/OBPClientService'
 import OpeyClientService from '../services/OpeyClientService'
 import { LangChainAdapter, streamText } from 'ai';
+import { StreamEvent } from '@langchain/core/types/stream'
 
 import { UserInput } from '../schema/OpeySchema'
 import { strictEqual } from 'node:assert'
@@ -44,12 +46,12 @@ export class OpeyController {
         @Res() response: Response,
     ) {
 
+        // Read user input from request body
         let user_input: UserInput
         try {
           console.log("Request body: ", request.body)
-          const user_message = request.body.messages[request.body.messages.length - 1]
           user_input = {
-            "message": user_message.content,
+            "message": request.body.message,
             "thread_id": request.body.thread_id,
             "is_tool_call_approval": request.body.is_tool_call_approval
           }
@@ -60,28 +62,47 @@ export class OpeyController {
         
         
 
-        // Define a function to transform the response from Opey into a pure langchain stream format
-        const transformToPureLangchain = new TransformStream({
+        // Define a function to transform the response from Opey (which is a text stream) into a TS-Native langchain stream
+        const transformToLangchainJSNative = new TransformStream({
           transform(chunk, controller) {
             // Decode the chunk to a string
             const decodedChunk = new TextDecoder().decode(chunk)
-            console.log('[transform]', decodedChunk);
+          
+            // Remove SSE event 'data:' prefix
             const dataString = decodedChunk.split('data: ')[1]
-            controller.enqueue(dataString);
+
+            // Wrangle into a Langchain StreamEvent *hope that it works*
+            const langchainChunk = dataString as unknown as StreamEvent
+            console.log(langchainChunk);
+            controller.enqueue(langchainChunk);
+          },
+          flush(controller) {
+            console.log('[flush]');
+            // Close ReadableStream when done
+            controller.terminate();
+          },
+        });
+
+        // NOTE: To delete probably
+        const convertToVercelTansform = new TransformStream({
+          transform(chunk, controller) {
+            // Decode the chunk to a string
+            const decodedChunk = new TextDecoder().decode(chunk)
+            console.log(decodedChunk);
+            controller.enqueue(decodedChunk);
           },
           flush(controller) {
             console.log('[flush]');
             controller.terminate();
           },
-        });
+        })
 
         let stream: ReadableStream | null = null
         
         try {
-          // Read stream from OpeyClientService
+          // Read web stream from OpeyClientService
           console.log("Calling OpeyClientService.stream")
           stream = await this.opeyClientService.stream(user_input)
-          //console.debug(`Stream received readable: ${stream?.readable}`)
           
         } catch (error) {
           console.error("Error reading stream: ", error)
@@ -93,62 +114,59 @@ export class OpeyController {
           return response.status(500).json({ error: 'Internal Server Error' })
         }
 
-        return new Promise<Response>((resolve, reject) => {
-          // pipeline(stream, convertToVercelTansform, response, (error) => {
-          //   if (error) {
-          //     console.error("Error piping stream: ", error)
-          //     reject(error)
-          //   } else {
-          //     console.log("Stream piped successfully")
-          //     resolve(response)
-          //   }
-          // })
-          const streamTee = stream.tee()
-          if (!streamTee) {
-            console.error("Stream is not tee'd")
-            return response.status(500).json({ error: 'Internal Server Error' })
-          }
-          const [stream1, stream2] = streamTee
-
-          const reader = stream1.getReader()
-          let charsReceived = 0;
-          const decoder = new TextDecoder();
-
-          // this is simply to log the stream to console
-          reader.read().then(function processText({ done, value }) {
-            // Result objects contain two properties:
-            // done  - true if the stream has already given you all its data.
-            // value - some data. Always undefined when done is true.
-            if (done) {
-              console.log("Stream complete");
-              return;
-            }
         
-            // value for fetch streams is a Uint8Array
-            charsReceived += value.length;
-            const chunk = value;
-            console.log("Chunk: ", decoder.decode(chunk), "\n\nChars received: ", charsReceived);
+        // wrangle our text stream into a langchain stream
+        const langchainStream: ReadableStream = stream.pipeThrough(transformToLangchainJSNative)
+        
+        // Tee the stream so we can log it to console
+        const streamTee = langchainStream.tee()
+        if (!streamTee) {
+          console.error("Stream is not tee'd")
+          return response.status(500).json({ error: 'Internal Server Error' })
+        }
+        const [stream1, stream2] = streamTee
 
-            return reader.read().then(processText);
-          })
+        // Stream 2 we turn into a vercel Stream in order to log the result
+        const vercelDataStreamReader = LangChainAdapter.toDataStream(stream2).getReader();
 
-          try {
-            const vercelDataStream = LangChainAdapter.toDataStream(stream2)
-            resolve(vercelDataStream)
-          } catch (error) {
-            reject(error)
+        let charsReceived = 0;
+        const decoder = new TextDecoder();
+        // this is simply to log the stream to console
+        vercelDataStreamReader.read().then(function processText({ done, value }) {
+          // Result objects contain two properties:
+          // done  - true if the stream has already given you all its data.
+          // value - some data. Always undefined when done is true.
+          if (done) {
+            console.log("Stream complete");
+            return;
           }
-          
-          
-          
-          // stream.on('end', () => {
-          //   response.status(200)
-          //   resolve(response)
-          // })
-          // stream.on('error', (error) => {
-          //   console.error("Error piping stream: ", error)
-          //   reject(error)
-          // })
+      
+          // value for fetch streams is a Uint8Array
+          charsReceived += value.length;
+          const chunk = value;
+          console.log("Chunk from langchain: ", decoder.decode(chunk), "\n\nChars received: ", charsReceived);
+
+          return vercelDataStreamReader.read().then(processText);
+        })
+
+        const nodeStream = Readable.fromWeb(stream1 as WebReadableStream<any>)
+        
+
+        response.setHeader('x-vercel-ai-data-stream', 'v1')
+        response.setHeader('Content-Type', 'text/event-stream');
+        response.setHeader('Cache-Control', 'no-cache');
+        response.setHeader('Connection', 'keep-alive');
+        nodeStream.pipe(response);
+      
+
+        return new Promise<Response>((resolve, reject) => {
+          nodeStream.on('end', () => {
+            resolve(response);
+          });
+          nodeStream.on('error', (error) => {
+            console.error('Stream error:', error);
+            reject(error);
+          });
           
         })
 
