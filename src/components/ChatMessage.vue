@@ -3,6 +3,7 @@
 import MarkdownIt from "markdown-it";
 
 // Imports for syntax highlighting
+// Languages that we want syntax highlighting for need to be imported here
 import Prism from 'prismjs';
 import 'prismjs/themes/prism.css'
 import 'prismjs/components/prism-bash'
@@ -20,54 +21,53 @@ import 'prismjs/components/prism-markup';
 import 'prismjs/components/prism-http';
 import 'prismjs/themes/prism-okaidia.css';
 
-    export default {
-        props: {
-            message: {
-                type: Object,
-                required: true
-            }
-        },
-        data() {
-            return {
-                type: '',
-                content: ''
-            }
-        },
-        methods: {
-            highlightCode(content, language) {
-                if (Prism.languages[language]) {
-                    return Prism.highlight(content, Prism.languages[language], language);
-                } else {
-                    console.log(`could not highlight ${language} code block, add language to dependencies`)
-                    // If the language is not recognized, return the content as is
-                    return content;
-                }
-            },
-            renderMarkdown(content) {
-                const markdown = new MarkdownIt({
-                    highlight: (str, lang) => {
-                        console.log(`highlighting ${lang} code block`)
-                        if (lang && Prism.languages[lang]) {
-                            try {
-                                return `<pre class="language-${lang}"><code>${this.highlightCode(str, lang)}</code></pre>`;
-                            } catch (error) {
-                                console.log(`error hilighting ${lang} code block: ${error}`)
-                            }
-                        } else if (!lang) {
-                            console.warn('No language specified for code block')
-                        } else if (!Prism.languages[lang]) {
-                            console.warn(`Language ${lang} not recognized or not installed`)
-                        }
-
-                        // If the language is not specified or not recognized, use a default language
-                        return `<pre class="language-"><code>${markdown.utils.escapeHtml(str)}</code></pre>`;
-                    }
-                });
-
-                return markdown.render(content);
-            },
+export default {
+    props: {
+        message: {
+            type: Object,
+            required: true
         }
+    },
+    data() {
+        return {
+            type: '',
+            content: ''
+        }
+    },
+    methods: {
+        highlightCode(content, language) {
+            if (Prism.languages[language]) {
+                return Prism.highlight(content, Prism.languages[language], language);
+            } else {
+                console.log(`could not highlight ${language} code block, add language to dependencies`)
+                // If the language is not recognized, return the content as is
+                return content;
+            }
+        },
+        renderMarkdown(content) {
+            const markdown = new MarkdownIt({
+                highlight: (str, lang) => {
+                    if (lang && Prism.languages[lang]) {
+                        try {
+                            return `<pre class="language-${lang}"><code>${this.highlightCode(str, lang)}</code></pre>`;
+                        } catch (error) {
+                            console.log(`error hilighting ${lang} code block: ${error}`)
+                        }
+                    } else if (!lang) {
+                        console.warn('No language specified for code block')
+                    } else if (!Prism.languages[lang]) {
+                        console.warn(`Language ${lang} not recognized or not installed, see imports for this component`)
+                    }
+
+                    // If the language is not specified or not recognized, use a default language
+                    return `<pre class="language-"><code>${markdown.utils.escapeHtml(str)}</code></pre>`;
+                }
+            });
+
+            return markdown.render(content);
+        },
     }
+}
 </script>
 
 <template>
