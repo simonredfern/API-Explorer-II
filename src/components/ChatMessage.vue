@@ -84,11 +84,22 @@ export default {
     padding: 10px;
     margin: 10px 0 10px 0;
     display: flex;
+    flex-direction: column;
+    align-items: flex-end;
 }
 
 .message-container.user {
-    justify-content: flex-end;
+    width: auto;
+    max-width: 80%;
     margin-left: auto;
-    margin-right: 10px;
+    margin-right: 0px;
+    border-radius: 10px 10px 0 10px;
+}
+
+.message-container.assistant {
+    border-radius: 10px 10px 10px 0px;
+    max-width: 80%;
+    margin-left: 0px;
+    margin-right: auto;
 }
 </style>

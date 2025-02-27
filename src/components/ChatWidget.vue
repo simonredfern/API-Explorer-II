@@ -4,7 +4,7 @@ placeholder for Opey II Chat widget
 <script lang="ts">
 
 import { ref, reactive } from 'vue'
-import { Close } from '@element-plus/icons-vue'
+import { Close, Top as ElTop } from '@element-plus/icons-vue'
 import ChatMessage from './ChatMessage.vue';
 import { v4 as uuidv4 } from 'uuid';
 import { OpeyStreamContext, OpeyMessage, sendOpeyMessage } from '@/obp/opey-functions';
@@ -13,6 +13,7 @@ export default {
     setup () {
         return { 
             Close,
+            ElTop
         }
     },
     data() {
@@ -106,14 +107,10 @@ export default {
                     </div>
                 </el-main>
                 <el-footer>
-                    <el-form :inline="true" @submit.prevent>
-                        <el-form-item label="Message">
-                            <el-input v-model="input" placeholder="Type your message..." :disabled="opeyContext.status !== 'ready'" @keypress.enter="onSubmit" clearable />
-                        </el-form-item>
-                        <el-form-item>
-                            <el-button type="primary" @click="onSubmit">Send</el-button>
-                        </el-form-item>
-                    </el-form>
+                    <div class="user-input-container">
+                        <input v-model="input" type="textarea" class="user-input" placeholder="Type your message..." :disabled="opeyContext.status !== 'ready'" @keypress.enter="onSubmit" clearable />
+                        <el-button type="primary" @click="onSubmit" color="#253047" :icon="ElTop" circle></el-button>
+                    </div>
                 </el-footer>
             </el-container>
         </div>
@@ -149,8 +146,8 @@ export default {
     height: 470px;
     min-width: 390px;
     min-height: 470px;
-    max-height: 80vh;
-    max-width: 80vw;
+    max-height: 90vh;
+    max-width: 90vw;
     background-color: tomato;
     resize: both;
     overflow: auto;
@@ -182,6 +179,10 @@ export default {
     background-color: #253047;
 }
 
+.chat-container .el-footer {
+    height: 150px;
+}
+
 .chat-container .el-main {
     background-color:#151d30;
     color: #fff;
@@ -195,5 +196,36 @@ export default {
 .messages-container {
     padding-left: 10px;
     padding-right: 10px;
+}
+
+.user-input-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    background-color: #151d30;
+    border-radius: 10px;
+    padding: 10px;
+    height: 70%;
+    color: #fff;
+}
+
+.user-input {
+  border-radius: 5px;
+  font-size: 14px;
+  border: none;
+  background-color: #151d30;
+  resize: none;
+  height: 100%;
+  margin-bottom: 0px;
+}
+
+.user-input-container input:focus {
+    border: none;
+    outline: 0;
+}
+
+.user-input-container button {
+    margin-bottom: 0px;
 }
 </style>
