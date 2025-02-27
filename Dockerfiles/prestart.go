@@ -18,7 +18,7 @@ import (
 func main() {
 	// Define the build env variables to be replaced at container run time
 	// url config variables are expected to be a valid URL in the container environment
-	url_config := []string{"VITE_OBP_API_HOST", "VITE_OBP_API_PORTAL_HOST", "VITE_OBP_LOGO_URL"}
+	url_config := []string{"VITE_OBP_API_HOST", "VITE_OBP_API_MANAGER_HOST", "VITE_OBP_API_PORTAL_HOST", "VITE_OBP_LOGO_URL"}
 	// DANGERZONE: The following strings will be replaced by container environment variables without any checking of whatever!!!
 	config := []string{"VITE_OBP_API_VERSION", "VITE_OBP_LINKS_COLOR", "VITE_OBP_HEADER_LINKS_COLOR", "VITE_OBP_HEADER_LINKS_HOVER_COLOR", "VITE_OBP_HEADER_LINKS_BACKGROUND_COLOR", "VITE_OBP_API_DEFAULT_RESOURCE_DOC_VERSION", "VITE_CHATBOT_ENABLED", "VITE_CHATBOT_URL"}
 	configMap := make(map[string]string)
@@ -41,13 +41,6 @@ func main() {
 		cleanURL := checkURL(rawURL)
 		configMap[key] = cleanURL
 	}
-
-    api_manager := os.Getenv("VITE_OBP_API_MANAGER")
-    if api_manager == "" {
-        configMap["VITE_OBP_API_MANAGER"] = ""
-        } else {
-        configMap["VITE_OBP_API_MANAGER"] = checkURL(api_manager)
-    }
 
 	dir := "/opt/app-root/src/assets"
 	pattern := "index-.*\\.js$"
