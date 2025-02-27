@@ -1,0 +1,17 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ChatMessage > should render correctly on assistant message 1`] = `
+"<div class=\\"message-container assistant\\">
+  <div class=\\"content\\">
+    <p>Hi there, how can I help you today?</p>
+  </div>
+</div>"
+`;
+
+exports[`ChatMessage > should render correctly on human message 1`] = `
+"<div class=\\"message-container user\\">
+  <div class=\\"content\\">
+    <p>Hello Opey!</p>
+  </div>
+</div>"
+`;

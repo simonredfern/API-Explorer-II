@@ -5,26 +5,37 @@ import ChatMessage from '../components/ChatMessage.vue'
 
 describe('ChatMessage', () => {
   it('should render correctly on human message', () => {
-    const humanMessage = JSON.parse(`{
-                    "messages": [
-                      {
-                        "content": "Hello Opey!",
-                        "additional_kwargs": {},
-                        "response_metadata": {},
-                        "type": "human",
-                        "id": "ed614658-22a3-40a3-b403-bc790b941a9a",
-                        "example": false
-                      }
-                    ]
-                  }`)
+    const humanMessage = {
+      id: 123,
+      role: 'user',
+      content: 'Hello Opey!',
+    }
     const wrapper = mount(ChatMessage, {
       props: {
         message: humanMessage
       }
     })
 
-    expect(wrapper.text()).toContain('Hello Opey!')
+    expect(wrapper.text()).toContain(humanMessage.content)
     expect(wrapper.html()).toMatchSnapshot()
   })
+
+  it('should render correctly on assistant message', () => {
+    const assistantMessage = {
+      id: 123,
+      role: 'assistant',
+      content: 'Hi there, how can I help you today?',
+    }
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: assistantMessage
+      }
+    })
+
+    expect(wrapper.text()).toContain(assistantMessage.content)
+    expect(wrapper.html()).toMatchSnapshot()
+  })
+
+  
 })
 

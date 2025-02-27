@@ -1,12 +1,13 @@
 <!--
 placeholder for Opey II Chat widget
 --> 
-<script>
+<script lang="ts">
 
 import { ref, reactive } from 'vue'
 import { Close } from '@element-plus/icons-vue'
 import ChatMessage from './ChatMessage.vue';
 import { v4 as uuidv4 } from 'uuid';
+import { OpeyStreamContext, OpeyMessage, sendOpeyMessage } from '@/obp/opey-functions';
 
 export default {
     setup () {
@@ -18,10 +19,16 @@ export default {
         return {
             chatOpen: false,
             thread_id: uuidv4(),
-            messages: ref([]),
-            status: 'ready',
             input: '',
-            currentAssistantMessage: null,
+            opeyContext: reactive({
+                currentAssistantMessage: {
+                    id: '',
+                    role: 'assistant',
+                    content: ''
+                },
+                messages: new Array<OpeyMessage>(),
+                status: 'ready'
+            } as OpeyStreamContext),
         }
     },
     components: {
@@ -33,92 +40,42 @@ export default {
         },
         async onSubmit() {
             // Add user message to the messages array
-            const userMessage = {
+            const userMessage: OpeyMessage = {
                 id: uuidv4(),
                 role: 'user',
                 content: this.input
             };
-            this.messages.push(userMessage);
+            this.opeyContext.messages.push(userMessage);
             
             // Create a placeholder for the assistant's response
-            this.currentAssistantMessage = {
+            this.opeyContext.currentAssistantMessage = {
                 id: uuidv4(),
                 role: 'assistant',
                 content: ''
             };
-            this.messages.push(this.currentAssistantMessage);
+            this.opeyContext.messages.push(this.opeyContext.currentAssistantMessage);
             
             // Set status to loading
-            this.status = 'loading';
+            this.opeyContext.status = 'loading';
             
-            const userInput = this.input;
             // Clear input field after sending
             this.input = '';
             
+            
+
+
+                
             try {
-                const response = await fetch('/api/opey/stream', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        thread_id: this.thread_id,
-                        message: userInput,
-                        is_tool_call_approval: false,
-                    }),
-                });
-
-                const stream = response.body;
-                const decoder = new TextDecoder();
-                const reader = stream.getReader();
-
-                // Use an arrow function to preserve 'this' context
-                const processStream = async () => {
-                    try {
-                        while (true) {
-                            const { done, value } = await reader.read();
-                            
-                            if (done) {
-                                console.log('Stream complete');
-                                this.status = 'ready';
-                                break;
-                            }
-                            
-                            const decodedValue = decoder.decode(value);
-                            console.debug('Received:', decodedValue); //DEBUG
-                            
-                            // Parse the SSE data format
-                            const lines = decodedValue.split('\n');
-                            for (const line of lines) {
-                                if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-                                    try {
-                                        const jsonStr = line.substring(6); // Remove 'data: '
-                                        const data = JSON.parse(jsonStr);
-                                        
-                                        if (data.type === 'token' && data.content) {
-                                            // Append content to the current assistant message
-                                            this.currentAssistantMessage.content += data.content;
-                                            // Force Vue to detect the change
-                                            this.messages = [...this.messages];
-                                        }
-                                    } catch (e) {
-                                        console.error('Error parsing JSON:', e);
-                                    }
-                                }
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Stream error:', error);
-                        this.status = 'ready';
-                    }
-                };
-                
-                // Start processing the stream
-                processStream();
-                
+                await sendOpeyMessage(
+                    userMessage.content,
+                    this.thread_id,
+                    false,
+                    this.opeyContext
+                )
+                console.log('Opey Status: ', this.opeyContext.status)
             } catch (error) {
-                console.error('Error:', error);
-                this.status = 'ready';
+                console.error('Error in chat:', error);
+                this.opeyContext.status = 'ready';
             }
         },
     },
@@ -127,34 +84,34 @@ export default {
 </script>
 
 <template>
-    <div v-if="!this.chatOpen" class="chat-widget-button-container">
+    <div v-if="!chatOpen" class="chat-widget-button-container">
         <el-tooltip content="Chat with our AI, Opey" placement="left" effect="light">
-            <el-button class="chat-widget-button" type="primary" size="large" @click="this.toggleChat" circle >
+            <el-button class="chat-widget-button" type="primary" size="large" @click="toggleChat" circle >
                 <img alt="AI Help" src="@/assets/opey-icon-white.png" />
             </el-button>
         </el-tooltip>
     </div>
 
-    <div v-if="this.chatOpen" class="chat-container">
+    <div v-if="chatOpen" class="chat-container">
         <div class="chat-container-inner">
             <el-container direction="vertical">
                 <el-header>
                     <img alt="Opey Logo" src="@/assets/opey-logo-inv.png"> 
                     Chat with Opey
-                    <el-button type="danger" :icon="this.Close" @click="this.toggleChat" size="small" circle></el-button>
+                    <el-button type="danger" :icon="Close" @click="toggleChat" size="small" circle></el-button>
                 </el-header>
                 <el-main>
                     <div class="messages-container">
-                        <ChatMessage v-for="message in messages" :key="message.id" :message="message" />
+                        <ChatMessage v-for="message in opeyContext.messages" :key="message.id" :message="message" />
                     </div>
                 </el-main>
                 <el-footer>
                     <el-form :inline="true" @submit.prevent>
                         <el-form-item label="Message">
-                            <el-input v-model="input" placeholder="Type your message..." :disabled="status !== 'ready'" @keypress.enter="this.onSubmit" clearable />
+                            <el-input v-model="input" placeholder="Type your message..." :disabled="opeyContext.status !== 'ready'" @keypress.enter="onSubmit" clearable />
                         </el-form-item>
                         <el-form-item>
-                            <el-button type="primary" @click="this.onSubmit">Send</el-button>
+                            <el-button type="primary" @click="onSubmit">Send</el-button>
                         </el-form-item>
                     </el-form>
                 </el-footer>
