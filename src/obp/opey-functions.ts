@@ -53,6 +53,15 @@ export async function processOpeyStream(
                     } catch (e) {
                         throw new Error(`Error parsing JSON: ${e}`);
                     }
+                } else if (line === 'data: [DONE]') {
+                    // Add the current assistant message to the messages list
+                    context.messages.push(context.currentAssistantMessage);
+                    // Reset the current assistant message
+                    context.currentAssistantMessage = {
+                        id: '',
+                        role: 'assistant',
+                        content: '',
+                    };
                 }
             }
         }

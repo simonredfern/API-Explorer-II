@@ -63,8 +63,8 @@ describe('ChatWidget', () => {
         await wrapper.vm.$nextTick()
 
         // Get the input element and trigger the keypress enter event
-        // This will probably fail if the class name of the input element changes
-        const input = wrapper.get('.user-input-container input')
+        // This will probably fail if the class name of the parent div is changed, or if the input type is moved i.e. from textarea to input or el-input
+        const input = wrapper.get('.user-input-container textarea')
         input.trigger('keypress.enter')
         expect(global.fetch).toHaveBeenCalled()
     })

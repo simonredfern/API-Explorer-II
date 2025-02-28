@@ -224,6 +224,10 @@ export default {
     color: #fff;
 }
 
+.user-input-container:hover {
+    border: 1px solid #979797;
+}
+
 .user-input-container:focus-within {
     border: 1px solid #fff;
 }
