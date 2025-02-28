@@ -135,7 +135,7 @@ describe('sendOpeyMessage', () => {
 
         expect(global.fetch).toHaveBeenCalled()
     })
-    it("should push the 'ready' status to the context", async () => {
+    it("should push the 'ready' status to the context after success", async () => {
 
         await OpeyModule.sendOpeyMessage('test message', '123', false, mockContext)
 

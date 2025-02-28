@@ -34,6 +34,10 @@ export default defineConfig({
     exclude:[
       ...configDefaults.exclude, 
       '**/backend-tests/*'
-    ]
+    ],
+    pool: "vmThreads",  
+    deps: {
+      inline: ['element-plus'],
+    }
   },
 });

@@ -87,12 +87,16 @@ export async function sendOpeyMessage(
         if (!stream) {
             throw new Error('No stream returned from API')
         }
+
+        if (response.status !== 200) {
+            throw new Error(`Error sending Opey message: ${response.statusText}`);
+        }
     
         await processOpeyStream(stream, context);
     } catch (error) {
         console.error('Error sending Opey message:', error);
         context.status = 'ready';
-        throw error;
+        throw new Error(`Error sending Opey message: ${error}`);
     }
 
 }

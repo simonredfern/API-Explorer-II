@@ -76,6 +76,8 @@ export default {
                 console.log('Opey Status: ', this.opeyContext.status)
             } catch (error) {
                 console.error('Error in chat:', error);
+                // on error, remove the assistant message placeholder, as it will be empty.
+                this.opeyContext.messages = this.opeyContext.messages.filter(m => m.id !== this.opeyContext.currentAssistantMessage.id);
                 this.opeyContext.status = 'ready';
             }
         },
