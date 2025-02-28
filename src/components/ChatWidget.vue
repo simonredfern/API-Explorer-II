@@ -100,12 +100,13 @@ export default {
             <el-container direction="vertical">
                 <el-header>
                     <img alt="Opey Logo" src="@/assets/opey-logo-inv.png"> 
-                    Chat with Opey
                     <el-button type="danger" :icon="Close" @click="toggleChat" size="small" circle></el-button>
                 </el-header>
                 <el-main>
                     <div class="messages-container">
-                        <ChatMessage v-for="message in opeyContext.messages" :key="message.id" :message="message" />
+                        <el-scrollbar>
+                            <ChatMessage v-for="message in opeyContext.messages" :key="message.id" :message="message" />
+                        </el-scrollbar>
                     </div>
                 </el-main>
                 <el-footer>
@@ -113,7 +114,6 @@ export default {
                         <div class="user-input">
                             <textarea v-model="input" type="textarea" placeholder="Type your message..." :disabled="opeyContext.status !== 'ready'" @keypress.enter="onSubmit" />
                         </div>
-                        
                         <el-button type="primary" @click="onSubmit" color="#253047" :icon="ElTop" circle></el-button>
                     </div>
                 </el-footer>
@@ -147,8 +147,8 @@ export default {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 390px;
-    height: 470px;
+    width: 650px;
+    height: 625px;
     min-width: 390px;
     min-height: 470px;
     max-height: 90vh;
@@ -159,6 +159,10 @@ export default {
     transform: rotate(180deg);
     border-radius: 10px;
     box-shadow: 0 10px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+.chat-header {
+    font-family: Roboto-Light, sans-serif;
 }
 
 .chat-container .el-header, .chat-container .el-footer, .chat-container .el-main {
@@ -176,7 +180,8 @@ export default {
 }
 
 .chat-container .el-header img {
-    height: 50px;
+    height: 70%;
+    margin-left: -7px;
 }
 
 .chat-container .el-header, .chat-container .el-footer {
@@ -201,6 +206,8 @@ export default {
 .messages-container {
     padding-left: 10px;
     padding-right: 10px;
+    width: 100%;
+    height: 100%;
 }
 
 .user-input-container {
