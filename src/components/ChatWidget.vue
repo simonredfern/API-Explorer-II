@@ -110,7 +110,10 @@ export default {
                 </el-main>
                 <el-footer>
                     <div class="user-input-container">
-                        <input v-model="input" type="textarea" class="user-input" placeholder="Type your message..." :disabled="opeyContext.status !== 'ready'" @keypress.enter="onSubmit" clearable />
+                        <div class="user-input">
+                            <textarea v-model="input" type="textarea" placeholder="Type your message..." :disabled="opeyContext.status !== 'ready'" @keypress.enter="onSubmit" />
+                        </div>
+                        
                         <el-button type="primary" @click="onSubmit" color="#253047" :icon="ElTop" circle></el-button>
                     </div>
                 </el-footer>
@@ -204,25 +207,66 @@ export default {
     display: flex;
     flex-direction: row;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     background-color: #151d30;
     border-radius: 10px;
     padding: 10px;
+    width: 70%;
+    max-width: 500px;
     height: 70%;
     color: #fff;
 }
 
+.user-input-container:focus-within {
+    border: 1px solid #fff;
+}
+
 .user-input {
+    width: 100%;
+    height: 100%;
+    margin-right: 10px;
+}
+
+.user-input textarea {
   border-radius: 5px;
   font-size: 14px;
   border: none;
+  text-wrap: wrap;
+  overflow-x: auto;
+  overflow-y: auto;
   background-color: #151d30;
   resize: none;
   height: 100%;
+  width: 100%;
   margin-bottom: 0px;
+  color: #fff;
 }
 
-.user-input-container input:focus {
+/* width */
+textarea::-webkit-scrollbar {
+    width: 7px;
+}
+
+/* Track */
+textarea::-webkit-scrollbar-track {
+    background: none;
+    margin-left: 2px;
+}
+
+/* Handle */
+textarea::-webkit-scrollbar-thumb {
+    background: #555;
+    width: 7px;
+    border-radius: 3.5px;
+}
+
+/* Handle on hover */
+textarea::-webkit-scrollbar-thumb:hover {
+  
+  background: #888;
+}
+
+.user-input-container textarea:focus {
     border: none;
     outline: 0;
 }
