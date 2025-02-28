@@ -85,11 +85,11 @@ export default {
     margin: 10px 0 10px 0;
     display: flex;
     flex-direction: column;
-    width: fit-content
+    width: fit-content;
+    max-width: min(600px, calc(100% - 60px));
 }
 
 .message-container.user {
-    max-width: 80%;
     margin-left: auto;
     margin-right: 0px;
     border-radius: 10px 10px 0 10px;
@@ -100,9 +100,13 @@ export default {
 
 .message-container.assistant {
     border-radius: 10px 10px 10px 0px;
-    max-width: 80%;
     margin-left: 0px;
     margin-right: auto;
     align-items: flex-start;
+}
+
+.content {
+    margin-top: -10px;
+    margin-bottom: -10px;
 }
 </style>
