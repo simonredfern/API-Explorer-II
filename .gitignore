@@ -45,3 +45,7 @@ components.d.ts
 private_key.pem
 public_key.pem
 ./server/cert/*
+
+
+.vite/deps
+__snapshots__/
