@@ -144,8 +144,44 @@ describe('processOpeyStream', async () => {
         
 
     })
-    it("should not have a unique set of messages", async () => {
+    it("should have a unique set of messages", async () => {
         // mock the stream as above
+        // Mock a ReadableStream
+        const mockAsisstantMessage = "Hi I'm Opey, your personal banking assistant. I'll certainly not take over the world, no, not at all!"
+        // Split the message into chunks, but reappend the whitespace (this is to simulate llm tokens)
+        const mockMessageChunks = mockAsisstantMessage.split(" ")
+        for (let i = 0; i < mockMessageChunks.length; i++) {
+            // Don't add whitespace to the last chunk
+            if (i === mockMessageChunks.length - 1 ) {
+                mockMessageChunks[i] = `${mockMessageChunks[i]}`
+                break
+            }
+            mockMessageChunks[i] = `${mockMessageChunks[i]} `
+        }
+
+        // Fake the token stream
+        const stream = new ReadableStream<Uint8Array>({
+            start(controller) {
+                for (let i = 0; i < mockMessageChunks.length; i++) {
+                    controller.enqueue(new TextEncoder().encode(`data: {"type":"token","content":"${mockMessageChunks[i]}"}\n`));
+                }
+                controller.enqueue(new TextEncoder().encode(`data: [DONE]\n`));
+                controller.close();
+            },
+        });
+
+        // Replace current assistant message with a more unique one for our test
+        mockContext.currentAssistantMessage = {
+            id: '456',
+            role: 'assistant',
+            content: '',
+         }
+       
+        // Push assistant message to the messages list as this is what we do in the ChatWidget to visualise token streaming
+        mockContext.messages.push(mockContext.currentAssistantMessage)
+
+        await OpeyModule.processOpeyStream(stream, mockContext)
+
         function hasUniqueValues(arr: OpeyModule.OpeyMessage[]): boolean {
             return arr.filter((value, index, self) => self.indexOf(value) === index).length === arr.length;
         }
@@ -156,6 +192,7 @@ describe('processOpeyStream', async () => {
 
 describe('sendOpeyMessage', () => {
     let mockContext: OpeyModule.OpeyStreamContext;
+    let testUserMessage: OpeyModule.UserMessage;
 
     beforeEach(() => {
         mockContext = {
@@ -183,18 +220,25 @@ describe('sendOpeyMessage', () => {
                 status: 200,
             }))
         );
+
+        testUserMessage = {
+            id: '123',
+            role: 'user',
+            content: 'test message',
+            isToolCallApproval: false,
+        } 
     })
     afterEach(() => {
         vi.clearAllMocks()
     })
     it('should call fetch', async () => {
-        await OpeyModule.sendOpeyMessage('test message', '123', false, mockContext)
+        await OpeyModule.sendOpeyMessage(testUserMessage, '123', mockContext)
 
         expect(global.fetch).toHaveBeenCalled()
     })
     it("should push the 'ready' status to the context after success", async () => {
 
-        await OpeyModule.sendOpeyMessage('test message', '123', false, mockContext)
+        await OpeyModule.sendOpeyMessage(testUserMessage, '123', mockContext)
 
         expect(mockContext.status).toBe('ready')
     })

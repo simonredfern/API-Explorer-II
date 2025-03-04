@@ -21,6 +21,8 @@ import 'prismjs/components/prism-markup';
 import 'prismjs/components/prism-http';
 import 'prismjs/themes/prism-okaidia.css';
 
+import { Warning } from '@element-plus/icons-vue'
+
 export default {
     props: {
         message: {
@@ -71,16 +73,19 @@ export default {
 </script>
 
 <template>
-    <div class="message-container" :class="this.message.role">
-        <div class="content" v-html="renderMarkdown(this.message.content)"></div>
+    <div :class="this.message.role">
+        <div class="message-container">
+            <div class="content" v-html="renderMarkdown(this.message.content)"></div>
+        </div>
+        <div v-if="this.message.error" class="error"><el-icon><Warning /></el-icon> {{ this.message.error }}</div>
     </div>
+    
 </template>
 
 <style>
 .message-container {
     background-color: antiquewhite;
     color:black;
-    font-family: 'Courier New', Courier, monospace;
     padding: 10px;
     margin: 10px 0 10px 0;
     display: flex;
@@ -89,20 +94,37 @@ export default {
     max-width: min(600px, calc(100% - 60px));
 }
 
-.message-container.user {
+.user, .assistant {
+    display: flex;
+    flex-direction: column;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.user .error {
+    color: red;
+    font-weight: bold;
+    align-self: flex-end;
+    font-size: smaller;
+}
+
+.user .message-container {
     margin-left: auto;
     margin-right: 0px;
     border-radius: 10px 10px 0 10px;
     align-items: flex-end;
     flex-basis: content;
     justify-content: flex-end;
+    color: white;
+    background-color: #2b303b;
 }
 
-.message-container.assistant {
+.assistant .message-container {
     border-radius: 10px 10px 10px 0px;
     margin-left: 0px;
     margin-right: auto;
     align-items: flex-start;
+    color: white;
+    background-color: #3e4e70;
 }
 
 .content {

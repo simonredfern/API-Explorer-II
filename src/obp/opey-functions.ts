@@ -1,15 +1,35 @@
 export interface OpeyMessage {
-    id: string;
+    id: string; // i.e. UUID4
     role: string;
     content: string;
+    error?: string;
+}
+
+export interface UserMessage extends OpeyMessage {
+    isToolCallApproval: boolean; 
+}
+
+export interface AssistantMessage extends OpeyMessage {
+    // Probably we will need some fields here for tool call/ tool call approval requests
 }
 
 export interface OpeyStreamContext {
-    currentAssistantMessage: OpeyMessage;
+    currentAssistantMessage: AssistantMessage;
     messages: OpeyMessage[];
     status: string;
 }
 
+async function pushOrUpdateOpeyMessage(currentMessage: OpeyMessage, context: OpeyStreamContext): Promise<void> {
+    const existingMessage = context.messages.find(m => m.id === currentMessage.id);
+    if (existingMessage) {
+        // Update the existing message
+        existingMessage.content = currentMessage.content;
+        
+    } else {
+        // Add the new message
+        context.messages.push(currentMessage);
+    }
+}
 /**
  * Process a stream from Opey API and update the message content
  * @param stream The ReadableStream from the fetch response
@@ -55,7 +75,8 @@ export async function processOpeyStream(
                     }
                 } else if (line === 'data: [DONE]') {
                     // Add the current assistant message to the messages list
-                    context.messages.push(context.currentAssistantMessage);
+                    // We need to check if the current assistant message is not already in the list, if it is simply update the existing message
+                    await pushOrUpdateOpeyMessage(context.currentAssistantMessage, context);
                     // Reset the current assistant message
                     context.currentAssistantMessage = {
                         id: '',
@@ -74,9 +95,8 @@ export async function processOpeyStream(
 }
 
 export async function sendOpeyMessage(
-    message: string,
+    message: UserMessage,
     threadId: string,
-    isToolCallApproval: boolean,
     context: OpeyStreamContext
 ): Promise<void> {
     try {
@@ -87,8 +107,8 @@ export async function sendOpeyMessage(
             },
             body: JSON.stringify({
                 thread_id: threadId,
-                message: message,
-                is_tool_call_approval: isToolCallApproval
+                message: message.content,
+                is_tool_call_approval: message.isToolCallApproval
             })
         })
     

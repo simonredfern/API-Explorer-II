@@ -5,9 +5,11 @@ placeholder for Opey II Chat widget
 
 import { ref, reactive } from 'vue'
 import { Close, Top as ElTop } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import ChatMessage from './ChatMessage.vue';
 import { v4 as uuidv4 } from 'uuid';
-import { OpeyStreamContext, OpeyMessage, sendOpeyMessage } from '@/obp/opey-functions';
+import { OpeyStreamContext, OpeyMessage, UserMessage, sendOpeyMessage } from '@/obp/opey-functions';
+import { last } from 'cheerio/dist/commonjs/api/traversing';
 
 export default {
     setup () {
@@ -21,6 +23,7 @@ export default {
             chatOpen: false,
             thread_id: uuidv4(),
             input: '',
+            lastUserMessasgeFailed: false,
             opeyContext: reactive({
                 currentAssistantMessage: {
                     id: '',
@@ -41,10 +44,11 @@ export default {
         },
         async onSubmit() {
             // Add user message to the messages array
-            const userMessage: OpeyMessage = {
+            const userMessage: UserMessage = {
                 id: uuidv4(),
                 role: 'user',
-                content: this.input
+                content: this.input,
+                isToolCallApproval: false,
             };
             this.opeyContext.messages.push(userMessage);
             
@@ -68,9 +72,8 @@ export default {
                 
             try {
                 await sendOpeyMessage(
-                    userMessage.content,
+                    userMessage,
                     this.thread_id,
-                    false,
                     this.opeyContext
                 )
                 console.log('Opey Status: ', this.opeyContext.status)
@@ -78,6 +81,10 @@ export default {
                 console.error('Error in chat:', error);
                 // on error, remove the assistant message placeholder, as it will be empty.
                 this.opeyContext.messages = this.opeyContext.messages.filter(m => m.id !== this.opeyContext.currentAssistantMessage.id);
+                this.lastUserMessasgeFailed = true;
+                this.opeyContext.messages[this.opeyContext.messages.length - 1].error = "Failed to send message. Please try again.";
+
+            } finally {
                 this.opeyContext.status = 'ready';
             }
         },
@@ -96,7 +103,7 @@ export default {
     </div>
 
     <div v-if="chatOpen" class="chat-container">
-        <div class="chat-container-inner">
+        <div class="chat-container-inner" id="chat-container">
             <el-container direction="vertical">
                 <el-header>
                     <img alt="Opey Logo" src="@/assets/opey-logo-inv.png"> 
