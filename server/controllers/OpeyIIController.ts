@@ -6,7 +6,6 @@ import { Service } from 'typedi'
 import OBPClientService from '../services/OBPClientService'
 import OpeyClientService from '../services/OpeyClientService'
 import { LangChainAdapter, streamText } from 'ai';
-import { StreamEvent } from '@langchain/core/types/stream'
 
 import { UserInput } from '../schema/OpeySchema'
 import { strictEqual } from 'node:assert'
@@ -200,12 +199,12 @@ export class OpeyController {
           }
         )
 
-        console.log("Consent request response: ", res)
+        // console.log("Consent request response: ", res)
 
-        if (!res) {
-          throw new Error(`Error getting consent request: ${JSON.stringify(res)}`)
+        // if (!res) {
+        //   throw new Error(`Error getting consent request: ${JSON.stringify(res)}`)
           
-        }
+        // }
       } catch (error) {
         console.error("Error in consent/request endpoint: ", error);
         return response.status(500).json({ error: 'Internal Server Error' });

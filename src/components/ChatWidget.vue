@@ -9,7 +9,6 @@ import { ElMessage } from 'element-plus'
 import ChatMessage from './ChatMessage.vue';
 import { v4 as uuidv4 } from 'uuid';
 import { OpeyStreamContext, OpeyMessage, UserMessage, sendOpeyMessage } from '@/obp/opey-functions';
-import { last } from 'cheerio/dist/commonjs/api/traversing';
 
 export default {
     setup () {
