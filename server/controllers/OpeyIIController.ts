@@ -163,6 +163,55 @@ export class OpeyController {
         }
     }
 
+    @Post('/consent/request')
+    /**
+     * Retrieves a consent request from OBP
+     * 
+     */
+    async getConsentRequest(
+        @Session() session: any,
+        @Req() request: Request,
+        @Res() response: Response,
+    ): Promise<Response | any> {
+      try {
+
+        const consentResponse = await fetch(
+          'https://api.openbankproject.com/obp/v5.1.0/consumer/consent-requests',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `DirectLogin token=${session['obpToken']}`
+            },
+            body: JSON.stringify({
+              "consent_request": {
+                "to": {
+                  "bank_id": "gh.29.uk",
+                  "account_id": "8ca8a7e4-6d02-48e3-a029-0b2bf89de9f0"
+                },
+                "permissions": [
+                  {
+                    "read": true,
+                    "write": true
+                  }
+                ]
+              }
+            })
+          }
+        )
+
+        console.log("Consent request response: ", res)
+
+        if (!res) {
+          throw new Error(`Error getting consent request: ${JSON.stringify(res)}`)
+          
+        }
+      } catch (error) {
+        console.error("Error in consent/request endpoint: ", error);
+        return response.status(500).json({ error: 'Internal Server Error' });
+      }
+    }
+
     @Post('/consent')
     /**
     * Retrieves a consent from OBP for the current user
