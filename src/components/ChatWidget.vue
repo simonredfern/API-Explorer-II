@@ -50,7 +50,17 @@ export default {
                 method: 'POST',
             })
 
-            console.log('Consent Response: ', await consentResponse.json())
+            if (consentResponse.ok) {
+                const consentData = await consentResponse.json()
+                if (consentData.success) {
+                    this.userHasConsented = true
+                    ElMessage.success('Consent granted. You can now chat with Opey.')
+                } else {
+                    ElMessage.error('Failed to grant consent. Please try again.')
+                }
+            } else {
+                ElMessage.error('Failed to grant consent. Please try again.')
+            }
         },
         async onSubmit() {
             // Add user message to the messages array

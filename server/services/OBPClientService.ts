@@ -37,9 +37,10 @@ import {
   CreateAny,
   UpdateAny,
   DiscardAny,
-  Any
+  Any,
 } from 'obp-typescript'
 import type { APIClientConfig, OAuthConfig } from 'obp-typescript'
+import { OAuth } from 'obp-typescript'
 
 @Service()
 export default class OBPClientService {
@@ -82,8 +83,22 @@ export default class OBPClientService {
     return this.clientConfig.version
   }
 
-  getOBPClientConfig(): any {
+  getOBPClientConfig(): APIClientConfig {
     return this.clientConfig
+  }
+
+  async getOAuthHeader(path: string, method:string): Promise<string> {
+    // This gets the OAuth1 header for the given path and method for the logged in user
+    // We should probably transition to OAuth2
+    
+    const config = this.getSessionConfig(this.clientConfig)
+    if (!config.oauthConfig) {
+      throw new Error('OAuth configuration is missing')
+    }
+    const oauthInstance = new OAuth(config.oauthConfig).get()
+
+    const authHeader = oauthInstance.authHeader(path, config.consumerSecret, config.accessToken, method)
+    return authHeader
   }
 
   async getDirectLoginToken(): Promise<string> {

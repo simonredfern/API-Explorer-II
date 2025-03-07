@@ -180,6 +180,8 @@ export class OpeyController {
         const authHeader = `DirectLogin token="${obpToken}"`
         console.log("Auth header: ", authHeader)
 
+        const obpOAuthHeaders = await this.obpClientService.getOAuthHeader('/consents', 'POST')
+        console.log("OBP OAuth Headers: ", obpOAuthHeaders)
 
         const obpConfig: Configuration = {
           apiKey: authHeader,
@@ -196,7 +198,7 @@ export class OpeyController {
             accountAccess: [],
             everything: false,
             entitlements: [], 
-            consumerId: process.env.VITE_OBP_CONSUMER_KEY? process.env.VITE_OBP_CONSUMER_KEY : '', 
+            consumerId: '',
           } as unknown as ConsumerConsentrequestsBody,
           {
             headers: {
@@ -205,9 +207,10 @@ export class OpeyController {
           }
         )
 
-        console.log("Consent request response: ", consentRequestResponse)
+        //console.log("Consent request response: ", consentRequestResponse)
         
         console.log({consentId: consentRequestResponse.data.consent_request_id})
+        session['obpConsentRequestId'] = consentRequestResponse.data.consent_request_id
 
         return response.status(200).json(JSON.stringify({consentId: consentRequestResponse.data.consent_request_id}))
         //console.log(await response.body.json())

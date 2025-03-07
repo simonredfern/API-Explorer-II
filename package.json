@@ -65,6 +65,7 @@
     "@types/jsonwebtoken": "^9.0.6",
     "@types/markdown-it": "^14.1.1",
     "@types/node": "^20.5.7",
+    "@types/oauth": "^0.9.6",
     "@vitejs/plugin-vue": "^4.6.2",
     "@vitejs/plugin-vue-jsx": "^3.1.0",
     "@vue/eslint-config-prettier": "^9.0.0",
