@@ -23,6 +23,7 @@ export default {
             thread_id: uuidv4(),
             input: '',
             lastUserMessasgeFailed: false,
+            userHasConsented: false,
             opeyContext: reactive({
                 currentAssistantMessage: {
                     id: '',
@@ -38,8 +39,18 @@ export default {
         ChatMessage,
     },
     methods: {
-        toggleChat() {
+        async toggleChat() {
             this.chatOpen = !this.chatOpen
+            if (!this.userHasConsented) {
+                await this.initiateConsentFlow()
+            }
+        },
+        async initiateConsentFlow() {
+            const consentResponse = await fetch('/api/opey/consent/request', {
+                method: 'POST',
+            })
+
+            console.log('Consent Response: ', await consentResponse.json())
         },
         async onSubmit() {
             // Add user message to the messages array

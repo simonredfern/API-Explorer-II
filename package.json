@@ -38,6 +38,7 @@
     "markdown-it": "^14.1.0",
     "node-fetch": "^2.6.7",
     "oauth": "^0.10.0",
+    "obp-api-typescript": "^1.0.1",
     "obp-typescript": "^1.0.36",
     "pinia": "^2.0.37",
     "prismjs": "^1.29.0",

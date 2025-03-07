@@ -5,10 +5,9 @@ import { ReadableStream as WebReadableStream } from "stream/web"
 import { Service } from 'typedi'
 import OBPClientService from '../services/OBPClientService'
 import OpeyClientService from '../services/OpeyClientService'
-import { LangChainAdapter, streamText } from 'ai';
 
 import { UserInput } from '../schema/OpeySchema'
-import { strictEqual } from 'node:assert'
+import { APIApi, Configuration, ConsentApi, ConsumerConsentrequestsBody, InlineResponse20151 } from 'obp-api-typescript'
 
 @Service()
 @Controller('/opey')
@@ -174,37 +173,46 @@ export class OpeyController {
     ): Promise<Response | any> {
       try {
 
-        const consentResponse = await fetch(
-          'https://api.openbankproject.com/obp/v5.1.0/consumer/consent-requests',
+        let obpToken: string
+
+        obpToken = await this.obpClientService.getDirectLoginToken()
+        console.log("Got token: ", obpToken)
+        const authHeader = `DirectLogin token="${obpToken}"`
+        console.log("Auth header: ", authHeader)
+
+
+        const obpConfig: Configuration = {
+          apiKey: authHeader,
+          basePath: process.env.VITE_OBP_API_HOST,
+        }
+
+        console.log("OBP Config: ", obpConfig)
+
+        const consentAPI = new ConsentApi(obpConfig, process.env.VITE_OBP_API_HOST)
+        
+
+        // OBP sdk naming is a bit mad, can be rectified in the future
+        const consentRequestResponse = await consentAPI.oBPv500CreateConsentRequest({
+            accountAccess: [],
+            everything: false,
+            entitlements: [], 
+            consumerId: process.env.VITE_OBP_CONSUMER_KEY? process.env.VITE_OBP_CONSUMER_KEY : '', 
+          } as unknown as ConsumerConsentrequestsBody,
           {
-            method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `DirectLogin token=${session['obpToken']}`
             },
-            body: JSON.stringify({
-              "consent_request": {
-                "to": {
-                  "bank_id": "gh.29.uk",
-                  "account_id": "8ca8a7e4-6d02-48e3-a029-0b2bf89de9f0"
-                },
-                "permissions": [
-                  {
-                    "read": true,
-                    "write": true
-                  }
-                ]
-              }
-            })
           }
         )
 
-        // console.log("Consent request response: ", res)
+        console.log("Consent request response: ", consentRequestResponse)
+        
+        console.log({consentId: consentRequestResponse.data.consent_request_id})
 
-        // if (!res) {
-        //   throw new Error(`Error getting consent request: ${JSON.stringify(res)}`)
-          
-        // }
+        return response.status(200).json(JSON.stringify({consentId: consentRequestResponse.data.consent_request_id}))
+        //console.log(await response.body.json())
+        
+
       } catch (error) {
         console.error("Error in consent/request endpoint: ", error);
         return response.status(500).json({ error: 'Internal Server Error' });

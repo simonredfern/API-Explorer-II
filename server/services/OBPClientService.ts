@@ -56,6 +56,7 @@ export default class OBPClientService {
       version: process.env.VITE_OBP_API_VERSION as Version,
       oauthConfig: this.oauthConfig
     }
+    
   }
   async get(path: string, clientConfig: any): Promise<any> {
     const config = this.getSessionConfig(clientConfig)
@@ -83,5 +84,32 @@ export default class OBPClientService {
 
   getOBPClientConfig(): any {
     return this.clientConfig
+  }
+
+  async getDirectLoginToken(): Promise<string> {
+    // Hilariously insecure, should be replaced with an OAuth 2 flow as soon as possible
+
+    const consumerKey = this.oauthConfig.consumerKey
+    const username = process.env.VITE_OBP_DIRECT_LOGIN_USERNAME
+    const password = process.env.VITE_OBP_DIRECT_LOGIN_PASSWORD
+
+    const authHeader = `DirectLogin username="${username}",password="${password}",consumer_key="${consumerKey}"`
+    // Get token from OBP
+    const tokenResponse = await fetch(`${this.clientConfig.baseUri}/my/logins/direct`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      }
+    })
+
+    if (!tokenResponse.ok) {
+      throw new Error(`Failed to get direct login token: ${tokenResponse.statusText} ${await tokenResponse.text()}`)
+    } 
+    
+    const token = await tokenResponse.json()
+    return token.token
+    
+
   }
 }
