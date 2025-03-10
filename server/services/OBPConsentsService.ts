@@ -1,12 +1,12 @@
 import { Service } from 'typedi'
-import { Configuration, ConsentApi} from 'obp-api-typescript'
+import { Configuration, ConsentApi, ConsumerConsentrequestsBody, InlineResponse20151} from 'obp-api-typescript'
 import OBPClientService from './OBPClientService'
+import { AxiosResponse } from 'axios'
 
 @Service()
 export default class OBPConsentsService {
     private consentApiConfig: Configuration
-    public obpClientService: OBPClientService
-    public consentsClient: ConsentApi // This needs to be changed once we migrate away from the old OBP SDK
+    public obpClientService: OBPClientService // This needs to be changed once we migrate away from the old OBP SDK
     constructor() {
         this.obpClientService = new OBPClientService()
     }
@@ -19,9 +19,12 @@ export default class OBPConsentsService {
      * @param as_client 
      * @returns 
      */
-    async createConsentClient(path: string, method: string, as_consumer: "logged_in_user" | "API_Explorer"): Promise<ConsentApi | undefined> {
+    async createConsentClient(as_consumer: "logged_in_user" | "API_Explorer", path?: string, method?: string): Promise<ConsentApi | undefined> {
         // This function creates a Consents API client as the logged in user, using their OAuth1 headers
         if (as_consumer === "logged_in_user") {
+            if (!path || !method) {
+                throw new Error("Path and method are required when creating a Consents API client for a logged in user")
+            }
             try {
 
                 // Get the OAuth1 headers for the logged in user to use in the API call
@@ -34,8 +37,7 @@ export default class OBPConsentsService {
                 })
                 
                 // Create the Consents API client
-                this.consentsClient = new ConsentApi(this.consentApiConfig)
-                return this.consentsClient
+                return new ConsentApi(this.consentApiConfig)
 
             } catch (error) {
                 console.error(error)
@@ -54,8 +56,7 @@ export default class OBPConsentsService {
                     accessToken: directLoginHeader
                 })
 
-                this.consentsClient = new ConsentApi(this.consentApiConfig)
-                return this.consentsClient
+                return new ConsentApi(this.consentApiConfig)
 
             } catch (error) {
                 console.error(error)
@@ -67,7 +68,36 @@ export default class OBPConsentsService {
     }
         
         
-    async createConsentRequest(): Promise<any> {
+    async createConsentRequest(): Promise<InlineResponse20151 | undefined> {
+        // this should be done as API Explorer II, so set client on instance for that
+        const client = await this.createConsentClient('API_Explorer')
+        if (!client) {
+            throw new Error('Could not create Consents API client')
+        }
+        // Create a consent request
+        // Parameters in body to be changed later to fit our needs, or match parameters given to this function
+        try {
+            const consentRequestResponse = await client.oBPv500CreateConsentRequest(
+                {
+                    accountAccess: [],
+                    everything: false,
+                    entitlements: [], 
+                    consumerId: '',
+                } as unknown as ConsumerConsentrequestsBody,
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                }
+            )
+
+            return consentRequestResponse.data
+        } catch (error) {
+            console.error(error)
+            throw new Error(`Could not create consent request, ${error}`)
+        }
         
+
+
     }
 }

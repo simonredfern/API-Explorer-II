@@ -133,6 +133,7 @@ describe('OpeyController consents flow', () => {
     let opeyController: OpeyController
 
     beforeAll(() => {
+
         mockOBPClientService = {
             get: vi.fn(async () => {
                 Promise.resolve({})
