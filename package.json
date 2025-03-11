@@ -92,6 +92,7 @@
     "vite-plugin-node-polyfills": "^0.10.0",
     "vite-plugin-rewrite-all": "^1.0.2",
     "vitest": "^0.34.6",
+    "vitest-mock-express": "^2.2.0",
     "vue-tsc": "^2.0.0"
   },
   "overrides": {

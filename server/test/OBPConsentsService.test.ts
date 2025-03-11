@@ -1,5 +1,5 @@
 import {describe, beforeAll, it, vi, Mock, MockInstance } from 'vitest'
-import { ConsentApi, InlineResponse20151 } from 'obp-api-typescript'
+import { ConsentApi, InlineResponse20151, InlineResponse2017 } from 'obp-api-typescript'
 import { AxiosResponse } from 'axios'
 
 const mockGetOAuthHeader = vi.fn(async () => (`OAuth oauth_consumer_key="jgaawf2fnj4yixqdsfaq4gipt4v1wvgsxgre",oauth_nonce="JiGDBWA3MAyKtsd9qkfWCxfju36bMjsA",oauth_signature_method="HMAC-SHA1",oauth_timestamp="1741364123",oauth_version="1.0",oauth_signature="sa%2FRylnsdfLK8VPZI%2F2WkGFlTKs%3D"`));
@@ -129,3 +129,43 @@ describe('OBPConsentsService.createConsentRequest', () => {
 
     });
 });
+
+describe('OBPConsentsService.createConsent', () => {
+    let obpConsentsService: OBPConsentsService;
+    let mockOBPv310CreateConsentImplicit: Mock
+    let mockConsentApi: ConsentApi;
+    beforeEach(() => {
+        // reset mocks
+        vi.clearAllMocks();
+        // Create service instance
+        obpConsentsService = new OBPConsentsService();
+    })
+
+    it('with mocked', async () => {
+        // Create mock response function for consent IMPLICIT 
+        mockOBPv310CreateConsentImplicit = vi.fn().mockResolvedValue({
+            data: {
+                consent_id: '12345678',
+                jwt: "asdjfawieofaowbfaowhh2084h02pefhh0.20fh02h0h29eyf09q3h09h.2-hf4-8h284hf0h0h0284h0",
+                status: 'INITIATED',
+            },
+        } as AxiosResponse<InlineResponse2017>);
+
+        mockConsentApi = {
+            oBPv310CreateConsentImplicit: mockOBPv310CreateConsentImplicit,
+        } as unknown as ConsentApi;
+        
+        
+        
+        // Mock the createConsentClient method
+        vi.spyOn(obpConsentsService, 'createConsentClient').mockResolvedValue(mockConsentApi);
+
+        const consentRequest = await obpConsentsService.createConsent();
+
+        expect(consentRequest).toBeDefined();
+        expect(consentRequest).toHaveProperty('consent_id', '12345678');
+        expect(consentRequest).toHaveProperty('jwt', 'asdjfawieofaowbfaowhh2084h02pefhh0.20fh02h0h29eyf09q3h09h.2-hf4-8h284hf0h0h0284h0');
+        expect(consentRequest).toHaveProperty('status', 'INITIATED');
+        expect(mockOBPv310CreateConsentImplicit).toHaveBeenCalled();
+    })
+})

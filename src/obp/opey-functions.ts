@@ -19,6 +19,10 @@ export interface OpeyStreamContext {
     status: string;
 }
 
+export interface OpeyConsentObject {
+    consent_id: string;
+}
+
 async function pushOrUpdateOpeyMessage(currentMessage: OpeyMessage, context: OpeyStreamContext): Promise<void> {
     const existingMessage = context.messages.find(m => m.id === currentMessage.id);
     if (existingMessage) {
@@ -127,5 +131,29 @@ export async function sendOpeyMessage(
         context.status = 'ready';
         throw new Error(`Error sending Opey message: ${error}`);
     }
+
+}
+
+
+export async function getOpeyConsent(): Promise<OpeyConsentObject> {
+    // Get consent from the Opey API
+    try {
+        const consentResponse = await fetch('/api/opey/consent', {
+            method: 'POST',
+        })
+
+        if (!consentResponse.ok) {
+            throw new Error(`Failed to get Opey consent: ${consentResponse.statusText}`);
+        }
+
+        const consent = await consentResponse.json();
+        return consent
+
+    } catch (error) {
+        console.error('Error getting Opey consent:', error);
+        throw new Error(`${error instanceof Error ? error.message : String(error)}`);
+    }
+    
+
 
 }

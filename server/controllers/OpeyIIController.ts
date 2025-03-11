@@ -1,10 +1,11 @@
 import { Controller, Session, Req, Res, Post, Get } from 'routing-controllers'
 import { Request, Response } from 'express'
-import { Transform, pipeline, Readable } from "node:stream"
+import { Readable } from "node:stream"
 import { ReadableStream as WebReadableStream } from "stream/web"
 import { Service } from 'typedi'
 import OBPClientService from '../services/OBPClientService'
 import OpeyClientService from '../services/OpeyClientService'
+import OBPConsentsService from '../services/OBPConsentsService'
 
 import { UserInput } from '../schema/OpeySchema'
 import { APIApi, Configuration, ConsentApi, ConsumerConsentrequestsBody, InlineResponse20151 } from 'obp-api-typescript'
@@ -16,6 +17,7 @@ export class OpeyController {
     constructor(
       public obpClientService: OBPClientService,
       public opeyClientService: OpeyClientService,
+      public obpConsentsService: OBPConsentsService
     ) {}
 
     @Get('/')
@@ -42,7 +44,7 @@ export class OpeyController {
         @Session() session: any,
         @Req() request: Request,
         @Res() response: Response,
-    ) {
+    ): Promise<Response> {
 
         // Read user input from request body
         let user_input: UserInput
@@ -106,14 +108,49 @@ export class OpeyController {
         // }
         // const [stream1, stream2] = streamTee
 
-        
+        // function to convert a web stream to a node stream
+        const safeFromWeb = (webStream: WebReadableStream<any>): Readable => {
+          if (typeof Readable.fromWeb === 'function') {
+            return Readable.fromWeb(webStream)
+          } else {
+            console.warn('Readable.fromWeb is not available, using a polyfill');
 
-        const nodeStream = Readable.fromWeb(frontendStream as WebReadableStream<any>)
+            // Create a Node.js Readable stream
+            const nodeReadable = new Readable({
+              read() {}
+            });
 
-        response.setHeader('x-vercel-ai-data-stream', 'v1')
+            // Pump data from webreadable to node readable stream
+            const reader = webStream.getReader();
+
+            (async () => {
+              try {
+                while (true) {
+                  const {done, value} = await reader.read();
+
+                  if (done) {
+                    nodeReadable.push(null); // end stream
+                    break;
+                  }
+
+                  nodeReadable.push(value);
+                }
+              } catch (error) {
+                console.error('Error reading from web stream:', error);
+                nodeReadable.destroy(error instanceof Error ? error : new Error(error));
+              }
+            })();
+
+            return nodeReadable
+          }
+        }
+
+        const nodeStream = safeFromWeb(frontendStream as WebReadableStream<any>)
+
         response.setHeader('Content-Type', 'text/event-stream');
         response.setHeader('Cache-Control', 'no-cache');
         response.setHeader('Connection', 'keep-alive');
+
         nodeStream.pipe(response);
       
 
@@ -125,7 +162,16 @@ export class OpeyController {
             console.error('Stream error:', error);
             reject(error);
           });
+
+           // Add a timeout to prevent hanging promises
+          const timeout = setTimeout(() => {
+              console.warn('Stream timeout reached');
+              resolve(response);
+          }, 30000);
           
+          // Clear the timeout when stream ends
+          nodeStream.on('end', () => clearTimeout(timeout));
+          nodeStream.on('error', () => clearTimeout(timeout));
         })
 
         
@@ -232,44 +278,17 @@ export class OpeyController {
         @Res() response: Response
     ): Promise<Response | any> {
         try {
-        console.log("Getting consent from OBP")
-        // Check if consent is already in session
-        if (session['obpConsent']) {
-            console.log("Consent found in session, returning cached consent ID")
-            const obpConsent = session['obpConsent']
-            // NOTE: Arguably we should not return the consent to the frontend as it could be hijacked,
-            // we can keep everything in the backend and only return the JWT token
-            return response.status(200).json({consent_id: obpConsent.consent_id});
-        }
+          // create consent as logged in user
+          const obpConsent = await this.obpConsentsService.createConsent()
 
-        const oauthConfig = session['clientConfig']
-        const version = this.obpClientService.getOBPVersion()
-        // Obbiously this should not be hard-coded, especially the consumer_id, but for now it is
-        const consentRequestBody = {
-            "everything": false,
-            "views": [],
-            "entitlements": [],
-            "consumer_id": "33e0a1bd-9f1d-4128-911b-8936110f802f"
-        }
+          console.log("Consent: ", obpConsent)
 
-        // Get current user, only proceed if user is logged in
-        const currentUser = await this.obpClientService.get(`/obp/${version}/users/current`, oauthConfig)
-        const currentResponseKeys = Object.keys(currentUser)
-        if (!currentResponseKeys.includes('user_id')) {
-            return response.status(400).json({ message: 'User not logged in, Authentication required' });
-        }
+          session['obpConsent'] = obpConsent
+          return response.status(200).json({consent_id: obpConsent?.consent_id});
 
-        // url needs to be changed once we get the 'bankless' consent endpoint
-        // this creates a consent for the current logged in user, and starts SCA flow i.e. sends SMS or email OTP to user
-        const consent = await this.obpClientService.create(`/obp/${version}/banks/gh.29.uk/my/consents/IMPLICIT`, consentRequestBody, oauthConfig)
-        console.log("Consent: ", consent)
-
-        // store consent in session, return consent 200 OK
-        session['obpConsent'] = consent
-        return response.status(200).json({consent_id: consent.consent_id});
         } catch (error) {
-        console.error("Error in consent endpoint: ", error);
-        return response.status(500).json({ error: 'Internal Server Error '});
+          console.error("Error in consent endpoint: ", error);
+          return response.status(500).json({ error: 'Internal Server Error '});
         }
     }
 

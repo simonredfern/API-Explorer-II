@@ -2,10 +2,13 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { OpeyController } from "../controllers/OpeyIIController";
 import OpeyClientService from '../services/OpeyClientService';
 import OBPClientService from '../services/OBPClientService';
+import OBPConsentsService from '../services/OBPConsentsService';
 import Stream, { Readable } from 'stream';
 import { Request, Response } from 'express';
+import { getMockReq, getMockRes } from 'vitest-mock-express'
 import httpMocks from 'node-mocks-http'
 import { EventEmitter } from 'events';
+import { InlineResponse2017 } from 'obp-api-typescript';
 
 vi.mock("../../server/services/OpeyClientService", () => {
     return {
@@ -35,36 +38,59 @@ vi.mock("../../server/services/OpeyClientService", () => {
 });
 
 describe('OpeyController', () => {
+    let MockOpeyClientService: OpeyClientService
+    let opeyController: OpeyController
     // Mock the OpeyClientService class
 
-    const MockOpeyClientService = {
-        authConfig: {},
-        opeyConfig: {},
-        getOpeyStatus: vi.fn(async () => {
-            return {status: 'running'}
-        }),
-        stream: vi.fn(async () => {
+    const { mockClear } = getMockRes()
+    beforeEach(() => {
+        mockClear()
+    })
 
-            async function * generator() {
-                for (let i=0; i<10; i++) {
-                    yield `Chunk ${i}`;
+    beforeAll(() => {
+        vi.clearAllMocks();
+        MockOpeyClientService = {
+            authConfig: {},
+            opeyConfig: {},
+            getOpeyStatus: vi.fn(async () => {
+                return {status: 'running'}
+            }),
+            stream: vi.fn(async () => {
+    
+                const mockAsisstantMessage = "Hi I'm Opey, your personal banking assistant. I'll certainly not take over the world, no, not at all!"
+                // Split the message into chunks, but reappend the whitespace (this is to simulate llm tokens)
+                const mockMessageChunks = mockAsisstantMessage.split(" ")
+                for (let i = 0; i < mockMessageChunks.length; i++) {
+                    // Don't add whitespace to the last chunk
+                    if (i === mockMessageChunks.length - 1 ) {
+                        mockMessageChunks[i] = `${mockMessageChunks[i]}`
+                        break
+                    }
+                    mockMessageChunks[i] = `${mockMessageChunks[i]} `
                 }
-            }
 
-            const readableStream = Stream.Readable.from(generator());
+                // Return the fake the token stream
+                return new ReadableStream<Uint8Array>({
+                    start(controller) {
+                        for (let i = 0; i < mockMessageChunks.length; i++) {
+                            controller.enqueue(new TextEncoder().encode(`data: {"type":"token","content":"${mockMessageChunks[i]}"}\n`));
+                        }
+                        controller.enqueue(new TextEncoder().encode(`data: [DONE]\n`));
+                        controller.close();
+                    },
+                });
+            }),
+            invoke: vi.fn(async () => {
+                return {
+                    content: 'Hi this is Opey',
+                }
+            })
+        } as unknown as OpeyClientService
 
-            return readableStream as NodeJS.ReadableStream;
-        }),
-        invoke: vi.fn(async () => {
-            return {
-                content: 'Hi this is Opey',
-            }
-        })
-    } as unknown as OpeyClientService
+        // Instantiate OpeyController with the mocked OpeyClientService
+        opeyController = new OpeyController(new OBPClientService, MockOpeyClientService)
+    })
 
-
-    // Instantiate OpeyController with the mocked OpeyClientService
-    const opeyController = new OpeyController(new OBPClientService, MockOpeyClientService)
 
 
     it('getStatus', async () => {
@@ -75,8 +101,10 @@ describe('OpeyController', () => {
         expect(res.statusCode).toBe(200);
     })
 
+    
     it('streamOpey', async () => {
 
+        
         const _eventEmitter = new EventEmitter();
         _eventEmitter.addListener('data', () => {
             console.log('Data received')
@@ -87,6 +115,7 @@ describe('OpeyController', () => {
             writableStream: Stream.Writable
         });
 
+        // Mock request and response objects to pass to express controller
         const req = {
             body: {
                 message: 'Hello Opey',
@@ -95,25 +124,26 @@ describe('OpeyController', () => {
             }
         } as unknown as Request;
 
-        // Define handelrs for events
+        const response = await opeyController.streamOpey({}, req, res)
+
+        // Get the stream from the response
+        const stream = response.body
         
 
-        
         let chunks: any[] = [];
         try {
-            const response = await opeyController.streamOpey({}, req, res)
-
-            response.on('end', async () => {
-                console.log('Stream ended')
-                console.log(res._getData())
-                await expect(res.statusCode).toBe(200);
-            })
             
-            response.on('data', async (chunk) => {
-                console.log(chunk)
-                await chunks.push(chunk);
-                await expect(chunk).toBeDefined();
-            })
+            
+
+            while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) {
+                    console.log('Stream complete');
+                    context.status = 'ready';
+                    break;
+                }
+            }
         } catch (error) {
             console.error(error)
         }
@@ -127,7 +157,7 @@ describe('OpeyController', () => {
 })
 
 
-describe('OpeyController consents flow', () => {
+describe('OpeyController consents', () => {
     let mockOBPClientService: OBPClientService
 
     let opeyController: OpeyController
@@ -165,9 +195,18 @@ describe('OpeyController consents flow', () => {
             })
         } as unknown as OpeyClientService
     
+        const MockOBPConsentsService = {
+            createConsent: vi.fn(async () => {
+                return {
+                    "consent_id": "8ca8a7e4-6d02-40e3-a129-0b2bf89de9f0",
+                    "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik9CUCBDb25zZW50IFRva2VuIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE2MTYyMzkwMjJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+                    "status": "INITIATED",
+                } as InlineResponse2017
+            }) 
+        } as unknown as OBPConsentsService
     
         // Instantiate OpeyController with the mocked OpeyClientService
-        opeyController = new OpeyController(new OBPClientService, MockOpeyClientService)
+        opeyController = new OpeyController(new OBPClientService, MockOpeyClientService, MockOBPConsentsService)
 
     })
     afterEach(() => {
@@ -175,25 +214,22 @@ describe('OpeyController consents flow', () => {
     })
     it('should return 200 and consent ID when consent is created at OBP', async () => {
 
-        vi.mock('../services/OBPClientService', () => {
-            return {
-              default: vi.fn().mockImplementation(() => {
-                return {
-                  get: vi.fn(async () => ({ user_id: 'mocked-user-id' })),
-                  create: vi.fn(async () => ({
-                    "consent_request_id": "8ca8a7e4-6d02-40e3-a129-0b2bf89de9f0",
-                    "consumer_id": "7uy8a7e4-6d02-40e3-a129-0b2bf89de8uh",
-                    "payload": "payload"
-                  })),
-                }
-              }),
-            }
-          })
 
-        const req = {}
-        const res = httpMocks.createResponse()
-        await opeyController.getConsentRequest({}, req, res)
-        await expect(res.status).toBe(200)
+        const req = getMockReq()
+        const session = {}
+        const { res } = getMockRes()
+        await opeyController.getConsent(session, req, res)
+        expect(res.status).toHaveBeenCalledWith(200)
 
+        // Obviously if you change the MockOBPConsentsService.createConsent mock implementation, you will need to change this test
+        expect(res.json).toHaveBeenCalledWith({
+            "consent_id": "8ca8a7e4-6d02-40e3-a129-0b2bf89de9f0",
+        }) 
+
+        // Expect that the consent object was saved in the session
+        expect(session).toHaveProperty('obpConsent')
+        expect(session['obpConsent']).toHaveProperty('consent_id', "8ca8a7e4-6d02-40e3-a129-0b2bf89de9f0")
+        expect(session['obpConsent']).toHaveProperty('jwt', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik9CUCBDb25zZW50IFRva2VuIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE2MTYyMzkwMjJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c")
+        expect(session['obpConsent']).toHaveProperty('status', "INITIATED")
     })
 })

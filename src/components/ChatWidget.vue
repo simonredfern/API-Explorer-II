@@ -8,7 +8,8 @@ import { Close, Top as ElTop } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import ChatMessage from './ChatMessage.vue';
 import { v4 as uuidv4 } from 'uuid';
-import { OpeyStreamContext, OpeyMessage, UserMessage, sendOpeyMessage } from '@/obp/opey-functions';
+import { OpeyStreamContext, OpeyMessage, UserMessage, sendOpeyMessage, getOpeyConsent } from '@/obp/opey-functions';
+import { getCurrentUser } from '@/obp';
 
 export default {
     setup () {
@@ -38,6 +39,12 @@ export default {
     components: {
         ChatMessage,
     },
+    async created() {
+        const isLoggedIn = await this.checkLoginStatus()
+        if (isLoggedIn) {
+            this.initiateConsentFlow()
+        }
+    },
     methods: {
         async toggleChat() {
             this.chatOpen = !this.chatOpen
@@ -45,14 +52,22 @@ export default {
                 await this.initiateConsentFlow()
             }
         },
+        async checkLoginStatus(): Promise<boolean> {
+            const currentUser = await getCurrentUser()
+            const currentResponseKeys = Object.keys(currentUser)
+            if (currentResponseKeys.includes('username')) {
+                return true
+            } else {
+                return false
+            }
+        },
         async initiateConsentFlow() {
-            const consentResponse = await fetch('/api/opey/consent/request', {
-                method: 'POST',
-            })
+            // get consent for Opey from user
+            const consentResponse = await getOpeyConsent()
 
-            if (consentResponse.ok) {
-                const consentData = await consentResponse.json()
-                if (consentData.success) {
+            if (consentResponse) {
+                const consentId = consentResponse.consent_id
+                if (consentId) {
                     this.userHasConsented = true
                     ElMessage.success('Consent granted. You can now chat with Opey.')
                 } else {

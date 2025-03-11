@@ -1,5 +1,5 @@
 import { Service } from 'typedi'
-import { Configuration, ConsentApi, ConsumerConsentrequestsBody, InlineResponse20151} from 'obp-api-typescript'
+import { Configuration, ConsentApi, ConsentsIMPLICITBody, ConsumerConsentrequestsBody, InlineResponse20151, InlineResponse2017} from 'obp-api-typescript'
 import OBPClientService from './OBPClientService'
 import { AxiosResponse } from 'axios'
 
@@ -66,7 +66,41 @@ export default class OBPConsentsService {
             throw new Error("Invalid client type, must be 'logged_in_user' or 'API_Explorer'")
         }
     }
+      
+    async createConsent(): Promise<InlineResponse2017 | undefined> {
+        // Create a consent as the logged in user, using Opey's consumerID 
+        // I.e. give permission to Opey to do anything on behalf of the logged in user
+
+        const client = await this.createConsentClient('logged_in_user', '/obp/v5.1.0/banks/BANK_ID/my/consents/IMPLICIT', 'POST')
+        if (!client) {
+            throw new Error('Could not create Consents API client')
+        }
+
+        const opeyConsumerID = process.env.VITE_OPEY_CONSUMER_ID
+        if (!opeyConsumerID) {
+            throw new Error('Opey Consumer ID is missing, please set VITE_OPEY_CONSUMER_ID')
+        }
+
+        const body: ConsentsIMPLICITBody = {
+            everything: false, 
+            entitlements: [],
+            consumer_id: opeyConsumerID,
+            views: [],
+            valid_from: new Date().toISOString(),
+            time_to_live: 3600,
+        }
+
+        try {
+            const consentResponse = await client.oBPv310CreateConsentImplicit(body, 'test', {headers: {'Content-Type': 'application/json'}})
+            console.log("Consent Response: ", consentResponse)
+            return consentResponse.data
+
+        } catch (error) {
+            console.error(error)
+            throw new Error(`Could not create consent, ${error}`)
+        }
         
+    }
         
     async createConsentRequest(): Promise<InlineResponse20151 | undefined> {
         // this should be done as API Explorer II, so set client on instance for that

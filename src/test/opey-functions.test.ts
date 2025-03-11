@@ -243,3 +243,25 @@ describe('sendOpeyMessage', () => {
         expect(mockContext.status).toBe('ready')
     })
 })
+
+describe('getOpeyConsent', () => {
+    
+    beforeEach(() => {
+        global.fetch = vi.fn(() =>
+            Promise.resolve(new Response(JSON.stringify({consent_id: 1234}), {
+                headers: { 'content-type': 'application/json' },
+                status: 200,
+            }))
+        );
+    })
+    
+    it('should call fetch', async () => {
+        await OpeyModule.getOpeyConsent()
+        expect(global.fetch).toHaveBeenCalled()
+    })
+
+    it('should return a consent id', async () => {
+        const consentId = await OpeyModule.getOpeyConsent()
+        expect(consentId).toStrictEqual({consent_id: 1234})
+    })
+})
