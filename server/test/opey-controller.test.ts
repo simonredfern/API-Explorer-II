@@ -5,7 +5,6 @@ import OBPClientService from '../services/OBPClientService';
 import OBPConsentsService from '../services/OBPConsentsService';
 import Stream, { Readable } from 'stream';
 import { Request, Response } from 'express';
-import { getMockReq, getMockRes } from 'vitest-mock-express'
 import httpMocks from 'node-mocks-http'
 import { EventEmitter } from 'events';
 import { InlineResponse2017 } from 'obp-api-typescript';
@@ -42,9 +41,7 @@ describe('OpeyController', () => {
     let opeyController: OpeyController
     // Mock the OpeyClientService class
 
-    const { mockClear } = getMockRes()
     beforeEach(() => {
-        mockClear()
     })
 
     beforeAll(() => {
@@ -215,10 +212,21 @@ describe('OpeyController consents', () => {
     it('should return 200 and consent ID when consent is created at OBP', async () => {
 
 
-        const req = getMockReq()
+        // Mock the request and response objects
+        const req = {}
         const session = {}
-        const { res } = getMockRes()
+
+        const res: Partial<Response> = {
+            status: vi.fn().mockImplementation((status) => {
+                return res
+            }),
+            json: vi.fn().mockImplementation((data) => {
+                return data
+            })
+        }
+
         await opeyController.getConsent(session, req, res)
+        
         expect(res.status).toHaveBeenCalledWith(200)
 
         // Obviously if you change the MockOBPConsentsService.createConsent mock implementation, you will need to change this test
