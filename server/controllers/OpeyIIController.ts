@@ -226,8 +226,8 @@ export class OpeyController {
         const authHeader = `DirectLogin token="${obpToken}"`
         console.log("Auth header: ", authHeader)
 
-        const obpOAuthHeaders = await this.obpClientService.getOAuthHeader('/consents', 'POST')
-        console.log("OBP OAuth Headers: ", obpOAuthHeaders)
+        //const obpOAuthHeaders = await this.obpClientService.getOAuthHeader('/consents', 'POST')
+        //console.log("OBP OAuth Headers: ", obpOAuthHeaders)
 
         const obpConfig: Configuration = {
           apiKey: authHeader,
@@ -279,7 +279,7 @@ export class OpeyController {
     ): Promise<Response | any> {
         try {
           // create consent as logged in user
-          const obpConsent = await this.obpConsentsService.createConsent()
+          const obpConsent = await this.obpConsentsService.createConsent(session)
 
           console.log("Consent: ", obpConsent)
 

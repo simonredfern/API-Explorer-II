@@ -39,8 +39,9 @@ export default {
     components: {
         ChatMessage,
     },
-    async created() {
+    async mounted() {
         const isLoggedIn = await this.checkLoginStatus()
+        console.log('Is logged in: ', isLoggedIn)
         if (isLoggedIn) {
             this.initiateConsentFlow()
         }
