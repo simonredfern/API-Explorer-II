@@ -31,7 +31,6 @@ coverage
 *.sw?
 
 #files from npm-run-build
-package-lock.json
 tsconfig.app.tsbuildinfo
 tsconfig.vitest.tsbuildinfo
 tsconfig.node.tsbuildinfo
