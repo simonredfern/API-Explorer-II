@@ -78,6 +78,11 @@ import { inject } from 'vue'
   height: 100%;
   overflow: hidden;
 }
+.search-nav {
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
 .middle {
   height: 100%;
   overflow: hidden;
