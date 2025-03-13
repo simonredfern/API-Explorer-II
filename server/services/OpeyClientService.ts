@@ -19,17 +19,60 @@ export default class OpeyClientService {
         }
         
     }
-
-    async getOpeyConfig(opeyConfig: OpeyConfig): Promise<OpeyConfig> {
-        return opeyConfig || this.opeyConfig
+    /**
+     * Either sets the Opey configuration or returns the current configuration.
+     * If a partial config is provided, it will be merged with the current config,
+     * only overwriting explicitly defined fields.
+     * 
+     * @param partialConfig - Optional partial configuration to merge with default config
+     * @returns Complete OpeyConfig with merged values
+     */
+    async getOpeyConfig(partialConfig?: Partial<OpeyConfig>): Promise<OpeyConfig> {
+        if (!partialConfig) {
+            return this.opeyConfig;
+        }
+        
+        // Create a deep copy of the current config to avoid mutation
+        const mergedConfig = JSON.parse(JSON.stringify(this.opeyConfig));
+        
+        // Merge the base URI if provided
+        if (partialConfig.baseUri) {
+            mergedConfig.baseUri = partialConfig.baseUri;
+        }
+        
+        // Merge paths if provided (only overwrite defined paths)
+        if (partialConfig.paths) {
+            mergedConfig.paths = {
+                ...mergedConfig.paths,
+                ...partialConfig.paths
+            };
+        }
+        
+        // Merge authConfig if provided
+        if (partialConfig.authConfig) {
+            mergedConfig.authConfig = {
+                ...mergedConfig.authConfig,
+                ...partialConfig.authConfig
+            };
+            
+            // If opeyConsent is provided, merge it too
+            if (partialConfig.authConfig.opeyConsent && mergedConfig.authConfig.opeyConsent) {
+                mergedConfig.authConfig.opeyConsent = {
+                    ...mergedConfig.authConfig.opeyConsent,
+                    ...partialConfig.authConfig.opeyConsent
+                };
+            }
+        }
+        
+        return mergedConfig;
     }
 
-    async getOpeyStatus(opeyConfig: OpeyConfig): Promise<any> {
+    async getOpeyStatus(opeyConfig?: OpeyConfig): Promise<any> {
         // Endpoint to check if Opey is running
         const config = await this.getOpeyConfig(opeyConfig)
         const auth = await this.checkAuthConfig(config)
         if (!auth.valid) {
-            console.warn(`AuthConfig not valid: ${auth.reason}`)
+            console.warn(`AuthConfig is not set: ${auth.reason}\n Other endpoints require authentication`)
         }
 
         try {
@@ -42,7 +85,7 @@ export default class OpeyClientService {
                 const status = await response.json()
                 return status
             } else {
-                throw new Error(`Error getting status from Opey: ${response.status} ${response.statusText}`)
+                throw new Error(`Could not connect: ${response.status} ${response.statusText}`)
             }
             
             
@@ -57,8 +100,11 @@ export default class OpeyClientService {
     /**
      * Streams a response from Opey by posting a user input message.
      * 
-     * This method sends the user input to Opey's streaming endpoint and returns
-     * a ReadableStream for the client to consume token by token or message by message.
+     * This method performs the following operations:
+     * 1. Retrieves the Opey configuration
+     * 2. Validates authentication credentials
+     * 3. Makes a POST request to the Opey stream endpoint
+     * 4. Processes and returns the API response as a ReadableStream
      * 
      * @param user_input - The user's input message and settings to send to Opey
      * @param opeyConfig - Configuration object for Opey connection
@@ -69,8 +115,7 @@ export default class OpeyClientService {
      * @throws Error if there's no response body
      * @throws Error if there's any issue streaming from Opey
      */
-    async stream(user_input: UserInput, opeyConfig: OpeyConfig): Promise<any> {
-        // Endpoint to post a message to Opey and stream the response tokens/messages
+    async stream(user_input: UserInput, opeyConfig?: OpeyConfig): Promise<ReadableStream> {
         const config = await this.getOpeyConfig(opeyConfig)
 
         // Check if we have the consent for Opey
@@ -94,7 +139,7 @@ export default class OpeyClientService {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    "Authorization": `Bearer ${config.authConfig.opeyConsent.jwt}`,
+                    "Authorization": `Bearer ${config.authConfig.opeyConsent.jwt}`, // Should not be undefined as we already checked authConfig
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify(stream_input)
@@ -112,10 +157,31 @@ export default class OpeyClientService {
         }
     }
 
-    async invoke(user_input: UserInput): Promise<any> {
-        // Endpoint to post a message to Opey and get a response without stream
-        // I.e. a normal REST call
-        const url = `${this.opeyConfig.baseUri}${this.opeyConfig.paths.invoke}`
+    /**
+     * Invokes the Opey API with the provided user input and optional configuration.
+     * 
+     * This method performs the following operations:
+     * 1. Retrieves the Opey configuration
+     * 2. Validates authentication credentials
+     * 3. Makes a POST request to the Opey invoke endpoint
+     * 4. Processes and returns the API response
+     * 
+     * @param user_input - The input data to be sent to the Opey API
+     * @param opeyConfig - Optional configuration override for this specific request
+     * @returns A Promise resolving to the response from the Opey API
+     * @throws Error if authentication is invalid or if the API request fails
+     */
+    async invoke(user_input: UserInput, opeyConfig?: OpeyConfig): Promise<any> {
+        
+        const config = await this.getOpeyConfig(opeyConfig)
+
+        // Check if we have the consent for Opey
+        const auth = await this.checkAuthConfig(config)
+        if (!auth.valid) {
+            throw new Error(`AuthConfig not valid: ${auth.reason}`)
+        }
+
+        const url = `${config.baseUri}${config.paths.invoke}`
 
         console.log(`Posting to Opey, STREAMING OFF: ${JSON.stringify(user_input)}\n URL: ${url}`) //DEBUG
 
@@ -123,7 +189,7 @@ export default class OpeyClientService {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    "Authorization": `Bearer ${this.opeyConfig.authConfig.opeyJWT}`,
+                    "Authorization": `Bearer ${config.authConfig.opeyConsent.jwt}`, // not undefined as we checked authConfig
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify(user_input)
@@ -140,8 +206,20 @@ export default class OpeyClientService {
     }
 
 
+    /**
+     * Checks if the authentication configuration in the OpeyConfig is valid.
+     * 
+     * This method validates that:
+     * - authConfig exists and contains opeyConsent
+     * - the OBP consent object has a status of 'ACCEPTED'
+     * 
+     * @param opeyConfig - The configuration object to validate
+     * @returns An object with validation result:
+     *          - valid: boolean indicating if the auth config is valid
+     *          - reason: string explaining the validation result
+     */
     async checkAuthConfig(opeyConfig: OpeyConfig): Promise<{ valid: boolean; reason: string }> {
-        // Check if the authConfig is set in the OpeyConfig
+        
         if (!opeyConfig.authConfig || !opeyConfig.authConfig.opeyConsent) {
             return { valid: false, reason: 'No authConfig set in opeyConfig, authentication required' }
         } else if (!opeyConfig.authConfig.opeyConsent) {
