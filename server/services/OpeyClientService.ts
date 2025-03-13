@@ -67,7 +67,7 @@ export default class OpeyClientService {
         return mergedConfig;
     }
 
-    async getOpeyStatus(opeyConfig?: OpeyConfig): Promise<any> {
+    async getOpeyStatus(opeyConfig?: Partial<OpeyConfig>): Promise<any> {
         // Endpoint to check if Opey is running
         const config = await this.getOpeyConfig(opeyConfig)
         const auth = await this.checkAuthConfig(config)
@@ -115,7 +115,7 @@ export default class OpeyClientService {
      * @throws Error if there's no response body
      * @throws Error if there's any issue streaming from Opey
      */
-    async stream(user_input: UserInput, opeyConfig?: OpeyConfig): Promise<ReadableStream> {
+    async stream(user_input: UserInput, opeyConfig?: Partial<OpeyConfig>): Promise<ReadableStream> {
         const config = await this.getOpeyConfig(opeyConfig)
 
         // Check if we have the consent for Opey
@@ -167,11 +167,11 @@ export default class OpeyClientService {
      * 4. Processes and returns the API response
      * 
      * @param user_input - The input data to be sent to the Opey API
-     * @param opeyConfig - Optional configuration override for this specific request
+     * @param opeyConfig - Optional configuration overrides for this specific request
      * @returns A Promise resolving to the response from the Opey API
      * @throws Error if authentication is invalid or if the API request fails
      */
-    async invoke(user_input: UserInput, opeyConfig?: OpeyConfig): Promise<any> {
+    async invoke(user_input: UserInput, opeyConfig?: Partial<OpeyConfig>): Promise<any> {
         
         const config = await this.getOpeyConfig(opeyConfig)
 

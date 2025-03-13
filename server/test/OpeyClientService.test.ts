@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import OpeyClientService from '../services/OpeyClientService';
-import { OpeyConfig } from '../schema/OpeySchema';
+import { OpeyConfig, UserInput } from '../schema/OpeySchema';
 
 describe('getStatus', async () => {
     let opeyClientService: OpeyClientService;
@@ -48,7 +48,7 @@ describe('getStatus', async () => {
 
 describe('stream', async () => {
     let opeyClientService: OpeyClientService;
-    let opeyConfig: OpeyConfig;
+    let opeyConfig: Partial<OpeyConfig>;
 
     beforeAll(() => {
         opeyClientService = new OpeyClientService();
@@ -72,11 +72,61 @@ describe('stream', async () => {
         })
 
         opeyConfig = {
-            baseUri: 'http://localhost:5000',
-            paths: {},
+            authConfig: {
+                opeyConsent: {
+                    consent_id: 'test-consent-id',
+                    status: 'ACCEPTED',
+                    jwt: 'test-jwt-token',
+                }
+            }
         }
 
     })
+
+    it('should add the opeyConsent jwt to the Authorization header', async () => {
+
+        const user_input: UserInput = {
+            message: 'test message',
+            is_tool_call_approval: false,
+        }
+
+        await opeyClientService.stream(user_input, opeyConfig);
+
+        expect(global.fetch).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+            method: 'POST',
+            headers: expect.objectContaining({
+                "Authorization": `Bearer ${opeyConfig.authConfig?.opeyConsent.jwt}`,
+            }),
+        }))
+
+    })
+
+    it('should return a ReadableStream if Opey returns 200', async () => {
+        
+        // Mock the stream response
+        const mockStream = new ReadableStream<Uint8Array>({
+            start(controller) {
+                controller.enqueue(new TextEncoder().encode(`data: {"type":"token","content":"test"}\n`));
+                controller.close();
+            },
+        });
+
+        global.fetch = vi.fn(() => {
+            return Promise.resolve(new Response(mockStream, {
+                status: 200,
+            }))
+        })
+
+        const user_input: UserInput = {
+            message: 'test message',
+            is_tool_call_approval: false,
+        }
+
+        const response = await opeyClientService.stream(user_input, opeyConfig);
+        
+
+        expect(response).toBeInstanceOf(ReadableStream);
+    });
 })
 
 describe('getOpeyConfig', async () => {
