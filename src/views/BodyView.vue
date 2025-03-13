@@ -49,14 +49,14 @@ import { inject } from 'vue'
         </el-header>
         <el-container class="middle">
           <el-aside class="summary" width="50%">
-            <!--Middle -->
             <RouterView name="body" />
           </el-aside>
-          <el-aside class="preview" width="50%">
+          <el-main class="preview">
             <!--right -->
             <RouterView class="preview" name="preview" />
-          </el-aside>
+          </el-main>
         </el-container>
+
         <!--<el-footer> -->
         <!--Bottom -->
         <!--Footer
@@ -68,19 +68,24 @@ import { inject } from 'vue'
 
 <style>
 .root {
-  min-height: 100vh;
-  overflow: unset;
-}
-.middle {
-  max-height: 95vh;
+  height: 100%;
+  /* min-height: 100vh; */
 }
 .summary {
-  max-height: 95vh;
+  max-height: 100%;
+}
+.main {
+  height: 100%;
+  overflow: hidden;
+}
+.middle {
+  height: 100%;
+  overflow: hidden;
 }
 .preview {
   color: white;
   background-color: #151d30;
-  max-height: 100vh;
+  max-height: 100%;
 }
 .collections {
   margin-left: -20px;
