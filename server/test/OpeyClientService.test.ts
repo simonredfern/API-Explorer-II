@@ -40,4 +40,30 @@ describe('getStatus', async () => {
 
 // Need to write tests for stream and invoke methods
 
-describe
+describe('stream', async () => {
+    let opeyClientService: OpeyClientService;
+
+    beforeAll(() => {
+        opeyClientService = new OpeyClientService();
+    })
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+
+        // create a mock stream
+        const mockStream = new ReadableStream<Uint8Array>({
+            start(controller) {
+                controller.enqueue(new TextEncoder().encode(`data: {"type":"token","content":"test"}\n`));
+                controller.close();
+            },
+        });
+
+        global.fetch = vi.fn(() => {
+            return Promise.resolve(new Response(JSON.stringify({}), {
+                status: 200,
+            }))
+        })
+
+
+    })
+})

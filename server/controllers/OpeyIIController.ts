@@ -61,7 +61,7 @@ export class OpeyController {
         }
         
 
-        // Define a function to transform the response from Opey (which is a text stream) into a TS-Native langchain stream
+        // Transform to decode and log the stream
         const frontendTransformer = new TransformStream({
           transform(chunk, controller) {
             // Decode the chunk to a string
@@ -207,66 +207,66 @@ export class OpeyController {
         }
     }
 
-    @Post('/consent/request')
-    /**
-     * Retrieves a consent request from OBP
-     * 
-     */
-    async getConsentRequest(
-        @Session() session: any,
-        @Req() request: Request,
-        @Res() response: Response,
-    ): Promise<Response | any> {
-      try {
+    // @Post('/consent/request')
+    // /**
+    //  * Retrieves a consent request from OBP
+    //  * 
+    //  */
+    // async getConsentRequest(
+    //     @Session() session: any,
+    //     @Req() request: Request,
+    //     @Res() response: Response,
+    // ): Promise<Response | any> {
+    //   try {
 
-        let obpToken: string
+    //     let obpToken: string
 
-        obpToken = await this.obpClientService.getDirectLoginToken()
-        console.log("Got token: ", obpToken)
-        const authHeader = `DirectLogin token="${obpToken}"`
-        console.log("Auth header: ", authHeader)
+    //     obpToken = await this.obpClientService.getDirectLoginToken()
+    //     console.log("Got token: ", obpToken)
+    //     const authHeader = `DirectLogin token="${obpToken}"`
+    //     console.log("Auth header: ", authHeader)
 
-        //const obpOAuthHeaders = await this.obpClientService.getOAuthHeader('/consents', 'POST')
-        //console.log("OBP OAuth Headers: ", obpOAuthHeaders)
+    //     //const obpOAuthHeaders = await this.obpClientService.getOAuthHeader('/consents', 'POST')
+    //     //console.log("OBP OAuth Headers: ", obpOAuthHeaders)
 
-        const obpConfig: Configuration = {
-          apiKey: authHeader,
-          basePath: process.env.VITE_OBP_API_HOST,
-        }
+    //     const obpConfig: Configuration = {
+    //       apiKey: authHeader,
+    //       basePath: process.env.VITE_OBP_API_HOST,
+    //     }
 
-        console.log("OBP Config: ", obpConfig)
+    //     console.log("OBP Config: ", obpConfig)
 
-        const consentAPI = new ConsentApi(obpConfig, process.env.VITE_OBP_API_HOST)
+    //     const consentAPI = new ConsentApi(obpConfig, process.env.VITE_OBP_API_HOST)
         
 
-        // OBP sdk naming is a bit mad, can be rectified in the future
-        const consentRequestResponse = await consentAPI.oBPv500CreateConsentRequest({
-            accountAccess: [],
-            everything: false,
-            entitlements: [], 
-            consumerId: '',
-          } as unknown as ConsumerConsentrequestsBody,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          }
-        )
+    //     // OBP sdk naming is a bit mad, can be rectified in the future
+    //     const consentRequestResponse = await consentAPI.oBPv500CreateConsentRequest({
+    //         accountAccess: [],
+    //         everything: false,
+    //         entitlements: [], 
+    //         consumerId: '',
+    //       } as unknown as ConsumerConsentrequestsBody,
+    //       {
+    //         headers: {
+    //           'Content-Type': 'application/json',
+    //         },
+    //       }
+    //     )
 
-        //console.log("Consent request response: ", consentRequestResponse)
+    //     //console.log("Consent request response: ", consentRequestResponse)
         
-        console.log({consentId: consentRequestResponse.data.consent_request_id})
-        session['obpConsentRequestId'] = consentRequestResponse.data.consent_request_id
+    //     console.log({consentId: consentRequestResponse.data.consent_request_id})
+    //     session['obpConsentRequestId'] = consentRequestResponse.data.consent_request_id
 
-        return response.status(200).json(JSON.stringify({consentId: consentRequestResponse.data.consent_request_id}))
-        //console.log(await response.body.json())
+    //     return response.status(200).json(JSON.stringify({consentId: consentRequestResponse.data.consent_request_id}))
+    //     //console.log(await response.body.json())
         
 
-      } catch (error) {
-        console.error("Error in consent/request endpoint: ", error);
-        return response.status(500).json({ error: 'Internal Server Error' });
-      }
-    }
+    //   } catch (error) {
+    //     console.error("Error in consent/request endpoint: ", error);
+    //     return response.status(500).json({ error: 'Internal Server Error' });
+    //   }
+    // }
 
     @Post('/consent')
     /**
@@ -293,41 +293,41 @@ export class OpeyController {
     }
 
 
-    @Post('/consent/answer-challenge')
-    /**
-     * Endpoint to answer the consent challenge with code i.e. SMS or email OTP for SCA
-     * If successful, returns a Consent-JWT for use by Opey to access endpoints/ roles that the consenting user has
-     * This completes (i.e. is the final step in) the consent flow
-     */
-    async answerConsentChallenge(
-      @Session() session: any,
-      @Req() request: Request,
-      @Res() response: Response
-    ): Promise<Response | any> {
-      try {
-        const oauthConfig = session['clientConfig']
-        const version = this.obpClientService.getOBPVersion()
+    // @Post('/consent/answer-challenge')
+    // /**
+    //  * Endpoint to answer the consent challenge with code i.e. SMS or email OTP for SCA
+    //  * If successful, returns a Consent-JWT for use by Opey to access endpoints/ roles that the consenting user has
+    //  * This completes (i.e. is the final step in) the consent flow
+    //  */
+    // async answerConsentChallenge(
+    //   @Session() session: any,
+    //   @Req() request: Request,
+    //   @Res() response: Response
+    // ): Promise<Response | any> {
+    //   try {
+    //     const oauthConfig = session['clientConfig']
+    //     const version = this.obpClientService.getOBPVersion()
   
-        const obpConsent = session['obpConsent']
-        if (!obpConsent) {
-          return response.status(400).json({ message: 'Consent not found in session' });
-        } else if (obpConsent.status === 'ACCEPTED') {
-          return response.status(400).json({ message: 'Consent already accepted' });
-        }
-        const answerBody = request.body
+    //     const obpConsent = session['obpConsent']
+    //     if (!obpConsent) {
+    //       return response.status(400).json({ message: 'Consent not found in session' });
+    //     } else if (obpConsent.status === 'ACCEPTED') {
+    //       return response.status(400).json({ message: 'Consent already accepted' });
+    //     }
+    //     const answerBody = request.body
   
-        const consentJWT = await this.obpClientService.create(`/obp/${version}/banks/gh.29.uk/consents/${obpConsent.consent_id}/challenge`, answerBody, oauthConfig)
-        console.log("Consent JWT: ", consentJWT)
-        // store consent JWT in session, return consent JWT 200 OK
-        session['obpConsentJWT'] = consentJWT
-        return response.status(200).json(true);
+    //     const consentJWT = await this.obpClientService.create(`/obp/${version}/banks/gh.29.uk/consents/${obpConsent.consent_id}/challenge`, answerBody, oauthConfig)
+    //     console.log("Consent JWT: ", consentJWT)
+    //     // store consent JWT in session, return consent JWT 200 OK
+    //     session['obpConsentJWT'] = consentJWT
+    //     return response.status(200).json(true);
   
-      } catch (error) { 
-        console.error("Error in consent/answer-challenge endpoint: ", error);
-        return response.status(500).json({ error: 'Internal Server Error' });
-      }
+    //   } catch (error) { 
+    //     console.error("Error in consent/answer-challenge endpoint: ", error);
+    //     return response.status(500).json({ error: 'Internal Server Error' });
+    //   }
       
-    }
+    // }
 
     
 }
