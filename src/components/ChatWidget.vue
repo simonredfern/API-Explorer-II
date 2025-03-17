@@ -8,7 +8,7 @@ import { Close, Top as ElTop } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import ChatMessage from './ChatMessage.vue';
 import { v4 as uuidv4 } from 'uuid';
-import { OpeyStreamContext, OpeyMessage, UserMessage, sendOpeyMessage, getOpeyConsent } from '@/obp/opey-functions';
+import { OpeyStreamContext, OpeyMessage, UserMessage, sendOpeyMessage, getobpConsent } from '@/obp/opey-functions';
 import { getCurrentUser } from '@/obp';
 
 export default {
@@ -64,7 +64,7 @@ export default {
         },
         async initiateConsentFlow() {
             // get consent for Opey from user
-            const consentResponse = await getOpeyConsent()
+            const consentResponse = await getobpConsent()
 
             if (consentResponse) {
                 const consentId = consentResponse.consent_id

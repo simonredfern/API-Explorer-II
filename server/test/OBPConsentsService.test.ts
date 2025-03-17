@@ -129,4 +129,30 @@ describe('OBPConsentsService.createConsent', () => {
         expect(consentRequest).toHaveProperty('status', 'INITIATED');
         expect(mockOBPv310CreateConsentImplicit).toHaveBeenCalled();
     })
+
+    it('should update the session with a valid OpeyConfig with auth', async () => {
+        // Create mock response function for consent IMPLICIT 
+        mockOBPv310CreateConsentImplicit = vi.fn().mockResolvedValue({
+            data: {
+                consent_id: '12345678',
+                jwt: "asdjfawieofaowbfaowhh2084h02pefhh0.20fh02h0h29eyf09q3h09h.2-hf4-8h284hf0h0h0284r0",
+                status: 'INITIATED',
+            },
+        } as AxiosResponse<InlineResponse2017>);
+
+        mockConsentApi = {
+            oBPv510CreateConsentImplicit: mockOBPv310CreateConsentImplicit,
+        } as unknown as ConsentApi;
+        
+        // Mock the createConsentClient method
+        vi.spyOn(obpConsentsService, 'createUserConsentsClient').mockResolvedValue(mockConsentApi);
+
+        await obpConsentsService.createConsent(mockSession);
+
+        expect(mockSession).toHaveProperty('opeyConfig');
+        expect(mockSession.opeyConfig).toHaveProperty('authConfig');
+        expect(mockSession.opeyConfig.authConfig).toHaveProperty('obpConsent');
+        expect(mockSession.opeyConfig.authConfig.obpConsent).toHaveProperty('status', 'INITIATED');
+        expect(mockSession.opeyConfig.authConfig.obpConsent).toHaveProperty('jwt', 'asdjfawieofaowbfaowhh2084h02pefhh0.20fh02h0h29eyf09q3h09h.2-hf4-8h284hf0h0h0284r0');
+    });
 })

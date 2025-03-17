@@ -34,7 +34,7 @@
   import { inject } from 'vue';
   import { obpApiHostKey } from '@/obp/keys';
   import { getCurrentUser } from '../obp';
-  import { getOpeyJWT, getOpeyConsent, answerOpeyConsentChallenge } from '@/obp/common-functions'
+  import { getOpeyJWT, getobpConsent, answerobpConsentChallenge } from '@/obp/common-functions'
   import { storeToRefs } from "pinia";
   import { socket } from '@/socket';
   import { useConnectionStore } from '@/stores/connection';
@@ -126,7 +126,7 @@
         // Check if the user already has a token in the cookies
 
         try {
-          const consentResponse = await getOpeyConsent()
+          const consentResponse = await getobpConsent()
           console.log('Consent response: ', consentResponse)
           if (consentResponse.status === 200 && consentResponse.data.consent_id) {
             this.consentId = consentResponse.data.consent_id

@@ -85,6 +85,13 @@ export default class OBPConsentsService {
         try {
             const consentResponse = await client.oBPv510CreateConsentImplicit(body, {headers: {'Content-Type': 'application/json',}})
             
+            // Save the consent in the session
+            session['opeyConfig'] = {
+                authConfig: {
+                    obpConsent: consentResponse.data
+                }
+            }
+
             return consentResponse.data
 
         } catch (error: any) {

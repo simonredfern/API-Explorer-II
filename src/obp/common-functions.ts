@@ -85,12 +85,12 @@ export async function getOpeyJWT() {
   return token
 }
 
-export async function getOpeyConsent() {
+export async function getobpConsent() {
   await axios.post('/api/opey/consent').catch((error) => {
     if (error.response) {
-      throw new Error(`getOpeyConsent returned an error: ${error.toJSON()}`);
+      throw new Error(`getobpConsent returned an error: ${error.toJSON()}`);
     } else {
-      throw new Error(`getOpeyConsent returned an error: ${error.message}`);
+      throw new Error(`getobpConsent returned an error: ${error.message}`);
     }
   }).then((response) => {
     console.log(response)
@@ -98,12 +98,12 @@ export async function getOpeyConsent() {
   });
 }
 
-export async function answerOpeyConsentChallenge(answerBody: any) {
+export async function answerobpConsentChallenge(answerBody: any) {
   const response = await axios.post('/api/opey/consent/answer-challenge', answerBody).catch((error) => {
     if (error.response) {
-      throw new Error(`answerOpeyConsentChallenge returned an error: ${error.toJSON()}`);
+      throw new Error(`answerobpConsentChallenge returned an error: ${error.toJSON()}`);
     } else {
-      throw new Error(`answerOpeyConsentChallenge returned an error: ${error.message}`);
+      throw new Error(`answerobpConsentChallenge returned an error: ${error.message}`);
     }
   });
   return response

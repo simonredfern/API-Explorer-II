@@ -244,7 +244,7 @@ describe('sendOpeyMessage', () => {
     })
 })
 
-describe('getOpeyConsent', () => {
+describe('getobpConsent', () => {
     
     beforeEach(() => {
         global.fetch = vi.fn(() =>
@@ -256,12 +256,12 @@ describe('getOpeyConsent', () => {
     })
     
     it('should call fetch', async () => {
-        await OpeyModule.getOpeyConsent()
+        await OpeyModule.getobpConsent()
         expect(global.fetch).toHaveBeenCalled()
     })
 
     it('should return a consent id', async () => {
-        const consentId = await OpeyModule.getOpeyConsent()
+        const consentId = await OpeyModule.getobpConsent()
         expect(consentId).toStrictEqual({consent_id: 1234})
     })
 })

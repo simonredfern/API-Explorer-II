@@ -73,7 +73,7 @@ describe('stream', async () => {
 
         opeyConfig = {
             authConfig: {
-                opeyConsent: {
+                obpConsent: {
                     consent_id: 'test-consent-id',
                     status: 'ACCEPTED',
                     jwt: 'test-jwt-token',
@@ -83,7 +83,7 @@ describe('stream', async () => {
 
     })
 
-    it('should add the opeyConsent jwt to the Authorization header', async () => {
+    it('should add the obpConsent jwt to the Authorization header', async () => {
 
         const user_input: UserInput = {
             message: 'test message',
@@ -95,7 +95,7 @@ describe('stream', async () => {
         expect(global.fetch).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
             method: 'POST',
             headers: expect.objectContaining({
-                "Authorization": `Bearer ${opeyConfig.authConfig?.opeyConsent.jwt}`,
+                "Consent-JWT": `${opeyConfig.authConfig?.obpConsent.jwt}`,
             }),
         }))
 
@@ -197,7 +197,7 @@ describe('getOpeyConfig', async () => {
     it('should merge authConfig when provided', async () => {
         const partialConfig: Partial<OpeyConfig> = {
             authConfig: {
-                opeyConsent: {
+                obpConsent: {
                     consent_id: 'test-consent-id',
                     status: 'ACCEPTED',
                     jwt: 'test-jwt-token',
@@ -209,7 +209,7 @@ describe('getOpeyConfig', async () => {
 
         // Verify authConfig was added with correct values
         expect(resultConfig.authConfig).toBeDefined();
-        expect(resultConfig.authConfig!.opeyConsent).toEqual({
+        expect(resultConfig.authConfig!.obpConsent).toEqual({
             consent_id: 'test-consent-id',
             status: 'ACCEPTED',
             jwt: 'test-jwt-token',
@@ -272,14 +272,14 @@ describe('checkAuthConfig', async () => {
         expect(result.reason).toBe('No authConfig set in opeyConfig, authentication required');
     });
 
-    it('should return invalid when opeyConsent is missing', async () => {
+    it('should return invalid when obpConsent is missing', async () => {
         const opeyConfig: OpeyConfig = {
             baseUri: 'http://localhost:5000',
             paths: {
                 status: '/status',
             },
             authConfig: {
-                // opeyConsent intentionally missing
+                // obpConsent intentionally missing
             }
         };
 
@@ -296,7 +296,7 @@ describe('checkAuthConfig', async () => {
                 status: '/status',
             },
             authConfig: {
-                opeyConsent: {
+                obpConsent: {
                     status: 'INITIATED',
                     jwt: 'test-token',
                     consent_id: '12345',
@@ -318,7 +318,7 @@ describe('checkAuthConfig', async () => {
                 status: '/status',
             },
             authConfig: {
-                opeyConsent: {
+                obpConsent: {
                     status: 'ACCEPTED',
                     jwt: 'test-token',
                     consent_id: '12345',
@@ -339,7 +339,7 @@ describe('checkAuthConfig', async () => {
                 status: '/status',
             },
             authConfig: {
-                opeyConsent: {
+                obpConsent: {
                     status: 'ACCEPTED',
                     jwt: 'test-token',
                     consent_id: '12345',

@@ -3,11 +3,13 @@ import { OpeyController } from "../controllers/OpeyIIController";
 import OpeyClientService from '../services/OpeyClientService';
 import OBPClientService from '../services/OBPClientService';
 import OBPConsentsService from '../services/OBPConsentsService';
+import { OpeyConfig } from '../schema/OpeySchema';
 import Stream, { Readable } from 'stream';
 import { Request, Response } from 'express';
 import httpMocks from 'node-mocks-http'
 import { EventEmitter } from 'events';
 import { InlineResponse2017 } from 'obp-api-typescript';
+import { c } from 'vitest/dist/reporters-5f784f42.js';
 
 vi.mock("../../server/services/OpeyClientService", () => {
     return {
@@ -169,7 +171,16 @@ describe('OpeyController consents', () => {
 
         const MockOpeyClientService = {
             authConfig: {},
-            opeyConfig: {},
+            opeyConfig: {
+                baseUri: 'http://localhost:8080',
+                paths: {
+                    invoke: '/invoke',
+                    status: '/status',
+                    stream: '/stream',
+                    approve_tool: '/approve_tool/{thread_id}',
+                    feedback: '/feedback',
+                }
+            },
             getOpeyStatus: vi.fn(async () => {
                 return {status: 'running'}
             }),
@@ -189,17 +200,36 @@ describe('OpeyController consents', () => {
                 return {
                     content: 'Hi this is Opey',
                 }
+            }),
+            getOpeyConfig: vi.fn(async (partialConfig?) => {
+                return {
+                    baseUri: 'http://localhost:8080',
+                    paths: {
+                        invoke: '/invoke',
+                        status: '/status',
+                        stream: '/stream',
+                        approve_tool: '/approve_tool/{thread_id}',
+                        feedback: '/feedback',
+                    }
+                }
             })
         } as unknown as OpeyClientService
     
         const MockOBPConsentsService = {
-            createConsent: vi.fn(async () => {
-                return {
+            createConsent: vi.fn(async (session) => {
+
+                const mockConsentResponse = {
                     "consent_id": "8ca8a7e4-6d02-40e3-a129-0b2bf89de9f0",
                     "jwt": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik9CUCBDb25zZW50IFRva2VuIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE2MTYyMzkwMjJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
                     "status": "INITIATED",
                 } as InlineResponse2017
-            }) 
+
+                session['opeyConfig'] = {
+                    authConfig: { obpConsent: mockConsentResponse } 
+                }
+
+                return mockConsentResponse
+            }),
         } as unknown as OBPConsentsService
     
         // Instantiate OpeyController with the mocked OpeyClientService
@@ -235,9 +265,14 @@ describe('OpeyController consents', () => {
         }) 
 
         // Expect that the consent object was saved in the session
-        expect(session).toHaveProperty('obpConsent')
-        expect(session['obpConsent']).toHaveProperty('consent_id', "8ca8a7e4-6d02-40e3-a129-0b2bf89de9f0")
-        expect(session['obpConsent']).toHaveProperty('jwt', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik9CUCBDb25zZW50IFRva2VuIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE2MTYyMzkwMjJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c")
-        expect(session['obpConsent']).toHaveProperty('status', "INITIATED")
+        expect(session).toHaveProperty('opeyConfig')
+        const opeyConfig = session['opeyConfig']
+        console.log(opeyConfig)
+        expect(opeyConfig).toHaveProperty('authConfig')
+        expect(session['opeyConfig']).toHaveProperty('authConfig')
+        expect(session['opeyConfig']['authConfig']).toHaveProperty('obpConsent')
+        expect(session['opeyConfig']['authConfig']['obpConsent']).toHaveProperty('consent_id', "8ca8a7e4-6d02-40e3-a129-0b2bf89de9f0")
+        expect(session['opeyConfig']['authConfig']['obpConsent']).toHaveProperty('jwt', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik9CUCBDb25zZW50IFRva2VuIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE2MTYyMzkwMjJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c")
+        expect(session['opeyConfig']['authConfig']['obpConsent']).toHaveProperty('status', "INITIATED")
     })
 })

@@ -19,7 +19,7 @@ export interface OpeyStreamContext {
     status: string;
 }
 
-export interface OpeyConsentObject {
+export interface obpConsentObject {
     consent_id: string;
 }
 
@@ -135,7 +135,7 @@ export async function sendOpeyMessage(
 }
 
 
-export async function getOpeyConsent(): Promise<OpeyConsentObject> {
+export async function getobpConsent(): Promise<obpConsentObject> {
     // Get consent from the Opey API
     try {
         const consentResponse = await fetch('/api/opey/consent', {

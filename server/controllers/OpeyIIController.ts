@@ -1,5 +1,5 @@
 import { Controller, Session, Req, Res, Post, Get } from 'routing-controllers'
-import { Request, Response } from 'express'
+import { Request, Response} from 'express'
 import { Readable } from "node:stream"
 import { ReadableStream as WebReadableStream } from "stream/web"
 import { Service } from 'typedi'
@@ -7,7 +7,7 @@ import OBPClientService from '../services/OBPClientService'
 import OpeyClientService from '../services/OpeyClientService'
 import OBPConsentsService from '../services/OBPConsentsService'
 
-import { UserInput } from '../schema/OpeySchema'
+import { UserInput, OpeyConfig} from '../schema/OpeySchema'
 import { APIApi, Configuration, ConsentApi, ConsumerConsentrequestsBody, InlineResponse20151 } from 'obp-api-typescript'
 
 @Service()
@@ -46,6 +46,13 @@ export class OpeyController {
         @Res() response: Response,
     ): Promise<Response> {
 
+        // Check if the consent is in the session, and can be added to the headers
+        const opeyConfig = session['opeyConfig']
+        if (!opeyConfig) {
+          console.error("Opey config not found in session")
+          return response.status(500).json({ error: 'Internal Server Error' })
+        }
+
         // Read user input from request body
         let user_input: UserInput
         try {
@@ -83,7 +90,7 @@ export class OpeyController {
         try {
           // Read web stream from OpeyClientService
           console.log("Calling OpeyClientService.stream")
-          stream = await this.opeyClientService.stream(user_input)
+          stream = await this.opeyClientService.stream(user_input, opeyConfig)
           
         } catch (error) {
           console.error("Error reading stream: ", error)
@@ -184,6 +191,14 @@ export class OpeyController {
         @Res() response: Response
     ): Promise<Response | any> {
 
+
+        // Check if the consent is in the session, and can be added to the headers
+        const opeyConfig = session['opeyConfig']
+        if (!opeyConfig) {
+          console.error("Opey config not found in session")
+          return response.status(500).json({ error: 'Internal Server Error' })
+        }
+
         let user_input: UserInput
         try {
           user_input = {
@@ -197,7 +212,7 @@ export class OpeyController {
         }
 
         try {
-          const opey_response = await this.opeyClientService.invoke(user_input)
+          const opey_response = await this.opeyClientService.invoke(user_input, opeyConfig)
 
           //console.log("Opey response: ", opey_response)
           return response.status(200).json(opey_response)
@@ -279,12 +294,17 @@ export class OpeyController {
     ): Promise<Response | any> {
         try {
           // create consent as logged in user
-          const obpConsent = await this.obpConsentsService.createConsent(session)
+          const opeyConfig = await this.opeyClientService.getOpeyConfig()
+          session['opeyConfig'] = opeyConfig
 
-          console.log("Consent: ", obpConsent)
+          // Either here or in this method, we should check if there is already a consent stored in the session
+          await this.obpConsentsService.createConsent(session)
 
-          session['obpConsent'] = obpConsent
-          return response.status(200).json({consent_id: obpConsent?.consent_id});
+          console.log("Consent at controller: ", session['opeyConfig'])
+
+          const authConfig = session['opeyConfig']['authConfig']
+
+          return response.status(200).json({consent_id: authConfig?.obpConsent.consent_id});
 
         } catch (error) {
           console.error("Error in consent endpoint: ", error);

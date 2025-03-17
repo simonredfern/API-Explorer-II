@@ -21,7 +21,8 @@ export interface OBPConsent {
     status: string;
 }
 export interface AuthConfig {
-    opeyConsent: OBPConsent;
+    obpConsent: OBPConsent;
+    // Add more auth config fields here if needed
 }
 
 export interface OpeyConfig {

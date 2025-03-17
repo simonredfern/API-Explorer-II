@@ -1,5 +1,5 @@
 import { Service } from 'typedi'
-import { UserInput, StreamInput, OpeyConfig, AuthConfig, ConsentRequestResponse } from '../schema/OpeySchema'
+import { UserInput, StreamInput, OpeyConfig, ConsentRequestResponse } from '../schema/OpeySchema'
 import OBPClientService from './OBPClientService'
 
 @Service()
@@ -55,11 +55,11 @@ export default class OpeyClientService {
                 ...partialConfig.authConfig
             };
             
-            // If opeyConsent is provided, merge it too
-            if (partialConfig.authConfig.opeyConsent && mergedConfig.authConfig.opeyConsent) {
-                mergedConfig.authConfig.opeyConsent = {
-                    ...mergedConfig.authConfig.opeyConsent,
-                    ...partialConfig.authConfig.opeyConsent
+            // If obpConsent is provided, merge it too
+            if (partialConfig.authConfig.obpConsent && mergedConfig.authConfig.obpConsent) {
+                mergedConfig.authConfig.obpConsent = {
+                    ...mergedConfig.authConfig.obpConsent,
+                    ...partialConfig.authConfig.obpConsent
                 };
             }
         }
@@ -116,7 +116,11 @@ export default class OpeyClientService {
      * @throws Error if there's any issue streaming from Opey
      */
     async stream(user_input: UserInput, opeyConfig?: Partial<OpeyConfig>): Promise<ReadableStream> {
+        console.log("OpeyConfig: ", opeyConfig) //DEBUG
+        
         const config = await this.getOpeyConfig(opeyConfig)
+
+        console.log("OpeyConfig after getting: ", config) //DEBUG
 
         // Check if we have the consent for Opey
         const auth = await this.checkAuthConfig(config)
@@ -124,7 +128,8 @@ export default class OpeyClientService {
             throw new Error(`AuthConfig not valid: ${auth.reason}`)
         }
 
-        // Should check here if the consent status is 'ACCEPTED' before streaming
+        // Get auth headers
+        const authHeaders = await this.getConsentAuthHeaders(config)
 
         
         try {
@@ -138,10 +143,7 @@ export default class OpeyClientService {
             
             const response = await fetch(url, {
                 method: 'POST',
-                headers: {
-                    "Authorization": `Bearer ${config.authConfig.opeyConsent.jwt}`, // Should not be undefined as we already checked authConfig
-                    "Content-Type": "application/json"
-                },
+                headers: authHeaders,
                 body: JSON.stringify(stream_input)
             })
             if (!response.body) {
@@ -181,6 +183,9 @@ export default class OpeyClientService {
             throw new Error(`AuthConfig not valid: ${auth.reason}`)
         }
 
+        // Get auth headers
+        const authHeaders = await this.getConsentAuthHeaders(config)
+        
         const url = `${config.baseUri}${config.paths.invoke}`
 
         console.log(`Posting to Opey, STREAMING OFF: ${JSON.stringify(user_input)}\n URL: ${url}`) //DEBUG
@@ -188,10 +193,7 @@ export default class OpeyClientService {
         try {
             const response = await fetch(url, {
                 method: 'POST',
-                headers: {
-                    "Authorization": `Bearer ${config.authConfig.opeyConsent.jwt}`, // not undefined as we checked authConfig
-                    "Content-Type": "application/json"
-                },
+                headers: authHeaders,
                 body: JSON.stringify(user_input)
             })
             if (response.status === 200) {
@@ -210,7 +212,7 @@ export default class OpeyClientService {
      * Checks if the authentication configuration in the OpeyConfig is valid.
      * 
      * This method validates that:
-     * - authConfig exists and contains opeyConsent
+     * - authConfig exists and contains obpConsent
      * - the OBP consent object has a status of 'ACCEPTED'
      * 
      * @param opeyConfig - The configuration object to validate
@@ -220,29 +222,29 @@ export default class OpeyClientService {
      */
     async checkAuthConfig(opeyConfig: OpeyConfig): Promise<{ valid: boolean; reason: string }> {
         
-        if (!opeyConfig.authConfig || !opeyConfig.authConfig.opeyConsent) {
+        console.log("Checking auth config: ", opeyConfig) //DEBUG
+
+        if (!opeyConfig.authConfig || !opeyConfig.authConfig.obpConsent) {
             return { valid: false, reason: 'No authConfig set in opeyConfig, authentication required' }
-        } else if (!opeyConfig.authConfig.opeyConsent) {
+        } else if (!opeyConfig.authConfig.obpConsent) {
             return { valid: false, reason: 'Opey consent missing in opeyConfig.authConfig' }
         }
 
-        if (!(opeyConfig.authConfig.opeyConsent.status === 'ACCEPTED')) {
+        if (!(opeyConfig.authConfig.obpConsent.status === 'ACCEPTED')) {
             return { valid: false, reason: 'Opey consent status is not ACCEPTED' }
         }
 
         return { valid: true, reason: 'AuthConfig is valid' }
     }
 
-    // async createConsentRequest(): Promise<ConsentRequestResponse | Error> {
-    //     // Create a consent request for the current user
-
-
-    //     const oauthConfig = session['clientConfig']
-
-    //     try {
-    //         this.obpClientService.create('/obp/v5.0.0/consumer/consent-requests', )
-    //     } catch (error) {
-    //         throw new Error(`Error creating consent request: ${error}`)
-    //     }
-    // }
+    async getConsentAuthHeaders(opeyConfig: OpeyConfig): Promise<{ [key: string]: string } | undefined> {
+        
+        if (!opeyConfig.authConfig || !opeyConfig.authConfig.obpConsent) {
+            throw new Error('AuthConfig not found or obpConsent missing')
+        }
+        return {
+            'Consent-JWT': opeyConfig.authConfig.obpConsent.jwt,
+            'Content-Type': 'application/json'
+        }
+    }
 }
