@@ -25,53 +25,148 @@
  *
  */
 
+import { OpeyMessage, ChatStreamInput } from '@/models/MessageModel'
+import { Chat } from '@/models/ChatModel'
+import { getobpConsent, processOpeyStream } from '@/obp/opey-functions'
 import { defineStore } from 'pinia'
-import { socket } from '@/socket'
+import { v4 as uuidv4 } from 'uuid'
 
 /**
  * Represents a Pinia store for managing chat messages and chatbot responses.
  */
-export const useChatStore = defineStore('chat', {
-    state: () => ({
-        // Messages a list of messages in the OpenAI format
-        chatMessages: [] as {role: string; content: string}[],
-        // Tells us wether a response from the chatbot is currently being streamed or not
-        isStreaming: false,
-        // The partial message at a particular moment in time
-        currentMessageSnapshot: "" as string,
-        lastError: "" as string,
-        waitingForResponse: false,
-    }),
-    actions: {
-        bindEvents() {
-            // TODO: Maybe we don't need to log this except for DEBUG, keep same for now
-            socket.on("connect", () => {
-                console.log("Connected to chatbot");
-            })
+export const useChat = defineStore('chat', {
 
-            // When the assistant stream response starts, we set isStreaming to true
-            socket.on('response stream start', (response) => {
-                this.isStreaming = true;
-                this.waitingForResponse = true;
-                // We create a temporary blank assistant message for the ChatWidget to render and add text deltas to when they come in
-                this.chatMessages.push({ role: 'assistant', content: " "})
-            });
-
-            // Text deltas received from the assistant stream (they are like little snippets of the generated response)
-            socket.on('response stream delta', (response) => {
-                this.currentMessageSnapshot += response.assistant;
-            });
-
-            socket.on('error', (error) => {
-                this.lastError = error.error;
-                console.error(error.error);
-            })
-
-            socket.on('response stream end', (response) => {
-                this.isStreaming = false;
-                this.chatMessages[this.chatMessages.length - 1].content = this.currentMessageSnapshot
-                this.currentMessageSnapshot = ""
-            });
+    state: (): Chat => {
+        return {
+            messages: [] as OpeyMessage[],
+            currentAssistantMessage: {
+                content: '',
+                role: 'assistant',
+                id: '',
+            } as OpeyMessage,
+            status: 'ready' as 'ready' | 'streaming' | 'error' | 'loading',
+            userIsAuthenticated: false,
+            threadId: '',
         }
+    },
+
+    getters: {
+
+        /**
+         * Retrieves or creates a thread ID for the chat.
+         * 
+         * @param store - The store object that holds the thread ID
+         * @param threadId - Optional thread ID to set
+         * @returns The current or newly created thread ID
+         * 
+         * If a threadId is provided, it will be set in the store and returned.
+         * This is useful if the you want to match the thread ID on the chatbot server side.
+         * 
+         * If no threadId is provided and none exists in the store, a new UUID will be generated.
+         * Otherwise, the existing threadId from the store is returned.
+         */
+        getThreadId: (store) => {
+            return (id?: string): string => {
+                if (id) {
+                    if (!store.threadId) {
+                        store.threadId = id
+                        return store.threadId
+                    } else {
+                        console.warn('Cannot set thread ID on already instantiated store. Create a new store instead.')
+                        return store.threadId
+                    }
+                }
+
+                if (!store.threadId) {
+                    store.threadId = uuidv4()
+                    return store.threadId
+                } else {
+                    return store.threadId
+                }
+            }
+        }
+    },
+
+    actions: {
+        /**
+         * Adds a message to the chat.
+         * 
+         * Works in a reducer-like fashion, updating the message if it already exists.
+         * 
+            * @param message - The message to add to the chat
+         */
+        async addMessage(message: OpeyMessage): Promise<void> {
+            
+            const existingMessage = this.messages.find(m => m.id === message.id);
+            if (existingMessage) {
+                // Update the existing message
+                existingMessage.content = message.content;
+                
+            } else {
+                // Add the new message
+                this.messages.push(message);
+            }
+        },
+
+        async removeMessage(messageId: string): Promise<void> {
+            this.messages = this.messages.filter(m => m.id !== messageId);
+        },
+
+        async handleAuthentication(): Promise<void> {
+            // Handle authentication
+            // get consent for Opey from user
+            const consentResponse = await getobpConsent()
+
+            if (consentResponse) {
+                const consentId = consentResponse.consent_id
+                if (consentId) {
+                    this.userIsAuthenticated = true
+                } else {
+                    throw new Error('Failed to grant consent. Please try again.')
+                }
+            } else {
+                throw new Error('Failed to grant consent. Please try again.')
+            }
+        },
+
+        async stream(input: ChatStreamInput): Promise<void> {
+            // Handle stream
+            try {
+                const response = await fetch('/api/opey/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        thread_id: this.threadId,
+                        message: input.message.content,
+                        is_tool_call_approval: input.message.isToolCallApproval
+                    })
+                })
+            
+                const stream = response.body;
+                if (!stream) {
+                    throw new Error('No stream returned from API')
+                }
+        
+                if (response.status !== 200) {
+                    throw new Error(`Error sending Opey message: ${response.statusText}`);
+                }
+                
+    
+                let context = {
+                    currentAssistantMessage: this.currentAssistantMessage,
+                    messages: this.messages,
+                    status: this.status
+                };
+    
+                await processOpeyStream(stream, context);
+            } catch (error) {
+                console.error('Error sending Opey message:', error);
+                this.status = 'ready';
+                throw new Error(`Error sending Opey message: ${error}`);
+            }
+        }
+        
     }
 })
