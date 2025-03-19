@@ -8,7 +8,7 @@ import { Close, Top as ElTop } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import ChatMessage from './ChatMessage.vue';
 import { v4 as uuidv4 } from 'uuid';
-import { OpeyStreamContext, OpeyMessage, UserMessage, sendOpeyMessage, getobpConsent } from '@/obp/opey-functions';
+import { OpeyMessage, UserMessage } from '@/models/MessageModel';
 import { getCurrentUser } from '@/obp';
 import { useChat } from '@/stores/chat';
 

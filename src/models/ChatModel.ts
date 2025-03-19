@@ -1,4 +1,4 @@
-import { OpeyMessage } from "@/models/MessageModel"
+import type { OpeyMessage } from "./MessageModel";
 
 export interface Chat {
     messages: OpeyMessage[];

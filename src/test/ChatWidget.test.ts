@@ -2,11 +2,16 @@ import { mount } from '@vue/test-utils';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import ChatWidget from '../components/ChatWidget.vue'
 import { OpeyStreamContext } from '@/obp/opey-functions';
+import { setActivePinia, createPinia } from 'pinia';
 
 describe('ChatWidget', () => {
     let mockContext: OpeyStreamContext;
 
     beforeEach(() => {
+
+        // Init Pinia Store
+        setActivePinia(createPinia())
+
         mockContext = {
             currentAssistantMessage: {
                 id: '123',

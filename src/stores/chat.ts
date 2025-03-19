@@ -25,8 +25,8 @@
  *
  */
 
-import { OpeyMessage, ChatStreamInput } from '@/models/MessageModel'
-import { Chat } from '@/models/ChatModel'
+import type { OpeyMessage, ChatStreamInput } from '@/models/MessageModel'
+import type { Chat } from '@/models/ChatModel'
 import { getobpConsent, processOpeyStream } from '@/obp/opey-functions'
 import { defineStore } from 'pinia'
 import { v4 as uuidv4 } from 'uuid'
