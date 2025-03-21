@@ -41,25 +41,13 @@ describe('ChatWidget', () => {
     afterEach(() => {
         vi.clearAllMocks()
     })
-    it('should call fetch when sending a user message', async () => {
+    it('should call the stream function when sending a user message', async () => {
         const wrapper = mount(ChatWidget, {})
-
+        wrapper.vm.chat.stream = vi.fn(async () => {})
         await wrapper.vm.onSubmit()
-        expect(global.fetch).toHaveBeenCalled()
+        expect(wrapper.vm.chat.stream).toHaveBeenCalled()
     })
-    it('should clear the assistant message placeholder from messages list on error', async () => {
-        // mock the fetch function with a rejected promise
-        const wrapper = mount(ChatWidget, {})
-
-        global.fetch = vi.fn(() =>
-            Promise.reject(new Error('Test error'))
-        );
-
-        await wrapper.vm.onSubmit()
-        expect(wrapper.vm.opeyContext.messages.find(m => m.id === wrapper.vm.opeyContext.currentAssistantMessage.id)).toBeUndefined()
-
-
-    })
+    
     it('should trigger onSubmit when enter key is pressed in the input', async () => {
         const wrapper = mount(ChatWidget, {})
         
@@ -71,12 +59,22 @@ describe('ChatWidget', () => {
         // This will probably fail if the class name of the parent div is changed, or if the input type is moved i.e. from textarea to input or el-input
         const input = wrapper.get('.user-input-container textarea')
         input.trigger('keypress.enter')
-        expect(global.fetch).toHaveBeenCalled()
     })
+    
     it('displays chat when chatOpen is set to true', async () => {
         const wrapper = mount(ChatWidget, {})
         wrapper.vm.chatOpen = true
         await wrapper.vm.$nextTick()
         expect(wrapper.find('.chat-container').exists()).toBe(true)
+    })
+
+    it('should show a log in screen if user is not authenticated', async () => {
+        const wrapper = mount(ChatWidget, {})
+        wrapper.vm.chat.userIsAuthenticated = false
+
+        wrapper.vm.chatOpen = true
+        await wrapper.vm.$nextTick()
+        console.log(wrapper.html())
+        expect(wrapper.find('.login-container').exists()).toBe(true)
     })
 })

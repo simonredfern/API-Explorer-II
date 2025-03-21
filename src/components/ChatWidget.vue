@@ -69,26 +69,11 @@ export default {
                 content: this.input,
                 isToolCallApproval: false,
             };
-            this.chat.addMessage(userMessage);
             
-            // Create a placeholder for the assistant's response
-            this.chat.currentAssistantMessage = {
-                id: uuidv4(),
-                role: 'assistant',
-                content: ''
-            };
-            this.chat.addMessage(this.chat.currentAssistantMessage);
-            
-            // Set status to loading
+            // Set status to loading // Clear input field after sending
             this.chat.status = 'loading';
-            
-            // Clear input field after sending
             this.input = '';
-            
-            
 
-
-                
             try {
                 await this.chat.stream({
                     message: userMessage,
@@ -129,16 +114,20 @@ export default {
                     <el-button type="danger" :icon="Close" @click="toggleChat" size="small" circle></el-button>
                 </el-header>
                 <el-main>
-                    <div class="messages-container">
+                    <div v-if="!chat.userIsAuthenticated" class="login-container">
+                        <p class="login-message" size="large">Opey is only available once logged on.</p>
+                        <a href="/api/connect" class="login-button router-link">Log on</a>
+                    </div>
+                    <div v-else class="messages-container" v-bind:class="{ disabled: !chat.userIsAuthenticated }">
                         <el-scrollbar>
                             <ChatMessage v-for="message in chat.messages" :key="message.id" :message="message" />
                         </el-scrollbar>
                     </div>
                 </el-main>
-                <el-footer>
+                <el-footer v-bind:class="{ disabled: !chat.userIsAuthenticated }">
                     <div class="user-input-container">
                         <div class="user-input">
-                            <textarea v-model="input" type="textarea" placeholder="Type your message..." :disabled="chat.status !== 'ready'" @keypress.enter="onSubmit" />
+                            <textarea v-model="input" type="textarea" placeholder="Type your message..." :disabled="(chat.status !== 'ready') || (!chat.userIsAuthenticated)" @keypress.enter="onSubmit" />
                         </div>
                         <el-button type="primary" @click="onSubmit" color="#253047" :icon="ElTop" circle></el-button>
                     </div>
@@ -179,12 +168,31 @@ export default {
     min-height: 470px;
     max-height: 90vh;
     max-width: 90vw;
-    background-color: tomato;
+    background-color: #151d30;
     resize: both;
     overflow: auto;
     transform: rotate(180deg);
     border-radius: 10px;
     box-shadow: 0 10px 20px 0 rgba(0, 0, 0, 0.2);
+}
+
+.login-container {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    margin:auto;
+    width: 100%;
+}
+
+.login-message {
+    color: #fff;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: large;
+    font-weight: bold;
+    margin-left: 100px;
+    margin-right: 100px;
 }
 
 .chat-header {
@@ -195,6 +203,12 @@ export default {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.disabled {
+    pointer-events: none;
+    cursor: not-allowed;
+    filter: blur(2px);
 }
 
 .chat-container .el-container {

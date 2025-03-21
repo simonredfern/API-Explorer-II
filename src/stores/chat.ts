@@ -84,6 +84,16 @@ export const useChat = defineStore('chat', {
                     return store.threadId
                 }
             }
+        },
+
+        getLastAssistantMessage(store): OpeyMessage | undefined {
+            return this.getMessageById(store.currentAssistantMessage.id)
+        },
+
+        getMessageById: (store) => {
+            return (id: string): OpeyMessage | undefined => {
+                return store.messages.find(m => m.id === id)
+            }
         }
     },
 
@@ -112,6 +122,13 @@ export const useChat = defineStore('chat', {
             this.messages = this.messages.filter(m => m.id !== messageId);
         },
 
+        async applyErrorToMessage(messageId: string, errorMessageString: string): Promise<void> {
+            const message = this.getMessageById(messageId);
+            if (message) {
+                message.error = errorMessageString;
+            }
+        },
+
         async handleAuthentication(): Promise<void> {
             // Handle authentication
             // get consent for Opey from user
@@ -130,6 +147,17 @@ export const useChat = defineStore('chat', {
         },
 
         async stream(input: ChatStreamInput): Promise<void> {
+            // Add user message to chat
+            this.addMessage(input.message)
+
+            // Create a placecholder for the assistant message
+            this.currentAssistantMessage = {
+                content: '',
+                role: 'assistant',
+                id: uuidv4(),
+            }
+            this.addMessage(this.currentAssistantMessage)
+
             // Handle stream
             try {
                 const response = await fetch('/api/opey/stream', {
@@ -163,8 +191,13 @@ export const useChat = defineStore('chat', {
                 await processOpeyStream(stream, context);
             } catch (error) {
                 console.error('Error sending Opey message:', error);
+
+                const errorMessage = "Hmmm, Looks like smething went wrong. Please try again later.";
+                // Apply error state to the assistant message
+                await this.applyErrorToMessage(this.currentAssistantMessage.id, errorMessage);
+
                 this.status = 'ready';
-                throw new Error(`Error sending Opey message: ${error}`);
+                
             }
         }
         

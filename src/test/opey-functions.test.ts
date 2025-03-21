@@ -65,6 +65,10 @@ describe('processOpeyStream', async () => {
             .toThrow('Stream closed by server')
     })
 
+    it('should be able to handle empty content', async () => {
+        
+    })
+
     it('should throw an error when the chunk is not valid json', async () => {
         const invalidJsonStream = new ReadableStream<Uint8Array>({
             start(controller) {

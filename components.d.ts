@@ -38,6 +38,7 @@ declare module 'vue' {
     ElMenuItem: typeof import('element-plus/es')['ElMenuItem']
     ElRow: typeof import('element-plus/es')['ElRow']
     ElScrollbar: typeof import('element-plus/es')['ElScrollbar']
+    ElText: typeof import('element-plus/es')['ElText']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     GlossarySearchNav: typeof import('./src/components/GlossarySearchNav.vue')['default']
     HeaderNav: typeof import('./src/components/HeaderNav.vue')['default']
