@@ -47,14 +47,14 @@ export default {
     methods: {
         async toggleChat() {
             this.chatOpen = !this.chatOpen
-            if (!this.chat.userIsAuthenticated) {
-                await this.chat.handleAuthentication()
-            }
         },
         async checkLoginStatus(): Promise<boolean> {
             const currentUser = await getCurrentUser()
             const currentResponseKeys = Object.keys(currentUser)
             if (currentResponseKeys.includes('username')) {
+                if (!this.chat.userIsAuthenticated) {
+                    await this.chat.handleAuthentication()
+                }
                 return true
             } else {
                 return false
