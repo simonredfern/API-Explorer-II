@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 
 import MarkdownIt from "markdown-it";
 
@@ -22,6 +22,7 @@ import 'prismjs/components/prism-http';
 import 'prismjs/themes/prism-okaidia.css';
 
 import { Warning } from '@element-plus/icons-vue'
+import type { ToolMessage } from "@/models/MessageModel";
 
 export default {
     props: {
@@ -37,7 +38,7 @@ export default {
         }
     },
     methods: {
-        highlightCode(content, language) {
+        highlightCode(content: string, language: string) {
             if (Prism.languages[language]) {
                 return Prism.highlight(content, Prism.languages[language], language);
             } else {
@@ -46,9 +47,9 @@ export default {
                 return content;
             }
         },
-        renderMarkdown(content) {
+        renderMarkdown(content: string) {
             const markdown = new MarkdownIt({
-                highlight: (str, lang) => {
+                highlight: (str, lang): string => {
                     if (lang && Prism.languages[lang]) {
                         try {
                             return `<pre class="language-${lang}"><code>${this.highlightCode(str, lang)}</code></pre>`;
@@ -73,11 +74,18 @@ export default {
 </script>
 
 <template>
-    <div :class="this.message.role">
+    <div v-if="message.role !== 'tool'" :class="message.role">
         <div class="message-container">
-            <div class="content" v-html="renderMarkdown(this.message.content)"></div>
+            <div class="content" v-html="renderMarkdown(message.content)"></div>
         </div>
-        <div v-if="this.message.error" class="error"><el-icon><Warning /></el-icon> {{ this.message.error }}</div>
+        <div v-if="message.error" class="error"><el-icon><Warning /></el-icon> {{ message.error }}</div>
+    </div>
+    <div v-else-if="message.role === 'tool'">
+        <div class="tool-message-container">
+            <el-collapse>
+                <el-collapse-item title=""></el-collapse-item>
+            </el-collapse>
+        </div>
     </div>
     
 </template>

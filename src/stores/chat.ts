@@ -25,9 +25,9 @@
  *
  */
 
-import type { OpeyMessage, ChatStreamInput } from '@/models/MessageModel'
+import type { OpeyMessage, ChatStreamInput, RawOpeyMessage, ToolMessage } from '@/models/MessageModel'
 import type { Chat } from '@/models/ChatModel'
-import { getobpConsent, processOpeyStream } from '@/obp/opey-functions'
+import { getobpConsent } from '@/obp/common-functions'
 import { defineStore } from 'pinia'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -147,6 +147,10 @@ export const useChat = defineStore('chat', {
         },
 
         async stream(input: ChatStreamInput): Promise<void> {
+
+            // By this point, if we have not set the thread ID we should do so
+            this.getThreadId()
+
             // Add user message to chat
             this.addMessage(input.message)
 
@@ -188,7 +192,7 @@ export const useChat = defineStore('chat', {
                     status: this.status
                 };
     
-                await processOpeyStream(stream, context);
+                await this._processOpeyStream(stream);
             } catch (error) {
                 console.error('Error sending Opey message:', error);
 
@@ -198,6 +202,78 @@ export const useChat = defineStore('chat', {
 
                 this.status = 'ready';
                 
+            }
+        },
+
+        async _processOpeyStream(stream: ReadableStream<Uint8Array>): Promise<void> {
+            const reader = stream.getReader();
+            let decoder = new TextDecoder();
+            
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        console.log('Stream complete');
+                        this.status = 'ready';
+                        break;
+                    }
+                    
+                    const decodedValue = decoder.decode(value);
+                    console.debug('Received:', decodedValue); //DEBUG
+                    
+                    // Parse the SSE data format
+                    const lines = decodedValue.split('\n');
+                    for (const line of lines) {
+                        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                            try {
+                                const jsonStr = line.substring(6); // Remove 'data: '
+                                const data = JSON.parse(jsonStr);
+                                const content: RawOpeyMessage = data.content;
+                                // This is where we process different types of messages from Opey by their 'type' field
+                                // Process pending tool calls
+                                if (data.type === 'message') {
+                                    console.log("Tool Calls: ", content)
+                                    for (const toolCall of content.tool_calls) {
+
+                                        const toolMessage: ToolMessage = {
+                                            pending: true,
+                                            id: uuidv4(),
+                                            role: 'tool',
+                                            content: '',
+                                            awaitingApproval: false,
+                                            toolCall: toolCall
+                                        }
+
+                                        this.addMessage(toolMessage)
+                                    }
+                                }
+                                if (data.type === 'token' && data.content) {
+                                    // Append content to the current assistant message
+                                    this.currentAssistantMessage.content += data.content;
+                                    // Force Vue to detect the change
+                                    this.messages = [...this.messages];
+                                }
+                            } catch (e) {
+                                throw new Error(`Error parsing JSON: ${e}`);
+                            }
+                        } else if (line === 'data: [DONE]') {
+                            // Add the current assistant message to the messages list
+                            // We need to check if the current assistant message is not already in the list, if it is simply update the existing message
+                            await this.addMessage(this.currentAssistantMessage);
+                            // Reset the current assistant message
+                            this.currentAssistantMessage = {
+                                id: '',
+                                role: 'assistant',
+                                content: '',
+                            };
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Stream error:', error);
+                this.status = 'ready';
+                throw error
             }
         }
         

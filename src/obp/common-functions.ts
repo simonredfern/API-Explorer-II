@@ -86,16 +86,23 @@ export async function getOpeyJWT() {
 }
 
 export async function getobpConsent() {
-  await axios.post('/api/opey/consent').catch((error) => {
-    if (error.response) {
-      throw new Error(`getobpConsent returned an error: ${error.toJSON()}`);
-    } else {
-      throw new Error(`getobpConsent returned an error: ${error.message}`);
+  // Get consent from the Opey API
+  try {
+    const consentResponse = await fetch('/api/opey/consent', {
+        method: 'POST',
+    })
+
+    if (!consentResponse.ok) {
+        throw new Error(`Failed to get Opey consent: ${consentResponse.statusText}`);
     }
-  }).then((response) => {
-    console.log(response)
-    return response
-  });
+
+    const consent = await consentResponse.json();
+    return consent
+
+  } catch (error) {
+      console.error('Error getting Opey consent:', error);
+      throw new Error(`${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 export async function answerobpConsentChallenge(answerBody: any) {
