@@ -22,7 +22,6 @@ import 'prismjs/components/prism-http';
 import 'prismjs/themes/prism-okaidia.css';
 
 import { Warning } from '@element-plus/icons-vue'
-import type { ToolMessage } from "@/models/MessageModel";
 
 export default {
     props: {
@@ -74,20 +73,22 @@ export default {
 </script>
 
 <template>
-    <div v-if="message.role !== 'tool'" :class="message.role">
+    <div :class="message.role">
+        <!-- Render Tool call boxes if there are any -->
+        <div v-if="message.toolCalls?.length !== 0" class="tool-calls-container">
+            <div v-for="toolCall in message.toolCalls" class="tool-call">
+                <div class="tool-message-container">
+                    <div class="status"  v-bind:class="toolCall.status"></div>
+                    <div class="name">{{ toolCall.toolCall.name }}</div>
+                </div>
+
+            </div>
+        </div>
+
         <div class="message-container">
             <div class="content" v-html="renderMarkdown(message.content)"></div>
         </div>
         <div v-if="message.error" class="error"><el-icon><Warning /></el-icon> {{ message.error }}</div>
-    </div>
-    <div v-else-if="message.role === 'tool'">
-        <div class="tool-message-container">
-            <el-collapse>
-                <el-collapse-item title="Tool Message">
-                    {{ message.args }}
-                </el-collapse-item>
-            </el-collapse>
-        </div>
     </div>
     
 </template>
@@ -104,15 +105,22 @@ export default {
     max-width: min(600px, calc(100% - 60px));
 }
 
-.tool-message-container {
-    background-color: antiquewhite;
-    color:black;
-    padding: 10px;
-    margin: 10px 0 10px 0;
+.tool-calls-container {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     width: fit-content;
-    max-width: min(600px, calc(100% - 60px));
+}
+
+.tool-message-container {
+    background-color: #253047;
+    color:#fff;
+    font-size: small;
+    padding: 10px;
+    border-radius: 10px;
+    margin: 0 10px 0 0;
+    display: flex;
+    flex-direction: row;
+    width: auto;
 }
 
 .user, .assistant {

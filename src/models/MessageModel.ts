@@ -1,5 +1,5 @@
 // Purpose: Define the message models for the chat stream
-import { ToolCall } from '@langchain/core/messages'
+import { ToolCall as LangChainToolCall } from '@langchain/core/messages'
 
 
 // This is a schema for the raw message that we will get back from the Opey API,
@@ -20,7 +20,7 @@ export interface RawOpeyMessage {
     /**
      * Tool calls in the message.
      */
-    tool_calls: ToolCall[];
+    tool_calls: LangChainToolCall[];
     
     /**
      * Whether this message is an approval request for a tool call.
@@ -57,14 +57,14 @@ export interface UserMessage extends OpeyMessage {
 }
 
 export interface AssistantMessage extends OpeyMessage {
-    toolCalls: ToolMessage[];
+    toolCalls: OpeyToolCall[];
     // Probably we will need some fields here for tool call/ tool call approval requests
 }
 
-export interface ToolMessage extends OpeyMessage {
-    pending: boolean;
-    awaitingApproval: boolean;
-    toolCall: ToolCall;
+export interface OpeyToolCall {
+    status: "pending" | "awaiting_approval" | "error" | "success"
+    toolCall: LangChainToolCall; // LangChainToolCall is a type from the LangChain library
+    output?: string | object // used for when we have a successful tool call and need to link the result to the tool call
 }
 
 export interface ChatStreamInput {

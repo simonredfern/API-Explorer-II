@@ -25,7 +25,7 @@
  *
  */
 
-import type { OpeyMessage, ChatStreamInput, RawOpeyMessage, ToolMessage } from '@/models/MessageModel'
+import type { OpeyMessage, ChatStreamInput, RawOpeyMessage, OpeyToolCall, AssistantMessage } from '@/models/MessageModel'
 import type { Chat } from '@/models/ChatModel'
 import { getobpConsent } from '@/obp/common-functions'
 import { defineStore } from 'pinia'
@@ -43,7 +43,7 @@ export const useChat = defineStore('chat', {
                 content: '',
                 role: 'assistant',
                 id: '',
-            } as OpeyMessage,
+            } as AssistantMessage,
             status: 'ready' as 'ready' | 'streaming' | 'error' | 'loading',
             userIsAuthenticated: false,
             threadId: '',
@@ -93,6 +93,19 @@ export const useChat = defineStore('chat', {
         getMessageById: (store) => {
             return (id: string): OpeyMessage | undefined => {
                 return store.messages.find(m => m.id === id)
+            }
+        },
+
+        getToolCallById: (store) => {
+            return (toolCallId: string): OpeyToolCall | undefined => {
+                const allMessages = store.messages.concat(store.currentAssistantMessage) // Include the current assistant message in the search
+                for (const message of allMessages) {
+                    if (message.role === 'assistant') {
+                        const assistantMessage = message as AssistantMessage
+                        return assistantMessage.toolCalls.find(tc => tc.toolCall.id === toolCallId)
+                    }
+                }
+
             }
         }
     },
@@ -224,26 +237,54 @@ export const useChat = defineStore('chat', {
                                 const jsonStr = line.substring(6); // Remove 'data: '
                                 const data = JSON.parse(jsonStr);
                                 const content: RawOpeyMessage = data.content;
+                                
+                                
+                                
                                 // This is where we process different types of messages from Opey by their 'type' field
                                 // Process pending tool calls
                                 if (data.type === 'message') {
+
+                                    // 'message' type contains the tool calls from the assistant
                                     if (content.tool_calls && content.tool_calls.length > 0) {
                                         console.log("Tool Calls: ", content)
                                         for (const toolCall of content.tool_calls) {
 
-                                            const toolMessage: ToolMessage = {
-                                                pending: true,
-                                                id: uuidv4(),
-                                                role: 'tool',
-                                                content: '',
-                                                awaitingApproval: false,
-                                                toolCall: toolCall
+                                            const toolMessage: OpeyToolCall = {
+                                                status: "pending",
+                                                toolCall: toolCall,
                                             }
 
                                             this.currentAssistantMessage.toolCalls.push(toolMessage)
                                         }
                                     }
                                 }
+
+                                // Now we handle the actual messages from the completed/ failed tool calls
+                                if (data.type === 'tool') {
+                                    const toolCallId = content.tool_call_id;
+                                    if (!toolCallId) {
+                                        throw new Error('Tool call ID not found in tool message');
+                                    }
+
+                                    console.log("Tool Message: ", toolCallId)
+                                    console.log("Current Assistant Message: ", this.currentAssistantMessage)
+                                    // get the tool call that the message refers to
+                                    const toolMessage = this.getToolCallById(toolCallId);
+                                    if (!toolMessage) {
+                                        throw new Error('Tool call for ID not found in messages');
+                                    }
+
+                                    // Update the tool message with the content
+                                    if (content.original?.data && content.original.data.status === 'error') {
+                                        toolMessage.status = "error";
+                                        toolMessage.output = content.content;
+                                    } else {
+                                        toolMessage.status = "success";
+                                        toolMessage.output = content.content;
+                                    }
+                                    
+                                }
+
                                 if (data.type === 'token' && data.content) {
                                     // Append content to the current assistant message
                                     this.currentAssistantMessage.content += data.content;
@@ -251,7 +292,7 @@ export const useChat = defineStore('chat', {
                                     this.messages = [...this.messages];
                                 }
                             } catch (e) {
-                                throw new Error(`Error parsing JSON: ${e}\n\n${line}`);
+                                throw new Error(`${e}`);
                             }
                         } else if (line === 'data: [DONE]') {
                             // Add the current assistant message to the messages list
