@@ -1,8 +1,8 @@
-import type { OpeyMessage } from "./MessageModel";
+import type { OpeyMessage, AssistantMessage } from "./MessageModel";
 
 export interface Chat {
     messages: OpeyMessage[];
-    currentAssistantMessage: OpeyMessage;
+    currentAssistantMessage: AssistantMessage;
     status: 'ready' | 'streaming' | 'error' | 'loading';
     userIsAuthenticated: boolean;
     threadId: string;

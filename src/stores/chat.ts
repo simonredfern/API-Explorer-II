@@ -159,6 +159,7 @@ export const useChat = defineStore('chat', {
                 content: '',
                 role: 'assistant',
                 id: uuidv4(),
+                toolCalls: []
             }
             this.addMessage(this.currentAssistantMessage)
 
@@ -184,13 +185,6 @@ export const useChat = defineStore('chat', {
                 if (response.status !== 200) {
                     throw new Error(`Error sending Opey message: ${response.statusText}`);
                 }
-                
-    
-                let context = {
-                    currentAssistantMessage: this.currentAssistantMessage,
-                    messages: this.messages,
-                    status: this.status
-                };
     
                 await this._processOpeyStream(stream);
             } catch (error) {
@@ -233,19 +227,21 @@ export const useChat = defineStore('chat', {
                                 // This is where we process different types of messages from Opey by their 'type' field
                                 // Process pending tool calls
                                 if (data.type === 'message') {
-                                    console.log("Tool Calls: ", content)
-                                    for (const toolCall of content.tool_calls) {
+                                    if (content.tool_calls && content.tool_calls.length > 0) {
+                                        console.log("Tool Calls: ", content)
+                                        for (const toolCall of content.tool_calls) {
 
-                                        const toolMessage: ToolMessage = {
-                                            pending: true,
-                                            id: uuidv4(),
-                                            role: 'tool',
-                                            content: '',
-                                            awaitingApproval: false,
-                                            toolCall: toolCall
+                                            const toolMessage: ToolMessage = {
+                                                pending: true,
+                                                id: uuidv4(),
+                                                role: 'tool',
+                                                content: '',
+                                                awaitingApproval: false,
+                                                toolCall: toolCall
+                                            }
+
+                                            this.currentAssistantMessage.toolCalls.push(toolMessage)
                                         }
-
-                                        this.addMessage(toolMessage)
                                     }
                                 }
                                 if (data.type === 'token' && data.content) {
@@ -255,7 +251,7 @@ export const useChat = defineStore('chat', {
                                     this.messages = [...this.messages];
                                 }
                             } catch (e) {
-                                throw new Error(`Error parsing JSON: ${e}`);
+                                throw new Error(`Error parsing JSON: ${e}\n\n${line}`);
                             }
                         } else if (line === 'data: [DONE]') {
                             // Add the current assistant message to the messages list
@@ -266,6 +262,7 @@ export const useChat = defineStore('chat', {
                                 id: '',
                                 role: 'assistant',
                                 content: '',
+                                toolCalls: [],
                             };
                         }
                     }

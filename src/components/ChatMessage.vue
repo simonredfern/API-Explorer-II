@@ -83,7 +83,9 @@ export default {
     <div v-else-if="message.role === 'tool'">
         <div class="tool-message-container">
             <el-collapse>
-                <el-collapse-item title=""></el-collapse-item>
+                <el-collapse-item title="Tool Message">
+                    {{ message.args }}
+                </el-collapse-item>
             </el-collapse>
         </div>
     </div>
@@ -92,6 +94,17 @@ export default {
 
 <style>
 .message-container {
+    background-color: antiquewhite;
+    color:black;
+    padding: 10px;
+    margin: 10px 0 10px 0;
+    display: flex;
+    flex-direction: column;
+    width: fit-content;
+    max-width: min(600px, calc(100% - 60px));
+}
+
+.tool-message-container {
     background-color: antiquewhite;
     color:black;
     padding: 10px;

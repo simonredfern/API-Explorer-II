@@ -57,6 +57,7 @@ export interface UserMessage extends OpeyMessage {
 }
 
 export interface AssistantMessage extends OpeyMessage {
+    toolCalls: ToolMessage[];
     // Probably we will need some fields here for tool call/ tool call approval requests
 }
 

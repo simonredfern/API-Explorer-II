@@ -214,6 +214,39 @@ describe('Chat Store _proccessOpeyStream', () => {
         expect(toolMessage.content).toBe('')
     })
 
+    it('should associate tool call with current assistant message', async () => {
+        // create a mock stream
+        const mockStream = new ReadableStream<Uint8Array>({
+            start(controller) {
+                controller.enqueue(new TextEncoder().encode(`data: {"type": "message", "content": {"type": "ai", "content": "", "tool_calls": [{"name": "retrieve_glossary", "args": {"question": "hre"}, "id": "call_XsmUpPIeS81l9MYpieBZtr4w", "type": "tool_call"}], "tool_approval_request": false, "tool_call_id": null, "run_id": "d0c2bcbe-62f7-464b-8564-bf9263939fe1", "original": {"type": "ai", "data": {"content": "", "additional_kwargs": {"tool_calls": [{"index": 0, "id": "call_XsmUpPIeS81l9MYpieBZtr4w", "function": {"arguments": "{\\"question\\":\\"hre\\"}", "name": "retrieve_glossary"}, "type": "function"}]}, "response_metadata": {"finish_reason": "tool_calls", "model_name": "gpt-4o-2024-08-06", "system_fingerprint": "fp_eb9dce56a8"}, "type": "ai", "name": null, "id": "run-5bb065b9-440d-4678-bbdb-cd6de94a78d3", "example": false, "tool_calls": [{"name": "retrieve_glossary", "args": {"question": "hre"}, "id": "call_XsmUpPIeS81l9MYpieBZtr4w", "type": "tool_call"}], "invalid_tool_calls": [], "usage_metadata": null}}}}\n`));
+                controller.close();
+            },
+        });
+
+        // mock the fetch function
+        global.fetch = vi.fn(() =>
+            Promise.resolve(new Response(mockStream, {
+                headers: { 'content-type': 'text/event-stream' },
+                status: 200,
+            }))
+        );
+
+        chatStore.currentAssistantMessage = {
+            id: '123',
+            role: 'assistant',
+            content: '',
+         }
+
+        await chatStore._processOpeyStream(mockStream)
+
+        expect(chatStore.messages).toHaveLength(1)
+
+        const toolMessage: ToolMessage = chatStore.messages[0] as ToolMessage
+
+        expect(chatStore.currentAssistantMessage.toolCalls).toBeDefined()
+        expect(chatStore.currentAssistantMessage.toolCalls).toContain(toolMessage.toolCall)
+    })
+
      it('should throw an error when the chunk is not valid json', async () => {
         const invalidJsonStream = new ReadableStream<Uint8Array>({
             start(controller) {

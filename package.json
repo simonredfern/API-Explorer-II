@@ -14,7 +14,10 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit -p tsconfig.vitest.json --composite false",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
-    "format": "prettier --write src/ server/"
+    "format": "prettier --write src/ server/",
+    "test:integration": "vitest run --config vitest.integration.config.js",
+    "test:integration:watch": "vitest --config vitest.integration.config.js",
+    "test:integration:ui": "vitest --ui --config vitest.integration.config.js"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.1.0",
@@ -79,6 +82,7 @@
     "jsdom": "^25.0.1",
     "node-mocks-http": "^1.16.2",
     "npm-run-all2": "^7.0.1",
+    "playwright": "^1.51.1",
     "prettier": "^3.0.1",
     "superagent": "^9.0.0",
     "supertest": "^7.0.0",
