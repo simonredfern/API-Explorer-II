@@ -45,23 +45,31 @@ The callback URL (if running locally) should be http://localhost:5173/api/callba
 Copy and paste the Consumer Key and Consumer Secret and add it to your .env file here.
 You can use .env.example as a basis of your .env file. 
 
+### Testing
 
+Unit tests are located in `server/test` and `src/test`.
 
-##### ~~Run Unit Tests with [Vitest](https://vitest.dev/)~~
+Integration tests are located in `src/test/integration`
+
+##### Run Unit Tests with [Vitest](https://vitest.dev/)
 
 <strike>
 
 ```sh
-yarn test:unit
+npm test
 ```
 </strike>
 
-or
+##### Run Integration Tests with vitest and [Playwright](https://playwright.dev/)
+
+
+
 <strike>
 
 ```sh
-npm test:unit
+npm run test:integration
 ```
+
 </strike>
 
 ## Compile and Minify for Production
