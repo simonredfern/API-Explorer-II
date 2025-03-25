@@ -66,7 +66,7 @@ describe('API Explorer Integration Tests', () => {
   });
   
   // Comment out the more complex UI tests until the basic setup is working
-  test.skip('Home page loads correctly', async () => {
+  test('Home page loads correctly', async () => {
     const servers = getServers();
     await page.goto(servers.viteUrl);
     
@@ -78,7 +78,7 @@ describe('API Explorer Integration Tests', () => {
     expect(title).toContain('API Explorer');
   });
   
-  test.skip('Chat widget can be opened', async () => {
+  test('Chat widget can be opened', async () => {
     const servers = getServers();
     await page.goto(servers.viteUrl);
     
