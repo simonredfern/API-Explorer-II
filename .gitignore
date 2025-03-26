@@ -48,3 +48,9 @@ public_key.pem
 
 .vite/deps
 __snapshots__/
+
+# Playwright auth
+playwright/.auth
+test-results/
+playwright-report/
+playwright-coverage/

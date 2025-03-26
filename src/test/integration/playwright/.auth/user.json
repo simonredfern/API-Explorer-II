@@ -1,0 +1,25 @@
+{
+  "cookies": [
+    {
+      "name": "connect.sid",
+      "value": "s%3Aow7WG7x84XDjOz1bhuLk2ZHI7SGdWOQ1.1NuswrPoiYfdfCH6a17hRt9X06%2B8e2Du5W%2BjJemFzXs",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1742994012.655226,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "JSESSIONID",
+      "value": "node018vw6hkksmti7yt5eyknrmkpd339443.node0",
+      "domain": "apisandbox.openbankproject.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

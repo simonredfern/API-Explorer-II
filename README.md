@@ -60,17 +60,18 @@ npm test
 ```
 </strike>
 
-##### Run Integration Tests with vitest and [Playwright](https://playwright.dev/)
+##### Run Integration Tests with [Playwright](https://playwright.dev/)
 
 
-
-<strike>
 
 ```sh
-npm run test:integration
+npx playwright test
+```
+or if you want a fancy testing UI to see what the browser is doing:
+```sh
+npx playwright test ui
 ```
 
-</strike>
 
 ## Compile and Minify for Production
 
