@@ -33,7 +33,7 @@ export default defineConfig({
     environment: 'happy-dom', // Simulates a browser environment
     exclude:[
       ...configDefaults.exclude, 
-      //'**/backend-tests/*'
+      '**/integration/*'
     ],
     pool: "vmThreads",  
     deps: {

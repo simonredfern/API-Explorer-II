@@ -25,7 +25,7 @@
  *
  */
 
-import type { OpeyMessage, ChatStreamInput, RawOpeyMessage, OpeyToolCall, AssistantMessage } from '@/models/MessageModel'
+import type { OpeyMessage, ChatStreamInput, RawOpeyMessage, OpeyToolCall, AssistantMessage, UserMessage } from '@/models/MessageModel'
 import type { Chat } from '@/models/ChatModel'
 import { getobpConsent } from '@/obp/common-functions'
 import { defineStore } from 'pinia'
@@ -102,7 +102,10 @@ export const useChat = defineStore('chat', {
                 for (const message of allMessages) {
                     if (message.role === 'assistant') {
                         const assistantMessage = message as AssistantMessage
-                        return assistantMessage.toolCalls.find(tc => tc.toolCall.id === toolCallId)
+                        const toolCallMatch = assistantMessage.toolCalls.find(tc => tc.toolCall.id === toolCallId)
+                        if (toolCallMatch) {
+                            return toolCallMatch
+                        }
                     }
                 }
 
@@ -118,7 +121,7 @@ export const useChat = defineStore('chat', {
          * 
             * @param message - The message to add to the chat
          */
-        async addMessage(message: OpeyMessage): Promise<void> {
+        async addMessage(message: AssistantMessage | UserMessage): Promise<void> {
             
             const existingMessage = this.messages.find(m => m.id === message.id);
             if (existingMessage) {
@@ -273,7 +276,7 @@ export const useChat = defineStore('chat', {
                                 if (data.type === 'tool') {
                                     const toolCallId = content.tool_call_id;
                                     if (!toolCallId) {
-                                        throw new Error('Tool call ID not found in tool message');
+                                        throw new Error('Tool call ID not found');
                                     }
 
                                     console.log("Tool Message: ", toolCallId)
@@ -281,7 +284,7 @@ export const useChat = defineStore('chat', {
                                     // get the tool call that the message refers to
                                     const toolMessage = this.getToolCallById(toolCallId);
                                     if (!toolMessage) {
-                                        throw new Error('Tool call for ID not found in messages');
+                                        throw new Error('Tool call for this ID not found in messages');
                                     }
 
                                     // Update the tool message with the content
