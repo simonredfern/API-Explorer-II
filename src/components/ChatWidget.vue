@@ -129,7 +129,7 @@ export default {
                         <div class="user-input">
                             <textarea v-model="input" type="textarea" placeholder="Type your message..." :disabled="(chat.status !== 'ready') || (!chat.userIsAuthenticated)" @keypress.enter="onSubmit" />
                         </div>
-                        <el-button type="primary" @click="onSubmit" color="#253047" :icon="ElTop" circle></el-button>
+                        <el-button type="primary" name="send" @click="onSubmit" color="#253047" :icon="ElTop" circle></el-button>
                     </div>
                 </el-footer>
             </el-container>

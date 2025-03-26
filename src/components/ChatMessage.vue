@@ -86,7 +86,7 @@ export default {
                             <el-icon color="#00ff18"><Check /></el-icon>
                         </div>
                     </div>
-                    <div class="name">{{ toolCall.toolCall.name }}</div>
+                    <div class="tool-name">{{ toolCall.toolCall.name }}</div>
                 </div>
 
             </div>
