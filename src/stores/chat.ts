@@ -234,10 +234,16 @@ export const useChat = defineStore('chat', {
                     for (const line of lines) {
                         if (line.startsWith('data: ') && line !== 'data: [DONE]') {
                             try {
-                                const jsonStr = line.substring(6); // Remove 'data: '
-                                const data = JSON.parse(jsonStr);
-                                const content: RawOpeyMessage = data.content;
                                 
+                                let data;
+                                const jsonStr = line.substring(6); // Remove 'data: '
+                                try {
+                                    data = JSON.parse(jsonStr);
+                                } catch (e) {
+                                    console.error(`Failed to parse JSON: ${jsonStr}`);
+                                    throw new Error(`Failed to parse JSON stream data: ${jsonStr}`);
+                                }
+                                const content: RawOpeyMessage = data.content;
                                 
                                 
                                 // This is where we process different types of messages from Opey by their 'type' field

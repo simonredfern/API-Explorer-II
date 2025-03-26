@@ -21,7 +21,7 @@ import 'prismjs/components/prism-markup';
 import 'prismjs/components/prism-http';
 import 'prismjs/themes/prism-okaidia.css';
 
-import { Warning } from '@element-plus/icons-vue'
+import { Warning, RefreshRight, Check } from '@element-plus/icons-vue'
 
 export default {
     props: {
@@ -78,7 +78,14 @@ export default {
         <div v-if="message.toolCalls?.length !== 0" class="tool-calls-container">
             <div v-for="toolCall in message.toolCalls" class="tool-call">
                 <div class="tool-message-container">
-                    <div class="status"  v-bind:class="toolCall.status"></div>
+                    <div class="status" v-bind:class="toolCall.status">
+                        <div v-if="toolCall.status === 'pending'">
+                            <el-icon class="is-loading" color="#20cbeb"><RefreshRight /></el-icon>
+                        </div>
+                        <div v-else-if="toolCall.status === 'success'">
+                            <el-icon color="#00ff18"><Check /></el-icon>
+                        </div>
+                    </div>
                     <div class="name">{{ toolCall.toolCall.name }}</div>
                 </div>
 
