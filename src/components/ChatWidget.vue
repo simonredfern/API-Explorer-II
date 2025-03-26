@@ -120,7 +120,7 @@ export default {
                     </div>
                     <div v-else class="messages-container" v-bind:class="{ disabled: !chat.userIsAuthenticated }">
                         <el-scrollbar>
-                            <ChatMessage v-for="message in chat.messages" :key="message.id" :message="message" />
+                            <ChatMessage v-for="message in chat.messages" :key="message.id" :message="message" :loading="message.loading" />
                         </el-scrollbar>
                     </div>
                 </el-main>

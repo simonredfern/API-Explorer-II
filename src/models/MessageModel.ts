@@ -50,6 +50,7 @@ export interface OpeyMessage {
     role: "assistant" | "user" | "tool";
     content: string;
     error?: string;
+    loading?: boolean;
 }
 
 export interface UserMessage extends OpeyMessage {

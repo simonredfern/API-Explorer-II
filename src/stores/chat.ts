@@ -44,7 +44,7 @@ export const useChat = defineStore('chat', {
                 role: 'assistant',
                 id: '',
             } as AssistantMessage,
-            status: 'ready' as 'ready' | 'streaming' | 'error' | 'loading',
+            status: 'ready' as 'ready' | 'streaming' | 'error',
             userIsAuthenticated: false,
             threadId: '',
         }
@@ -172,9 +172,12 @@ export const useChat = defineStore('chat', {
                 content: '',
                 role: 'assistant',
                 id: uuidv4(),
-                toolCalls: []
+                toolCalls: [],
+                loading: true,
             }
             this.addMessage(this.currentAssistantMessage)
+
+            // Set the status to 'loading' before we fetch the stream
 
             // Handle stream
             try {
@@ -213,6 +216,7 @@ export const useChat = defineStore('chat', {
         },
 
         async _processOpeyStream(stream: ReadableStream<Uint8Array>): Promise<void> {
+            this.status = 'streaming'
             const reader = stream.getReader();
             let decoder = new TextDecoder();
             
@@ -234,7 +238,7 @@ export const useChat = defineStore('chat', {
                     for (const line of lines) {
                         if (line.startsWith('data: ') && line !== 'data: [DONE]') {
                             try {
-                                
+
                                 let data;
                                 const jsonStr = line.substring(6); // Remove 'data: '
                                 try {
@@ -292,6 +296,7 @@ export const useChat = defineStore('chat', {
                                 }
 
                                 if (data.type === 'token' && data.content) {
+                                    this.currentAssistantMessage.loading = false;
                                     // Append content to the current assistant message
                                     this.currentAssistantMessage.content += data.content;
                                     // Force Vue to detect the change
@@ -310,6 +315,7 @@ export const useChat = defineStore('chat', {
                                 role: 'assistant',
                                 content: '',
                                 toolCalls: [],
+                                loading: true,
                             };
                         }
                     }
