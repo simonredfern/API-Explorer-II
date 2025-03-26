@@ -1,6 +1,7 @@
 
 import { spawn, ChildProcess } from 'child_process';
 import type { FullConfig } from '@playwright/test';
+import { setExpressServer } from './server-manager';
 
 // Ports for our test servers
 const EXPRESS_PORT = 8085;
@@ -9,8 +10,7 @@ export const servers = {
   expressUrl: `http://localhost:${EXPRESS_PORT}`,
 }
 
-let expressServer: ChildProcess;
-
+export let expressServer: ChildProcess;
 
 /**
  * Starts the Express server before running tests
@@ -25,6 +25,9 @@ async function globalSetup(config: FullConfig) {
     stdio: 'pipe',
     env: { ...process.env, PORT: EXPRESS_PORT.toString() }
   });
+
+  // Store in shared manager
+  setExpressServer(expressServer);
 
   // Log server output for debugging
   expressServer.stdout?.on('data', (data) => {

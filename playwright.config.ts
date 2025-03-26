@@ -10,6 +10,8 @@ export default defineConfig({
   testDir: 'src/test/integration',
 
   globalSetup: require.resolve('./src/test/integration/global.setup.ts'),
+
+  globalTeardown: require.resolve('./src/test/integration/global.teardown.ts'),
   // Reporter to use
   reporter: 'html',
 
@@ -24,7 +26,12 @@ export default defineConfig({
   projects: [
     {
         name: 'setup',
-        testMatch: /.*\.setup\.ts/
+        testMatch: /.*\.setup\.ts/,
+        teardown: 'teardown',
+    },
+    {
+        name: 'teardown',
+        testMatch: /.*\.teardown\.ts/
     },
     {
         name: 'chromium',

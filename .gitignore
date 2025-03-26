@@ -50,7 +50,9 @@ public_key.pem
 __snapshots__/
 
 # Playwright auth
-*.playwright/.auth
+src/test/integration/playwright/.auth
+src/test/integration/playwright/.auth/
+**/playwright/.auth/
 test-results/
 playwright-report/
 playwright-coverage/
