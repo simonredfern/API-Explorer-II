@@ -22,6 +22,7 @@ import 'prismjs/components/prism-http';
 import 'prismjs/themes/prism-okaidia.css';
 
 import { Warning, RefreshRight, Check } from '@element-plus/icons-vue'
+import ToolCall from './ToolCall.vue';
 
 export default {
     props: {
@@ -81,18 +82,7 @@ export default {
         <!-- Render Tool call boxes if there are any -->
         <div v-if="message.toolCalls?.length !== 0" class="tool-calls-container">
             <div v-for="toolCall in message.toolCalls" class="tool-call">
-                <div class="tool-message-container">
-                    <div class="status" v-bind:class="toolCall.status">
-                        <div v-if="toolCall.status === 'pending'">
-                            <el-icon class="is-loading" color="#20cbeb"><RefreshRight /></el-icon>
-                        </div>
-                        <div v-else-if="toolCall.status === 'success'">
-                            <el-icon color="#00ff18"><Check /></el-icon>
-                        </div>
-                    </div>
-                    <div class="tool-name">{{ toolCall.toolCall.name }}</div>
-                </div>
-
+                <ToolCall :name="toolCall.toolCall.name" :status="toolCall.status" :result="toolCall.output" :toolCallId="toolCall.toolCall.id" />
             </div>
         </div>
 
@@ -124,23 +114,16 @@ export default {
     width: fit-content;
     max-width: min(600px, calc(100% - 60px));
 }
-
 .tool-calls-container {
     display: flex;
     flex-direction: row;
-    width: fit-content;
+    width: auto;
+    max-width: min(600px, calc(100% - 60px));
 }
 
-.tool-message-container {
-    background-color: #253047;
-    color:#fff;
-    font-size: small;
-    padding: 10px;
-    border-radius: 10px;
-    margin: 0 10px 0 0;
-    display: flex;
-    flex-direction: row;
+.tool-call {
     width: auto;
+    max-width: 100%;
 }
 
 .user, .assistant {
@@ -179,6 +162,7 @@ export default {
 .content {
     margin-top: -10px;
     margin-bottom: -10px;
+    max-width: 100%;
 }
 
 /* for the loading indicator */
