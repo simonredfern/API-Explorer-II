@@ -72,19 +72,6 @@ export async function getCacheStorageInfo() {
   return message
 }
 
-export async function getOpeyJWT() {
-  const response = await axios.post('/api/opey/token').catch((error) => {
-    if (error.response) {
-      throw new Error(`getOpeyJWT returned an error: ${error.toJSON()}`);
-      
-    } else {
-      throw new Error(`getOpeyJWT returned an error: ${error.message}`);
-    }
-  });
-  const token = String(response?.data?.token)
-  return token
-}
-
 export async function getobpConsent() {
   // Get consent from the Opey API
   try {

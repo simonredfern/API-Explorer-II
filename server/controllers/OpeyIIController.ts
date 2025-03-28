@@ -297,7 +297,15 @@ export class OpeyController {
           const opeyConfig = await this.opeyClientService.getOpeyConfig()
           session['opeyConfig'] = opeyConfig
 
+          // Check if user already has a consent for opey
+          // If so, return the consent id
+          const consent = await this.obpConsentsService.getExistingConsent(session)
+          if (consent) {
+              console.log("Existing consent: ", consent)
+              return response.status(200).json({consent_id: consent.consent_id});
+          }
           // Either here or in this method, we should check if there is already a consent stored in the session
+          
           await this.obpConsentsService.createConsent(session)
 
           console.log("Consent at controller: ", session['opeyConfig'])

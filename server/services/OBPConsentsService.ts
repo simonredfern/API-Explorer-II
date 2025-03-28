@@ -36,7 +36,6 @@ export default class OBPConsentsService {
 
             // Get the OAuth1 headers for the logged in user to use in the API call
             const oauth1Headers = await this.obpClientService.getOAuthHeader(path, method, clientConfig)
-            console.log(`OAuth1 Headers: ${oauth1Headers}`)
             
             // Set config for the Consents API client from the new typescript SDK
             this.consentApiConfig = new Configuration({
@@ -106,7 +105,96 @@ export default class OBPConsentsService {
         }
         
     }
+
+    async getExistingConsent(session: Session): Promise<any> {
+        // Get Consents for the current user, check if any of them are for Opey
+        // If so, return the consent
+
+        // I.e. this is done by iterating and finding the consent with the correct consumer ID
+
+        // Get the Consents API client from the OBP SDK
+        // The OBP SDK is fucked here, so we'll need to use Fetch until the SWAGGER WILL ACTUALLY WORK
+        // const client = await this.createUserConsentsClient(session, '/obp/v5.1.0/my/consents/IMPLICIT', 'POST')
+        // if (!client) {
+        //     throw new Error('Could not create Consents API client')
+        // }
+
+
+        // Function to send an OBP request using the logged in user's OAuth1 headers
+        const sendOBPRequest = async (path: string, method: string, clientConfig: any) =>{
+            const oauth1Headers = await this.obpClientService.getOAuthHeader(path, method, clientConfig)
+            const config = {
+                headers: {
+                    'Authorization': oauth1Headers,
+                    'Content-Type': 'application/json',
+                }
+            }
+            return axios.get(`${clientConfig.baseUri}${path}`, config)
+        }
+
+        const clientConfig = session['clientConfig']
+        if (!clientConfig || !clientConfig.oauthConfig.accessToken) {
+            throw new Error('User is not logged in')
+        }
+
+
+        const consentInfosPath = '/obp/v5.1.0/my/consent-infos'
+
+        let opeyConsentId: string | null = null
+        try {
+            const response = await sendOBPRequest(consentInfosPath, 'GET', clientConfig)
+            const consents = response.data.consents
+
+            const opeyConsumerID = process.env.VITE_OPEY_CONSUMER_ID
+            if (!opeyConsumerID) {
+                throw new Error('Opey Consumer ID is missing, please set VITE_OPEY_CONSUMER_ID')
+            }
+
+            
+
+            for (const consent of consents) {
+                console.log('consent ', consent)
+                if (consent.consumer_id === opeyConsumerID && consent.staus === 'ACCEPTED') {
+                    opeyConsentId = consent.consent_id
+                    break
+                }
+            }
+
+            if (!opeyConsentId) {
+                console.log('getExistingConsent: No consent found for Opey for current user')
+                return null
+            }
+
+        } catch (error) {
+            console.error(error)
+            throw new Error(`Could not get existing consent info, ${error}`)
+        }
+
+        // Now try to get the consent using the consent ID
+        try {
+            const response = await sendOBPRequest(`/obp/v5.1.0/user/current/consents/${opeyConsentId}`, 'GET', clientConfig)
+            
+            session['opeyConfig'] = {
+                authConfig: {
+                    obpConsent: response.data
+                }
+            }
+            
+            return response.data
+        } catch (error) {
+            console.error(error)
+            throw new Error(`Could not get existing consent, ${error}`)
+        }
+
+
+    }
         
+
+
+
+
+
+
     // Probably not needed, but will keep for later
 
     // async createConsentRequest(): Promise<InlineResponse20151 | undefined> {
