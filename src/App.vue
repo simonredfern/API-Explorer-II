@@ -39,10 +39,17 @@ const isChatbotEnabled = import.meta.env.VITE_CHATBOT_ENABLED === 'true'
         <!--Header-->
         <HeaderNav />
       </el-header>
-      <RouterView />
+      <el-main>
+
+        <RouterView />
+      </el-main>
       <ChatWidget v-if="isChatbotEnabled"/>
     </el-container>
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+  .common-layout {
+    overflow: hidden;
+  }
+</style>
