@@ -116,8 +116,7 @@ export default {
 }
 .tool-calls-container {
     display: flex;
-    flex-direction: row;
-    width: auto;
+    flex-direction: column;
     max-width: min(600px, calc(100% - 60px));
 }
 

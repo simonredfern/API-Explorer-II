@@ -1,5 +1,8 @@
 <script lang="ts">
-import { ArrowDown, ArrowUp, RefreshRight, Check } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowUp, RefreshRight, Check, DocumentCopy } from '@element-plus/icons-vue'
+import VueJsonPretty from 'vue-json-pretty';
+import { ElMessage } from 'element-plus';
+import 'vue-json-pretty/lib/styles.css';
 
 export default {
     props: {
@@ -29,6 +32,27 @@ export default {
         toggleExpanded() {
             this.expanded = !this.expanded;
         },
+        copyToClipboard(text: string) {
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    ElMessage({
+                        message: 'Copied to clipboard!',
+                        type: 'success',
+                        duration: 2000
+                    });
+                })
+                .catch(err => {
+                    console.error('Failed to copy: ', err);
+                    ElMessage({
+                        message: 'Failed to copy to clipboard',
+                        type: 'error',
+                        duration: 2000
+                    });
+                });
+        }
+    },
+    components: {
+        VueJsonPretty,
     },
 }
 
@@ -36,21 +60,39 @@ export default {
 
 
 <template>
-    <div class="tool-message-container" @click="toggleExpanded">
-        <div class="status" v-bind:class="status">
-            <div v-if="status === 'pending'">
-                <el-icon class="is-loading" color="#20cbeb"><RefreshRight /></el-icon>
+    <div class="tool-message-container" v-bind:class="expanded? 'expanded':''">
+        
+        <div class="tool-message-header">
+            <div class="status" v-bind:class="status">
+                <div v-if="status === 'pending'">
+                    <el-icon class="is-loading" color="#20cbeb"><RefreshRight /></el-icon>
+                </div>
+                <div v-else-if="status === 'success'">
+                    <el-icon color="#00ff18"><Check /></el-icon>
+                </div>
             </div>
-            <div v-else-if="status === 'success'">
-                <el-icon color="#00ff18"><Check /></el-icon>
+            <div class="tool-name">{{ name }}</div>
+            <div class="expand-icon" @click="toggleExpanded">
+                <el-icon><ArrowDown v-if="!expanded" /><ArrowUp v-else /></el-icon>
             </div>
         </div>
-        <div class="tool-name">{{ name }}</div>
-        <div class="expand-icon">
-            <el-icon><ArrowDown v-if="!expanded" /><ArrowUp v-else /></el-icon>
-        </div>
+        
+        
+        <div v-if="expanded" class="tool-detail">
+            <div class="tool-id">ID: {{ toolCallId }}</div>
+            <h4>Result:</h4>
+            <div v-if="result" class="tool-result-container">
+                <div class="copy-to-clipboard">
+                    <el-button size="small" circle @click="copyToClipboard(JSON.stringify(result, null, 2))" :dark="true"><el-icon><DocumentCopy /></el-icon></el-button>
+                </div>
+                <el-scrollbar wrap-class="tool-result">
+                    <vue-json-pretty :data="result" :expand-depth="2" />
+                </el-scrollbar>
+                <!-- <div>{{ JSON.stringify(result, null, 2) }}</div> -->
+            </div>
+        </div>  
     </div>
-    <el-card v-if="expanded" class="tool-details">
+    <!-- <el-card v-if="expanded" class="tool-details">
         <template #header>
             <div class="tool-id">ID: {{ toolCallId }}</div>
         </template>
@@ -62,8 +104,7 @@ export default {
             
         </template>
         
-        <!-- Add other information here -->
-    </el-card>
+    </el-card> -->
 </template>
 
 <style scoped>
@@ -74,10 +115,55 @@ export default {
     font-size: small;
     padding: 10px;
     border-radius: 10px;
-    margin: 0 10px 0 0;
+    margin: 10px 0 0 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.copy-to-clipboard {
+    display: inline-block;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    z-index: 10;;
+}
+
+.tool-result {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+
+.tool-result-container {
+    background-color: #1e2a3a;
+    padding: 10px;
+    border-radius: 10px;
+    margin-top: 10px;
+    width: 90%;
+    position: relative;
+    height: 400px;
+    box-shadow: inset 0px 0px 17px -6px rgba(0,0,0,0.75);
+    overflow: auto;
+}
+
+
+
+.expand-icon {
+    margin-left: auto;
+    cursor: pointer;
+}
+
+.tool-message-header {
     display: flex;
     flex-direction: row;
-    width: auto;
+    align-items: center;
+    width: 100%;
 }
+
+.tool-detail {
+    margin-top: 10px;
+}
+
 
 </style>
