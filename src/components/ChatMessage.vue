@@ -82,7 +82,7 @@ export default {
         <!-- Render Tool call boxes if there are any -->
         <div v-if="message.toolCalls?.length !== 0" class="tool-calls-container">
             <div v-for="toolCall in message.toolCalls" class="tool-call">
-                <ToolCall :name="toolCall.toolCall.name" :status="toolCall.status" :result="toolCall.output" :toolCallId="toolCall.toolCall.id" />
+                <ToolCall :name="toolCall.toolCall.name" :status="toolCall.status" :args="toolCall.toolCall.args" :result="toolCall.output" :toolCallId="toolCall.toolCall.id" />
             </div>
         </div>
 

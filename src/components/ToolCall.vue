@@ -14,6 +14,10 @@ export default {
             type: String,
             required: true
         },
+        args: {
+            type: Object,
+            required: false
+        },
         result: {
             type: Object,
             required: false
@@ -79,7 +83,16 @@ export default {
         
         
         <div v-if="expanded" class="tool-detail">
-            <div class="tool-id">ID: {{ toolCallId }}</div>
+            <div class="tool-id"><h4>ID:</h4>    {{ toolCallId }}</div>
+            <h4>Arguments:</h4>
+            <div class="tool-args-container">
+                <div class="copy-to-clipboard">
+                    <el-button size="small" circle @click="copyToClipboard(JSON.stringify(args, null, 2))" :dark="true"><el-icon><DocumentCopy /></el-icon></el-button>
+                </div>
+                <el-scrollbar wrap-class="tool-args">
+                    <vue-json-pretty :data="args" :expand-depth="2" />
+                </el-scrollbar>
+            </div>
             <h4>Result:</h4>
             <div v-if="result" class="tool-result-container">
                 <div class="copy-to-clipboard">
@@ -127,6 +140,25 @@ export default {
     top: 10px;
     right: 20px;
     z-index: 10;;
+}
+
+.tool-id {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.tool-args-container {
+    background-color: #324863;
+    padding: 10px;
+    border-radius: 10px;
+    margin-top: 10px;
+    width: 90%;
+    position: relative;
+    height: auto;
+    max-height: 200px;
+    box-shadow: inset 0px 0px 17px -6px rgba(0,0,0,0.75);
+    overflow: auto;
 }
 
 .tool-result {
