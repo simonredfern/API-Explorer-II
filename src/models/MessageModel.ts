@@ -43,6 +43,11 @@ export interface RawOpeyMessage {
      * Original LangChain message in serialized form.
      */
     original?: Record<string, any>;
+
+    /**
+     * Whether the tool call was successful.
+     */
+    tool_status?: "success" | "error"
 }
 
 export interface OpeyMessage {

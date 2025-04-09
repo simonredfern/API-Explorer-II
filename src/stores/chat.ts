@@ -97,7 +97,7 @@ export const useChat = defineStore('chat', {
         },
 
         getToolCallById: (store) => {
-            return (toolCallId: string): OpeyToolCall | undefined => {
+            return (toolCallId: string): OpeyToolCall | undefined=> {
                 const allMessages = store.messages.concat(store.currentAssistantMessage) // Include the current assistant message in the search
                 for (const message of allMessages) {
                     if (message.role === 'assistant') {
@@ -266,8 +266,16 @@ export const useChat = defineStore('chat', {
                                 // Process pending tool calls
                                 if (data.type === 'message') {
 
-                                    // 'message' type contains the tool calls from the assistant
-                                    if (content.tool_calls && content.tool_calls.length > 0) {
+                                    if (content.tool_approval_request) {
+                                        if (!content.tool_call_id) {
+                                            throw new Error('Tool call ID not found for approval request');
+                                        }
+                                        const awaitingApproval = this.getToolCallById(content.tool_call_id)
+                                        awaitingApproval.status = "awaiting_approval"
+
+
+
+                                    } else if (content.tool_calls && content.tool_calls.length > 0) {
                                         console.log("Tool Calls: ", content)
                                         for (const toolCall of content.tool_calls) {
 
@@ -297,7 +305,7 @@ export const useChat = defineStore('chat', {
                                     }
 
                                     // Update the tool message with the content
-                                    if (content.original?.data && content.original.data.status === 'error') {
+                                    if (content.tool_status && content.tool_status === 'error') {
                                         toolMessage.status = "error";
                                         toolMessage.output = content.content;
                                     } else {

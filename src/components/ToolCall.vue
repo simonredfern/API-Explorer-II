@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ArrowDown, ArrowUp, RefreshRight, Check, DocumentCopy } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowUp, RefreshRight, Check, DocumentCopy, User } from '@element-plus/icons-vue'
 import VueJsonPretty from 'vue-json-pretty';
 import { ElMessage } from 'element-plus';
 import 'vue-json-pretty/lib/styles.css';
@@ -30,6 +30,11 @@ export default {
     data() {
         return {
             expanded: false,
+        }
+    },
+    mounted() {
+        if (this.status === 'awaiting_approval') {
+            this.expanded = true;
         }
     },
     methods: {
@@ -64,14 +69,20 @@ export default {
 
 
 <template>
-    <div class="tool-message-container" v-bind:class="expanded? 'expanded':''">
+    <div class="tool-message-container" v-bind:class="(expanded || status === 'awaiting_approval' )? 'expanded':''">
         
         <div class="tool-message-header">
             <div class="tool-name">Tool Call: {{ name }}</div>
             <div class="right-aligned">
+                <div v-if="status === 'awaiting_approval'" style="margin-right: 10px;">
+                    <p style="color: #ffb400; font-size: small;">Awaiting Approval</p>
+                </div>
                 <div class="status" v-bind:class="status">
                     <div v-if="status === 'pending'">
                         <el-icon class="is-loading" color="#20cbeb"><RefreshRight /></el-icon>
+                    </div>
+                    <div v-else-if="status === 'awaiting_approval'">
+                        <el-icon color="#ffb400"><User /></el-icon>
                     </div>
                     <div v-else-if="status === 'success'">
                         <el-icon color="#00ff18"><Check /></el-icon>
@@ -96,7 +107,14 @@ export default {
                     <vue-json-pretty :data="args" :expand-depth="2" />
                 </el-scrollbar>
             </div>
-            <h4>Result:</h4>
+            <div v-if="status === 'awaiting_approval'" class="tool-approval-container">
+                <h4>Approve this tool call?</h4>
+                <el-button type="primary">Approve</el-button>
+                <el-button type="danger">Deny</el-button>
+            </div>
+            <div v-else>
+                <h4>Result:</h4>
+            </div>
             <div v-if="result" class="tool-result-container">
                 <div class="copy-to-clipboard">
                     <el-button size="small" circle @click="copyToClipboard(JSON.stringify(result, null, 2))" :dark="true"><el-icon><DocumentCopy /></el-icon></el-button>
