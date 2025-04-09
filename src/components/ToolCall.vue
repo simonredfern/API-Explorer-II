@@ -67,18 +67,21 @@ export default {
     <div class="tool-message-container" v-bind:class="expanded? 'expanded':''">
         
         <div class="tool-message-header">
-            <div class="status" v-bind:class="status">
-                <div v-if="status === 'pending'">
-                    <el-icon class="is-loading" color="#20cbeb"><RefreshRight /></el-icon>
+            <div class="tool-name">Tool Call: {{ name }}</div>
+            <div class="right-aligned">
+                <div class="status" v-bind:class="status">
+                    <div v-if="status === 'pending'">
+                        <el-icon class="is-loading" color="#20cbeb"><RefreshRight /></el-icon>
+                    </div>
+                    <div v-else-if="status === 'success'">
+                        <el-icon color="#00ff18"><Check /></el-icon>
+                    </div>
                 </div>
-                <div v-else-if="status === 'success'">
-                    <el-icon color="#00ff18"><Check /></el-icon>
+                <div class="expand-icon" @click="toggleExpanded">
+                    <el-icon><ArrowDown v-if="!expanded" /><ArrowUp v-else /></el-icon>
                 </div>
             </div>
-            <div class="tool-name">{{ name }}</div>
-            <div class="expand-icon" @click="toggleExpanded">
-                <el-icon><ArrowDown v-if="!expanded" /><ArrowUp v-else /></el-icon>
-            </div>
+            
         </div>
         
         
@@ -179,16 +182,26 @@ export default {
     overflow: auto;
 }
 
-
+.status {
+    margin-left: auto;
+    margin-right: 20px;
+}
 
 .expand-icon {
     margin-left: auto;
     cursor: pointer;
 }
 
+.right-aligned {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
 .tool-message-header {
     display: flex;
     flex-direction: row;
+    justify-content: space-between;
     align-items: center;
     width: 100%;
 }

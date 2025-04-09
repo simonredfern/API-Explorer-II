@@ -46,6 +46,10 @@ export class OpeyController {
         @Res() response: Response,
     ): Promise<Response> {
 
+        if (!session) {
+          console.error("Session not found")
+          return response.status(401).json({ error: 'Session Time Out' })
+        }
         // Check if the consent is in the session, and can be added to the headers
         const opeyConfig = session['opeyConfig']
         if (!opeyConfig) {

@@ -158,6 +158,13 @@ export default {
     background-color: #3e4e70;
 }
 
+.assistant .error {
+    color: red;
+    font-weight: bold;
+    align-self: flex-start;
+    font-size: smaller;
+}
+
 .content {
     margin-top: -10px;
     margin-bottom: -10px;

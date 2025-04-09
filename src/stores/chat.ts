@@ -202,6 +202,10 @@ export const useChat = defineStore('chat', {
                 }
         
                 if (response.status !== 200) {
+                    switch (response.status) {
+                        case 401:
+                            throw new Error('Unauthorized. Please log in again.');
+                    }
                     throw new Error(`Error sending Opey message: ${response.statusText}`);
                 }
     
@@ -209,7 +213,12 @@ export const useChat = defineStore('chat', {
             } catch (error) {
                 console.error('Error sending Opey message:', error);
 
-                const errorMessage = "Hmmm, Looks like smething went wrong. Please try again later.";
+                let errorMessage = "Hmmm, Looks like smething went wrong. Please try again later.";
+
+                switch (error) {
+                    case 'Unauthorized. Please log in again.':
+                        errorMessage = 'You are not logged in. Please log in to continue.';
+                }
                 // Apply error state to the assistant message
                 await this.applyErrorToMessage(this.currentAssistantMessage.id, errorMessage);
 
