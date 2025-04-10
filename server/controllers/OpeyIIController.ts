@@ -303,10 +303,16 @@ export class OpeyController {
 
           // Check if user already has a consent for opey
           // If so, return the consent id
-          const consent = await this.obpConsentsService.getExistingConsent(session)
-          if (consent) {
-              console.log("Existing consent: ", consent)
+          const consentId = await this.obpConsentsService.getExistingOpeyConsentId(session)
+
+          if (consentId) {
+              console.log("Existing consent ID: ", consentId)
+              // If we have a consent id, we can get the consent from OBP
+              const consent = await this.obpConsentsService.getConsentByConsentId(session, consentId)
+
               return response.status(200).json({consent_id: consent.consent_id});
+          } else {
+              console.log("No existing consent ID found")
           }
           // Either here or in this method, we should check if there is already a consent stored in the session
           

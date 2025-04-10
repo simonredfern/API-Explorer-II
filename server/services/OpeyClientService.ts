@@ -207,6 +207,10 @@ export default class OpeyClientService {
         }
     }
 
+    // async respondToToolApproval(tool_approval_response): Promise<ReadableStream> {
+
+    // }
+
 
     /**
      * Checks if the authentication configuration in the OpeyConfig is valid.
