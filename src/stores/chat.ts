@@ -152,13 +152,33 @@ export const useChat = defineStore('chat', {
 
             if (consentResponse) {
                 const consentId = consentResponse.consent_id
-                if (consentId) {
-                    this.userIsAuthenticated = true
-                } else {
-                    throw new Error('Failed to grant consent. Please try again.')
-                }
+                
             } else {
                 throw new Error('Failed to grant consent. Please try again.')
+            }
+
+            const consentJwt = consentResponse.jwt
+
+            const opeyBaseUri = import.meta.env.VITE_CHATBOT_URL
+            // Get a session from opey
+            try {
+                const sessionResponse = await fetch(`${opeyBaseUri}/create-session`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Consent-JWT': consentJwt
+                    },
+                })
+
+                if (!sessionResponse.ok) {
+                    throw new Error(`Failed to create session: ${sessionResponse.statusText}`);
+                } else if (sessionResponse.status === 200) {
+                    this.userIsAuthenticated = true
+                }
+
+            } catch (error) {
+                console.error('Error creating session:', error);
             }
         },
 
@@ -181,11 +201,12 @@ export const useChat = defineStore('chat', {
             this.addMessage(this.currentAssistantMessage)
 
             // Set the status to 'loading' before we fetch the stream
-
+            const opeyBaseUri = import.meta.env.VITE_CHATBOT_URL
             // Handle stream
             try {
-                const response = await fetch('/api/opey/stream', {
+                const response = await fetch(`${opeyBaseUri}/stream`, {
                     method: 'POST',
+                    credentials: 'include',
                     headers: {
                         'Content-Type': 'application/json'
                     },

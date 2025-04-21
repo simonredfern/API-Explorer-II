@@ -165,6 +165,15 @@ export default class OBPConsentsService {
         }
     }
 
+    async checkConsentExpired(consent: any): Promise<boolean> { //DEBUG
+        // Check if the consent is expired
+        // Decode the JWT and check the exp field
+        
+        const exp = consent.jwt_payload.exp
+        const now = Math.floor(Date.now() / 1000)
+        return exp < now
+    }
+
     async getExistingOpeyConsentId(session: Session): Promise<any> {
         // Get Consents for the current user, check if any of them are for Opey
         // If so, return the consent
@@ -186,8 +195,10 @@ export default class OBPConsentsService {
             throw new Error('User is not logged in')
         }
 
-
-        const consentInfosPath = '/obp/v5.1.0/my/consent-infos'
+        // We need to change this back to consent infos once OBP shows 'EXPIRED' in the status
+        // Right now we have to check the JWT ourselves
+        const consentInfosPath = '/obp/v5.1.0/my/consents'
+        //const consentInfosPath = '/obp/v5.1.0/my/consent-infos'
 
         let opeyConsentId: string | null = null
         try {
@@ -199,11 +210,15 @@ export default class OBPConsentsService {
                 throw new Error('Opey Consumer ID is missing, please set VITE_OPEY_CONSUMER_ID')
             }
 
-            console.log('consents data: \n', response.data) //DEBUG
-
             for (const consent of consents) {
                 console.log(`consent_consumer_id: ${consent.consumer_id}, opey_consumer_id: ${opeyConsumerID}\n consent_status: ${consent.status}`) //DEBUG
                 if (consent.consumer_id === opeyConsumerID && consent.status === 'ACCEPTED') {
+                    // Check if the consent is expired
+                    const isExpired = await this.checkConsentExpired(consent)
+                    if (isExpired) {
+                        console.log('getExistingConsent: Consent is expired')
+                        continue
+                    }
                     opeyConsentId = consent.consent_id
                     break
                 }

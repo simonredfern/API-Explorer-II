@@ -310,7 +310,7 @@ export class OpeyController {
               // If we have a consent id, we can get the consent from OBP
               const consent = await this.obpConsentsService.getConsentByConsentId(session, consentId)
 
-              return response.status(200).json({consent_id: consent.consent_id});
+              return response.status(200).json({consent_id: consent.consent_id, jwt: consent.jwt});
           } else {
               console.log("No existing consent ID found")
           }
@@ -322,7 +322,7 @@ export class OpeyController {
 
           const authConfig = session['opeyConfig']['authConfig']
 
-          return response.status(200).json({consent_id: authConfig?.obpConsent.consent_id});
+          return response.status(200).json({consent_id: authConfig?.obpConsent.consent_id, jwt: authConfig?.obpConsent.jwt});
 
         } catch (error) {
           console.error("Error in consent endpoint: ", error);
