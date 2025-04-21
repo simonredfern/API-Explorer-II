@@ -72,17 +72,35 @@ export async function getCacheStorageInfo() {
   return message
 }
 
-export async function getOpeyJWT() {
-  const response = await axios.post('/api/opey/token').catch((error) => {
+export async function getobpConsent() {
+  // Get consent from the Opey API
+  try {
+    const consentResponse = await fetch('/api/opey/consent', {
+        method: 'POST',
+    })
+
+    if (!consentResponse.ok) {
+        throw new Error(`Failed to get Opey consent: ${consentResponse.statusText}`);
+    }
+
+    const consent = await consentResponse.json();
+    return consent
+
+  } catch (error) {
+      console.error('Error getting Opey consent:', error);
+      throw new Error(`${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+export async function answerobpConsentChallenge(answerBody: any) {
+  const response = await axios.post('/api/opey/consent/answer-challenge', answerBody).catch((error) => {
     if (error.response) {
-      throw new Error(`getOpeyJWT returned an error: ${error.toJSON()}`);
-      
+      throw new Error(`answerobpConsentChallenge returned an error: ${error.toJSON()}`);
     } else {
-      throw new Error(`getOpeyJWT returned an error: ${error.message}`);
+      throw new Error(`answerobpConsentChallenge returned an error: ${error.message}`);
     }
   });
-  const token = String(response?.data?.token)
-  return token
+  return response
 }
 
 export function clearCacheByName(cacheName: string) {
