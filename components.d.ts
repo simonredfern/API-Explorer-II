@@ -7,13 +7,16 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ChatMessage: typeof import('./src/components/ChatMessage.vue')['default']
     ChatWidget: typeof import('./src/components/ChatWidget.vue')['default']
+    ChatWidgetOld: typeof import('./src/components/ChatWidgetOld.vue')['default']
     Collections: typeof import('./src/components/Collections.vue')['default']
     Content: typeof import('./src/components/Content.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAside: typeof import('element-plus/es')['ElAside']
     ElBacktop: typeof import('element-plus/es')['ElBacktop']
     ElButton: typeof import('element-plus/es')['ElButton']
+    ElCard: typeof import('element-plus/es')['ElCard']
     ElCol: typeof import('element-plus/es')['ElCol']
     ElCollapse: typeof import('element-plus/es')['ElCollapse']
     ElCollapseItem: typeof import('element-plus/es')['ElCollapseItem']
@@ -35,6 +38,10 @@ declare module 'vue' {
     ElMenu: typeof import('element-plus/es')['ElMenu']
     ElMenuItem: typeof import('element-plus/es')['ElMenuItem']
     ElRow: typeof import('element-plus/es')['ElRow']
+    ElScrollbar: typeof import('element-plus/es')['ElScrollbar']
+    ElSkeleton: typeof import('element-plus/es')['ElSkeleton']
+    ElSkeletonItem: typeof import('element-plus/es')['ElSkeletonItem']
+    ElText: typeof import('element-plus/es')['ElText']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     GlossarySearchNav: typeof import('./src/components/GlossarySearchNav.vue')['default']
     HeaderNav: typeof import('./src/components/HeaderNav.vue')['default']
@@ -44,6 +51,8 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SearchNav: typeof import('./src/components/SearchNav.vue')['default']
+    StandaloneChat: typeof import('./src/components/StandaloneChat.vue')['default']
+    ToolCall: typeof import('./src/components/ToolCall.vue')['default']
   }
   export interface ComponentCustomProperties {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

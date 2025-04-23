@@ -65,11 +65,13 @@ import { getCacheStorageInfo } from './obp/common-functions'
       fallbackLocale: 'ES',
       messages
     })
-    app.provide('i18n', i18n)
+    
+    const pinia = createPinia()
 
+    app.provide('i18n', i18n)
     app.use(ElementPlus)
     app.use(i18n)
-    app.use(createPinia())
+    app.use(pinia)
     app.use(router)
 
     app.mount('#app')
