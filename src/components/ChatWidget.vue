@@ -4,7 +4,7 @@ placeholder for Opey II Chat widget
 <script lang="ts">
 
 import { ref, reactive } from 'vue'
-import { Close, Top as ElTop } from '@element-plus/icons-vue'
+import { Close, Top as ElTop, WarnTriangleFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import ChatMessage from './ChatMessage.vue';
 import { v4 as uuidv4 } from 'uuid';
@@ -17,6 +17,7 @@ export default {
         return { 
             Close,
             ElTop,
+            WarnTriangleFilled,
         }
     },
     data() {
@@ -24,6 +25,7 @@ export default {
             chatOpen: false,
             input: '',
             lastUserMessasgeFailed: false,
+            errorState: <{ type?: "authenticationError", message?: string, icon?: any }> {}, // add types of error as needed
             chat: useChat(),
         }
     },
@@ -34,15 +36,7 @@ export default {
         this.chat = useChat()
         const isLoggedIn = await this.checkLoginStatus()
         console.log('Is logged in: ', isLoggedIn)
-        if (isLoggedIn) {
-            try {
-                await this.chat.handleAuthentication()
-            } catch (error) {
-                console.error('Error in chat:', error);
-                ElMessage.error('Failed to authenticate.')
-            }
-            
-        }
+        
     },
     methods: {
         async toggleChat() {
@@ -53,7 +47,15 @@ export default {
             const currentResponseKeys = Object.keys(currentUser)
             if (currentResponseKeys.includes('username')) {
                 if (!this.chat.userIsAuthenticated) {
-                    await this.chat.handleAuthentication()
+                    try {
+                        await this.chat.handleAuthentication()
+                    } catch (error) {
+                        console.error('Error in chat:', error);
+                        this.errorState.type = "authenticationError"
+                        this.errorState.message = "Woops! Looks like we are having trouble connecting to Opey..."
+                        this.errorState.icon = WarnTriangleFilled
+                    }
+                    
                 }
                 return true
             } else {
@@ -114,7 +116,14 @@ export default {
                     <el-button type="danger" :icon="Close" @click="toggleChat" size="small" circle></el-button>
                 </el-header>
                 <el-main>
-                    <div v-if="!chat.userIsAuthenticated" class="login-container">
+                    
+                    <div v-if="errorState.type === 'authenticationError'" class="login-container">
+                        <el-icon :size="40" color="#FF4D4F">
+                            <component :is="errorState.icon" />
+                        </el-icon>
+                        <p class="login-message" size="large">{{ errorState.message }}</p>
+                    </div>
+                    <div v-else-if="!chat.userIsAuthenticated" class="login-container">
                         <p class="login-message" size="large">Opey is only available once logged on.</p>
                         <a href="/api/connect" class="login-button router-link">Log on</a>
                     </div>
