@@ -112,6 +112,12 @@ watchEffect(() => {
     }
   }
 })
+
+const getCurrentPath = () => {
+  const currentPath = route.path
+  return currentPath
+}
+
 </script>
 
 <template>
@@ -157,11 +163,11 @@ watchEffect(() => {
           <arrow-down />
         </el-icon>
       </span>-->
-      <a v-bind:href="'/api/connect?redirect='+ encodeURIComponent(route.path)" v-show="isShowLoginButton" class="login-button router-link">
+      <a v-bind:href="'/api/connect?redirect='+ encodeURIComponent(getCurrentPath())" v-show="isShowLoginButton" class="login-button router-link">
         {{ $t('header.login') }}
       </a>
       <span v-show="isShowLogOffButton" class="login-user">{{ loginUsername }}</span>
-      <a v-bind:href="'/api/user/logoff'" v-show="isShowLogOffButton" class="logoff-button router-link">
+      <a v-bind:href="'/api/user/logoff?redirect=' + encodeURIComponent(getCurrentPath())" v-show="isShowLogOffButton" class="logoff-button router-link">
         {{ $t('header.logoff') }}
       </a>
     </RouterView>
