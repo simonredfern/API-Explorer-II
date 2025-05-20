@@ -157,7 +157,7 @@ watchEffect(() => {
           <arrow-down />
         </el-icon>
       </span>-->
-      <a v-bind:href="'/api/connect'" v-show="isShowLoginButton" class="login-button router-link">
+      <a v-bind:href="'/api/connect?redirect='+ encodeURIComponent(route.path)" v-show="isShowLoginButton" class="login-button router-link">
         {{ $t('header.login') }}
       </a>
       <span v-show="isShowLogOffButton" class="login-user">{{ loginUsername }}</span>
