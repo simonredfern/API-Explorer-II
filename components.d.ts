@@ -7,6 +7,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AutoLogout: typeof import('./src/components/AutoLogout.vue')['default']
     ChatMessage: typeof import('./src/components/ChatMessage.vue')['default']
     ChatWidget: typeof import('./src/components/ChatWidget.vue')['default']
     ChatWidgetOld: typeof import('./src/components/ChatWidgetOld.vue')['default']

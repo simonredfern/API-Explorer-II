@@ -60,7 +60,8 @@ const headerLinksBackgroundColor = ref(headerLinksBackgroundColorSetting)
 const clearActiveTab = () => {
   const activeLinks = document.querySelectorAll('.router-link')
   for (const active of activeLinks) {
-    if (active.id) {
+    // Skip login and logoff buttons
+    if (active.id && active.id !== 'login' && active.id !== 'logoff') {
       active.style.backgroundColor = 'transparent'
       active.style.color = '#39455f'
     }
@@ -163,11 +164,11 @@ const getCurrentPath = () => {
           <arrow-down />
         </el-icon>
       </span>-->
-      <a v-bind:href="'/api/connect?redirect='+ encodeURIComponent(getCurrentPath())" v-show="isShowLoginButton" class="login-button router-link">
+      <a v-bind:href="'/api/connect?redirect='+ encodeURIComponent(getCurrentPath())" v-show="isShowLoginButton" class="login-button router-link" id="login">
         {{ $t('header.login') }}
       </a>
       <span v-show="isShowLogOffButton" class="login-user">{{ loginUsername }}</span>
-      <a v-bind:href="'/api/user/logoff?redirect=' + encodeURIComponent(getCurrentPath())" v-show="isShowLogOffButton" class="logoff-button router-link">
+      <a v-bind:href="'/api/user/logoff?redirect=' + encodeURIComponent(getCurrentPath())" v-show="isShowLogOffButton" class="logoff-button router-link" id="logoff">
         {{ $t('header.logoff') }}
       </a>
     </RouterView>
@@ -233,8 +234,8 @@ nav {
   cursor: pointer;
 }
 
-.login-button,
-.logoff-button {
+a.login-button,
+a.logoff-button {
   margin: 5px;
   color: #ffffff;
   background-color: #32b9ce;
