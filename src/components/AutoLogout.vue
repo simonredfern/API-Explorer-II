@@ -28,8 +28,6 @@ function setTimers(warningDelay = defaultWarningDelay, logoutDelay = defaultLogo
 
     warningTimeout = setTimeout(warningMessage, warningDelay); // 4 seconds for development, change later
     logoutTimeout = setTimeout(logout, logoutDelay); // 15 seconds for development, change later
-
-    console.log(`Auto logout set: warning in ${warningDelay/1000}s, logout in ${logoutDelay/1000}s`);
 }
 
 let warningNotification: NotificationHandle;
