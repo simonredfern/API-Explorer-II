@@ -17,20 +17,19 @@ let logoutTimeout: NodeJS.Timeout;
 let logoutTime: number;
 let countdownInterval: NodeJS.Timeout;
 
+// Add these variables at the top of your script
+let defaultWarningDelay = 1000 * 270; // 4.5 minutes by default
+let defaultLogoutDelay = 1000 * 300; // 5 minutes by default
+
+
 // Methods
-function setTimers() {
-
-    // Should use a function here to get suggested timeout from OBP
-    const timeoutInSeconds = async () => {}
-
-    const warningDelay = 1000 * 4; // 4 seconds for development, change later
-    const logoutDelay = 1000 * 15; // 15 seconds for development, change later
-
+function setTimers(warningDelay = defaultWarningDelay, logoutDelay = defaultLogoutDelay) {
     logoutTime = Date.now() + logoutDelay;
 
     warningTimeout = setTimeout(warningMessage, warningDelay); // 4 seconds for development, change later
     logoutTimeout = setTimeout(logout, logoutDelay); // 15 seconds for development, change later
 
+    console.log(`Auto logout set: warning in ${warningDelay/1000}s, logout in ${logoutDelay/1000}s`);
 }
 
 let warningNotification: NotificationHandle;
@@ -113,6 +112,24 @@ onMounted(() => {
     })
 
     setTimers();
+
+    // Update with API suggested values when available
+    getOBPSuggestedTimeout().then(timeoutInSeconds => {
+        // Convert to milliseconds
+        const logoutDelay = timeoutInSeconds * 1000;
+        // Set warning to appear 30 seconds before logout
+        const warningDelay = Math.max(logoutDelay - 30000, 0);
+        
+        // Update the defaults
+        defaultWarningDelay = warningDelay;
+        defaultLogoutDelay = logoutDelay;
+        
+        // Reset timers with new values
+        resetTimeout();
+    }).catch(error => {
+        console.error("Failed to get suggested timeout:", error);
+        // Continue with defaults
+    });
 });
 
 onBeforeUnmount(() => {
