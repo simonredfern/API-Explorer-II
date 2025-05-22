@@ -28,14 +28,26 @@
 <script setup lang="ts">
 import SearchNav from '../components/SearchNav.vue'
 import Menu from '../components/Menu.vue'
+import AutoLogout from '../components/AutoLogout.vue'
 import ChatWidget from '../components/ChatWidget.vue'
-import Collections from '../components/Collections.vue'
-import { inject } from 'vue'
+import { onMounted, ref } from 'vue'
+import {  getCurrentUser } from '../obp'
+
+const isLoggedIn = ref(false);
+
+onMounted(async () => {
+  const currentUser = await getCurrentUser()
+  const currentResponseKeys = Object.keys(currentUser)
+  isLoggedIn.value = currentResponseKeys.includes('username')
+})
+
 
 const isChatbotEnabled = import.meta.env.VITE_CHATBOT_ENABLED === 'true'
 </script>
 
 <template>
+
+  <AutoLogout v-if=isLoggedIn /> 
   <el-container class="root">
     <el-aside class="search-nav" width="20%">
       <!--Left-->
