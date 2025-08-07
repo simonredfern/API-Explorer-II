@@ -38,7 +38,6 @@ import { commitId } from '../app'
 export class StatusController {
   private obpExplorerHome = process.env.VITE_OBP_API_EXPLORER_HOST
   private connectors = [
-    'kafka_vSept2018',
     'akka_vDec2018',
     'rest_vMar2019',
     'stored_procedure_vDec2019',
