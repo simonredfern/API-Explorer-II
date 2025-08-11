@@ -337,8 +337,7 @@ export const useChat = defineStore('chat', {
                                     
                                 }
 
-                                // Assistant token streaming (legacy and new)
-                                if ((data.type === 'token' || data.type === 'assistant_token') && data.content) {
+                                if (data.type === 'assistant_complete' && data.content) {
                                     this.currentAssistantMessage.loading = false;
                                     // Append content to the current assistant message
                                     this.currentAssistantMessage.content += data.content;
