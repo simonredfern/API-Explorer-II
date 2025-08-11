@@ -284,7 +284,8 @@ export const useChat = defineStore('chat', {
                                 
                                 
                                 // This is where we process different types of messages from Opey by their 'type' field
-                                // Process pending tool calls
+                                // Support both legacy ('message','tool','token') and new streaming types
+                                // Pending tool calls (legacy)
                                 if (data.type === 'message') {
 
                                     if (content.tool_approval_request) {
@@ -310,7 +311,7 @@ export const useChat = defineStore('chat', {
                                     }
                                 }
 
-                                // Now we handle the actual messages from the completed/ failed tool calls
+                                // Now we handle the actual messages from the completed/ failed tool calls (legacy)
                                 if (data.type === 'tool') {
                                     const toolCallId = content.tool_call_id;
                                     if (!toolCallId) {
@@ -336,12 +337,50 @@ export const useChat = defineStore('chat', {
                                     
                                 }
 
-                                if (data.type === 'assistant_complete' && data.content) {
+                                // Assistant token streaming (legacy and new)
+                                if ((data.type === 'token' || data.type === 'assistant_token') && data.content) {
                                     this.currentAssistantMessage.loading = false;
                                     // Append content to the current assistant message
                                     this.currentAssistantMessage.content += data.content;
                                     // Force Vue to detect the change
                                     this.messages = [...this.messages];
+                                }
+
+                                // Assistant final content (new API emits assistant_complete)
+                                if (data.type === 'assistant_complete' && data.content) {
+                                    this.currentAssistantMessage.loading = false;
+                                    this.currentAssistantMessage.content += data.content;
+                                    this.messages = [...this.messages];
+                                }
+
+                                // New API: Tool lifecycle events mapping to UI model
+                                if (data.type === 'tool_start') {
+                                    const toolMessage: OpeyToolCall = {
+                                        status: 'pending',
+                                        toolCall: {
+                                            id: data.tool_call_id,
+                                            name: data.tool_name,
+                                            args: data.tool_input,
+                                        }
+                                    } as unknown as OpeyToolCall;
+                                    this.currentAssistantMessage.toolCalls.push(toolMessage)
+                                    this.messages = [...this.messages];
+                                }
+                                if (data.type === 'tool_end') {
+                                    const toolMessage = this.getToolCallById(data.tool_call_id)
+                                    if (toolMessage) {
+                                        toolMessage.status = data.status === 'error' ? 'error' : 'success'
+                                        toolMessage.output = data.tool_output
+                                        this.messages = [...this.messages];
+                                    }
+                                }
+                                if (data.type === 'approval_request') {
+                                    // Mark awaiting approval on matched tool call if present
+                                    const toolMessage = this.getToolCallById(data.tool_call_id)
+                                    if (toolMessage) {
+                                        toolMessage.status = 'awaiting_approval'
+                                        this.messages = [...this.messages];
+                                    }
                                 }
                             } catch (e) {
                                 throw new Error(`${e}`);
