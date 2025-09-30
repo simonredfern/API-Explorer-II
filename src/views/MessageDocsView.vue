@@ -31,11 +31,15 @@ import { useRoute } from 'vue-router'
 import SearchNav from '../components/MessageDocsSearchNav.vue'
 import { connectors } from '../obp/message-docs'
 import { obpGroupedMessageDocsKey } from '@/obp/keys';
+import MessageDocsSearchNav from '../components/MessageDocsSearchNav.vue';
+import CodeBlock from '../components/CodeBlock.vue';
 
 let connector = connectors[0]
 const route = useRoute()
 const groupedMessageDocs = ref(inject(obpGroupedMessageDocsKey)!)
 const messageDocs = ref({})
+
+const activeNames = ref(['1', '2', '3', '4', '5', '6'])
 
 onBeforeMount(() => {
   setDoc()
@@ -64,68 +68,126 @@ function showDependentEndpoints(value: any) {
 </script>
 
 <template>
-  <el-container>
+  <el-container class="root">
     <el-aside class="search-nav" width="20%">
       <SearchNav />
     </el-aside>
     <el-main>
       <el-container class="main">
-        <el-container>
-          <main>
-            <el-backtop :right="100" :bottom="100" target="main" />
-            <div v-for="(group, key) of messageDocs" :key="key">
-              <div v-for="(value, key) of group" :key="value">
-                <el-divider content-position="left">{{ value.process }}</el-divider>
-                <a v-bind:href="`#${value.process}`" :id="value.process">
-                  <h2>{{ value.description }}</h2>
-                </a>
-                <el-descriptions direction="vertical" :column="1" border>
-                  <el-descriptions-item label="Outbound Topic">
-                    {{ value.outbound_topic }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="Inbound Topic">
-                    {{ value.inbound_topic }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="Outbound Message">
-                    <pre>{{ JSON.stringify(value.example_outbound_message, null, 4) }}</pre>
-                  </el-descriptions-item>
-                  <el-descriptions-item label="Inbound Message">
-                    <pre>{{ JSON.stringify(value.example_inbound_message, null, 4) }}</pre>
-                  </el-descriptions-item>
-                  <el-descriptions-item v-if="showRequiredFieldInfo(value.requiredFieldInfo)" label="Required Fields">
-                    <pre>{{ JSON.stringify(value.requiredFieldInfo, null, 4) }}</pre>
-                  </el-descriptions-item>
-                  <el-descriptions-item v-if="showDependentEndpoints(value.dependent_endpoints)"
-                    label="Dependent Endpoints">
-                    <ul>
-                      <li v-for="(endpoint, key) of value.dependent_endpoints">
-                        {{ endpoint.version }}: {{ endpoint.name }}
-                      </li>
-                    </ul>
-                  </el-descriptions-item>
-                </el-descriptions>
-                <el-divider content-position="right">{{ value.process }}</el-divider>
-                <br />
-                <br />
-                <br />
-                <br />
+        <div v-for="(group, key) of messageDocs" :key="key">
+          <div v-for="(value, key) of group" :key="value">
+            <el-divider></el-divider>
+            <header>
+
+            </header>
+            <a v-bind:href="`#${value.process}`" :id="value.process">
+              <h2>{{ value.process }}</h2>
+            </a>
+            <p>{{ value.description }}</p>
+
+            <section class="topics">
+              <div>
+                <strong>Outbound Topic: </strong>
+                <el-tag type="info" round>{{ value.outbound_topic }}</el-tag>
               </div>
-            </div>
-          </main>
-        </el-container>
+              <div>
+                <strong>Inbound Topic: </strong>
+                <el-tag type="info" round>{{ value.inbound_topic }}</el-tag>
+              </div>
+            </section>
+
+            <section>
+              <h3>Example Outbound Message</h3>
+              <CodeBlock :code="value.example_outbound_message" />
+            </section>
+
+            <section>
+              <h3>Example Inbound Message</h3>
+              <CodeBlock :code="value.example_inbound_message" />
+            </section>
+
+            <section v-if="showRequiredFieldInfo(value.requiredFieldInfo)">
+              <h3>Required Fields</h3>
+              <CodeBlock :code="value.requiredFieldInfo" />
+            </section>
+
+            <section v-if="showDependentEndpoints(value.dependent_endpoints)">
+              <h3>Dependent Endpoints</h3>
+              <ul>
+                <li v-for="endpoint in value.dependent_endpoints" :key="endpoint.name">
+                  {{ endpoint.version }} — {{ endpoint.name }}
+                </li>
+              </ul>
+            </section>
+          </div>
+        </div>
+
       </el-container>
     </el-main>
   </el-container>
+
+  <!-- <el-container>
+    <el-aside class="search-nav" width="20%">
+      <MessageDocsSearchNav />
+    </el-aside>
+    <el-main>
+      <el-backtop :right="100" :bottom="100" target="main" />
+      <div v-for="(group, key) of messageDocs" :key="key">
+        <div v-for="(value, key) of group" :key="value">
+          <el-divider content-position="left">{{ value.process }}</el-divider>
+          <a v-bind:href="`#${value.process}`" :id="value.process">
+            <h2>{{ value.description }}</h2>
+          </a>
+          <el-collapse v-model="activeNames" @change="handleChange">
+            <el-collapse-item title="Outbound Topic" name="1">
+              {{ value.outbound_topic }}
+            </el-collapse-item>
+            <el-collapse-item title="Inbound Topic" name="2">
+              {{ value.inbound_topic }}
+            </el-collapse-item>
+            <el-collapse-item title="Outbound Message" name="3">
+              <pre>{{ JSON.stringify(value.example_outbound_message, null, 4) }}</pre>
+            </el-collapse-item>
+            <el-collapse-item title="Inbound Message" name="4">
+              <pre>{{ JSON.stringify(value.example_inbound_message, null, 4) }}</pre>
+            </el-collapse-item>
+            <el-collapse-item v-if="showRequiredFieldInfo(value.requiredFieldInfo)" title="Required Fields" name="5">
+              <pre>{{ JSON.stringify(value.requiredFieldInfo, null, 4) }}</pre>
+            </el-collapse-item>
+            <el-collapse-item v-if="showDependentEndpoints(value.dependent_endpoints)" title="Dependent Endpoints"
+              name="6">
+              <ul>
+                <li v-for="(endpoint, key) of value.dependent_endpoints">
+                  {{ endpoint.version }}: {{ endpoint.name }}
+                </li>
+              </ul>
+            </el-collapse-item>
+          </el-collapse>
+          <el-divider content-position="right">{{ value.process }}</el-divider>
+          <br />
+          <br />
+          <br />
+          <br />
+        </div>
+      </div>
+    </el-main>
+  </el-container> -->
 </template>
 
 <style scoped>
-.main {
-  max-height: 90vh;
+.root {
+  height: 100%;
 }
 
-template {
-  overflow: auto;
-  max-height: 900px;
+.main {
+  height: 100%;
+  overflow: scroll;
+}
+
+.search-nav {
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 main {
@@ -141,6 +203,7 @@ span {
 div {
   font-size: 14px;
 }
+
 pre {
   font-family: 'Roboto';
 }
@@ -154,7 +217,7 @@ a {
   color: #39455f;
 }
 
-.content :deep(a) {
+/* .content :deep(a) {
   text-decoration: none;
   color: #ffffff;
   font-family: 'Roboto';
@@ -162,7 +225,7 @@ a {
   border-radius: 3px;
   background-color: #52b165;
   padding: 1px;
-}
+} */
 
 .content :deep(a):hover {
   background-color: #39455f;
