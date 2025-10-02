@@ -36,6 +36,7 @@ import InternalServerErrorView from '../views/InternalServerErrorView.vue'
 import APIServerErrorView from '../views/APIServerErrorView.vue'
 import APIServerStatusView from '../views/APIServerStatusView.vue'
 import { isServerUp } from '../obp'
+import MessageDocsContent from '@/components/CodeBlock.vue'
 
 export default async function router(): Promise<any> {
   const isServerActive = await isServerUp()
@@ -60,7 +61,7 @@ export default async function router(): Promise<any> {
       {
         path: '/message-docs/:id',
         name: 'message-docs',
-        component: isServerActive ? MessageDocsView : InternalServerErrorView
+        component: isServerActive ? MessageDocsView : InternalServerErrorView,
       },
       {
         path: '/operationid',

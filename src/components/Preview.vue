@@ -296,9 +296,10 @@ const onError = (error) => {
         <JsonEditorVue
           v-model="exampleRequestBody"
           :stringified="true"
-          :mode="Mode.tree"
+          :mode="Mode.text"
           v-bind="{/* local props & attrs */}"
           :onChange="onJsonEditorChange"
+          :mainMenuBar="false"
         />
       </div>
       
