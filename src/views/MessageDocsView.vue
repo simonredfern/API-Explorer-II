@@ -37,7 +37,7 @@ import CodeBlock from '../components/CodeBlock.vue';
 let connector = connectors[0]
 const route = useRoute()
 const groupedMessageDocs = ref(inject(obpGroupedMessageDocsKey)!)
-const messageDocs = ref({})
+const messageDocs = ref(null as any)
 
 const activeNames = ref(['1', '2', '3', '4', '5', '6'])
 
@@ -73,7 +73,7 @@ function showDependentEndpoints(value: any) {
       <SearchNav />
     </el-aside>
     <el-main>
-      <el-container class="main">
+      <el-container class="main" direction="vertical">
         <div v-for="(group, key) of messageDocs" :key="key">
           <div v-for="(value, key) of group" :key="value">
             <el-divider></el-divider>
@@ -88,27 +88,29 @@ function showDependentEndpoints(value: any) {
             <section class="topics">
               <div>
                 <strong>Outbound Topic: </strong>
-                <el-tag type="info" round>{{ value.outbound_topic }}</el-tag>
+                <el-tag v-if="value.outbound_topic" type="info" round>{{ value.outbound_topic }}</el-tag>
+                <el-tag v-else type="error" round>None</el-tag>
               </div>
               <div>
                 <strong>Inbound Topic: </strong>
-                <el-tag type="info" round>{{ value.inbound_topic }}</el-tag>
+                <el-tag v-if="value.inbound_topic" type="info" round>{{ value.inbound_topic }}</el-tag>
+                <el-tag v-else type="error" round>None</el-tag>
               </div>
             </section>
 
             <section>
               <h3>Example Outbound Message</h3>
-              <CodeBlock :code="value.example_outbound_message" />
+              <CodeBlock :code="value.example_outbound_message" copyable />
             </section>
 
             <section>
               <h3>Example Inbound Message</h3>
-              <CodeBlock :code="value.example_inbound_message" />
+              <CodeBlock :code="value.example_inbound_message" copyable />
             </section>
 
             <section v-if="showRequiredFieldInfo(value.requiredFieldInfo)">
               <h3>Required Fields</h3>
-              <CodeBlock :code="value.requiredFieldInfo" />
+              <CodeBlock :code="value.requiredFieldInfo" copyable />
             </section>
 
             <section v-if="showDependentEndpoints(value.dependent_endpoints)">
@@ -181,7 +183,8 @@ function showDependentEndpoints(value: any) {
 
 .main {
   height: 100%;
-  overflow: scroll;
+  overflow-y: auto;
+  flex-direction: column;
 }
 
 .search-nav {
@@ -196,9 +199,7 @@ main {
   font-family: 'Roboto';
 }
 
-span {
-  font-size: 28px;
-}
+
 
 div {
   font-size: 14px;

@@ -2,7 +2,18 @@
   - Open Bank Project -  API Explorer II
   - Copyright (C) 2023-2024, TESOBE GmbH
   -
-  - This program is free software: you can redistribute it and/or modify
+    <div v-if="copyable" class="code-block-header">
+      <button 
+        @click="copyToClipboard" 
+        class="copy-button"
+        :class="{ 'copied': copied }"
+      >
+        <el-icon v-if="!copied" class="icon"><DocumentCopy /></el-icon>
+        <el-icon v-else class="icon"><Check /></el-icon>
+        <span v-if="!copied">Copy</span>
+        <span v-else>Copied!</span>
+      </button>
+    </div>rogram is free software: you can redistribute it and/or modify
   - it under the terms of the GNU Affero General Public License as published by
   - the Free Software Foundation, either version 3 of the License, or
   - (at your option) any later version.
@@ -27,6 +38,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUpdated, nextTick } from 'vue'
+import { DocumentCopy, Check } from '@element-plus/icons-vue'
 
 // Declare global hljs
 declare global {
@@ -40,13 +52,16 @@ declare global {
 interface Props {
   code: any
   language?: string
+  copyable?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  language: 'json'
+  language: 'json',
+  copyable: false
 })
 
 const codeBlockRef = ref<HTMLElement>()
+const copied = ref(false)
 
 const highlight = async () => {
   await nextTick()
@@ -55,6 +70,18 @@ const highlight = async () => {
     codeElements.forEach((block) => {
       window.hljs.highlightElement(block as HTMLElement)
     })
+  }
+}
+
+const copyToClipboard = async () => {
+  try {
+    await navigator.clipboard.writeText(formattedCode)
+    copied.value = true
+    setTimeout(() => {
+      copied.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Failed to copy: ', err)
   }
 }
 
@@ -73,7 +100,29 @@ const formattedCode = typeof props.code === 'string'
 
 <template>
   <div ref="codeBlockRef" class="code-block">
-    <pre><code :class="language">{{ formattedCode }}</code></pre>
+    <div v-if="copyable" class="code-block-header">
+      <button 
+        @click="copyToClipboard" 
+        class="copy-button"
+        :class="{ 'copied': copied }"
+      >
+        <span v-if="!copied">
+          <el-icon :size="10">
+            <DocumentCopy /> 
+          </el-icon>
+          Copy
+        </span>
+        <span v-else>
+          <el-icon :size="10">
+            <Check /> 
+          </el-icon>
+          Copied!
+        </span>
+      </button>
+    </div>
+    <div class="code-container">
+      <pre><code :class="language">{{ formattedCode }}</code></pre>
+    </div>
   </div>
 </template>
 
@@ -84,9 +133,52 @@ const formattedCode = typeof props.code === 'string'
   overflow: hidden;
   background: #1e1e1e;
   border: 1px solid #333;
+  position: relative;
 }
 
-.code-block pre {
+.code-block-header {
+  background: #2d2d2d;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #333;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.copy-button {
+  background: #444;
+  border: 1px solid #666;
+  color: #ddd;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.copy-button .icon {
+  font-size: 14px;
+}
+
+.copy-button:hover {
+  background: #555;
+  border-color: #777;
+}
+
+.copy-button.copied {
+  background: #4caf50;
+  border-color: #4caf50;
+  color: white;
+}
+
+.code-container {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.code-container pre {
   margin: 0;
   padding: 1.5rem;
   background: #1e1e1e;
@@ -99,7 +191,7 @@ const formattedCode = typeof props.code === 'string'
   word-wrap: break-word;
 }
 
-.code-block code {
+.code-container code {
   background: transparent;
   padding: 0;
   border-radius: 0;
@@ -108,21 +200,38 @@ const formattedCode = typeof props.code === 'string'
 }
 
 /* Custom scrollbar for code blocks */
-.code-block pre::-webkit-scrollbar {
-  height: 8px;
+.code-container::-webkit-scrollbar {
   width: 8px;
 }
 
-.code-block pre::-webkit-scrollbar-track {
+.code-container::-webkit-scrollbar-track {
   background: #2d2d2d;
 }
 
-.code-block pre::-webkit-scrollbar-thumb {
+.code-container::-webkit-scrollbar-thumb {
   background: #555;
   border-radius: 4px;
 }
 
-.code-block pre::-webkit-scrollbar-thumb:hover {
+.code-container::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+.code-container pre::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.code-container pre::-webkit-scrollbar-track {
+  background: #2d2d2d;
+}
+
+.code-container pre::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+.code-container pre::-webkit-scrollbar-thumb:hover {
   background: #777;
 }
 
