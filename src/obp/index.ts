@@ -50,23 +50,50 @@ export async function get(path: string): Promise<any> {
   }
 }
 
-export async function create(path: string, body: any): Promise<any> {
+export async function create(path: string, body?: any): Promise<any> {
   try {
-    return (await superagent.post(`/api/create?path=${path}`)
-      .set('Content-Type', 'application/json')
-      .send(JSON.parse(body)))
-      .body
+    let request = superagent.post(`/api/create?path=${path}`)
+    // Only send JSON body if provided and non-empty
+    if (body !== undefined && body !== null) {
+      if (typeof body === 'string') {
+        const trimmed = body.trim()
+        if (trimmed !== '') {
+          try {
+            request = request.set('Content-Type', 'application/json').send(JSON.parse(trimmed))
+          } catch (e) {
+            // If parsing fails, omit body to avoid client-side JSON errors
+          }
+        }
+      } else {
+        request = request.set('Content-Type', 'application/json').send(body)
+      }
+    }
+    return (await request).body
   } catch (error) {
     console.log(error)
     return { error }
   }
 }
 
-export async function update(path: string, body: any): Promise<any> {
+export async function update(path: string, body?: any): Promise<any> {
   try {
-    return (await superagent.put(`/api/update?path=${path}`)
-      .set('Content-Type', 'application/json')
-      .send(JSON.parse(body))).body
+    let request = superagent.put(`/api/update?path=${path}`)
+    // Only send JSON body if provided and non-empty
+    if (body !== undefined && body !== null) {
+      if (typeof body === 'string') {
+        const trimmed = body.trim()
+        if (trimmed !== '') {
+          try {
+            request = request.set('Content-Type', 'application/json').send(JSON.parse(trimmed))
+          } catch (e) {
+            // If parsing fails, omit body to avoid client-side JSON errors
+          }
+        }
+      } else {
+        request = request.set('Content-Type', 'application/json').send(body)
+      }
+    }
+    return (await request).body
   } catch (error) {
     console.log(error)
     return { error }
