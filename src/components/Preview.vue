@@ -125,11 +125,29 @@ const submitRequest = async () => {
   if (url.value) {
     switch (method.value) {
       case 'POST': {
-        highlightCode(await create(url.value, JSON.stringify(exampleRequestBody.value)))
+        highlightCode(
+          await create(
+            url.value,
+            (() => {
+              const rawBody = exampleRequestBody.value
+              const maybeBody = typeof rawBody === 'string' ? rawBody.trim() : rawBody
+              return maybeBody ? maybeBody : undefined
+            })()
+          )
+        )
         break
       }
       case 'PUT': {
-        highlightCode(await update(url.value, JSON.stringify(exampleRequestBody.value)))
+        highlightCode(
+          await update(
+            url.value,
+            (() => {
+              const rawBody = exampleRequestBody.value
+              const maybeBody = typeof rawBody === 'string' ? rawBody.trim() : rawBody
+              return maybeBody ? maybeBody : undefined
+            })()
+          )
+        )
         break
       }
       case 'DELETE': {
