@@ -260,13 +260,15 @@ const copyToClipboard = () => {
 const onJsonEditorChange = (updatedContent) => {
   oldExampleBodyContent.value = exampleRequestBody.value;
   try {
-    updatedContent = JSON.parse(JSON.stringify(updatedContent))
-    exampleRequestBody.value = updatedContent;
+    // In text mode, vanilla-jsoneditor returns { text: "..." }
+    // Extract the text property if it exists
+    const content = updatedContent?.text !== undefined ? updatedContent.text : updatedContent;
+    exampleRequestBody.value = content;
   } catch (e) {
     exampleRequestBody.value = oldExampleBodyContent.value;
     console.log(`JSON not valid: ${e}`);
   }
-  
+
 }
 
 const onError = (error) => {
@@ -285,11 +287,11 @@ const onError = (error) => {
     <el-form ref="requestFormRef" :model="requestForm" @submit.prevent>
       <el-form-item prop="url">
         <div class="flex-request-preview-panel">
-          <input 
-            type="text" 
-            v-model="url" 
-            :set="(requestForm.url = url)" 
-            id="search-input" 
+          <input
+            type="text"
+            v-model="url"
+            :set="(requestForm.url = url)"
+            id="search-input"
             @keyup.enter="submit(requestFormRef, submitRequest)"
           />
           <el-button
@@ -320,7 +322,7 @@ const onError = (error) => {
           :mainMenuBar="false"
         />
       </div>
-      
+
     </div>
     <div v-show="successResponseBody" class="success-response-container">
       <div class="success-response-header-container">
@@ -342,7 +344,7 @@ const onError = (error) => {
             v-for="(role, idx) in requiredRoles"
             :key="role.role"
             :name="role.role"
-            
+
           >
             <p>{{ role.role }}</p>
             <div class="flex-role-preview-panel" id="request-role-button-panel">
