@@ -61,10 +61,7 @@ const glossary = ref(inject(obpGlossaryKey)!.glossary_items)
 <style scoped>
 .main {
   max-height: 90vh;
-}
-template {
-  overflow: auto;
-  max-height: 900px;
+  overflow-y: auto;
 }
 main {
   margin: 25px;
