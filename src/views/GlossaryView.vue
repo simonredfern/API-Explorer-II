@@ -34,45 +34,89 @@ const glossary = ref(inject(obpGlossaryKey)!.glossary_items)
 </script>
 
 <template>
-  <el-container>
+  <el-container class="glossary-container">
     <el-aside class="search-nav" width="20%">
-      <SearchNav />
+      <el-scrollbar>
+        <SearchNav />
+      </el-scrollbar>
     </el-aside>
-    <el-main>
-      <el-container class="main">
-        <el-container>
-          <main>
-            <el-backtop :right="100" :bottom="100" target="main" />
-            <div v-for="(value, key) of glossary" :key="value">
-              <span>
-                <a v-bind:href="`#${value.title}`" :id="value.title">
-                  {{ value.title }}
-                </a>
-              </span>
-              <div v-html="value.description.html" class="content"></div>
-            </div>
-          </main>
-        </el-container>
-      </el-container>
+    <el-main class="glossary-content">
+      <el-scrollbar>
+        <el-backtop :right="100" :bottom="100" />
+        <div v-for="(value, key) of glossary" :key="value">
+          <span>
+            <a v-bind:href="`#${value.title}`" :id="value.title">
+              {{ value.title }}
+            </a>
+          </span>
+          <div v-html="value.description.html" class="content"></div>
+        </div>
+      </el-scrollbar>
     </el-main>
   </el-container>
 </template>
 
 <style scoped>
-.main {
-  max-height: 90vh;
-  overflow-y: auto;
+.glossary-container {
+  height: calc(100vh - 60px);
 }
-main {
-  margin: 25px;
+.search-nav :deep(.el-scrollbar__wrap) {
+  overflow-x: hidden;
+}
+.search-nav :deep(.el-scrollbar__view) {
+  padding: 10px;
+}
+.glossary-content {
   color: #39455f;
   font-family: 'Roboto';
+  padding: 0;
+}
+.glossary-content :deep(.el-scrollbar__wrap) {
+  overflow-x: hidden;
+}
+.glossary-content :deep(.el-scrollbar__view) {
+  padding: 25px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 span {
   font-size: 28px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 div {
   font-size: 14px;
+}
+.content {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+.content :deep(*) {
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.content :deep(img) {
+  max-width: 100%;
+  height: auto;
+}
+.content :deep(table) {
+  max-width: 100%;
+  table-layout: fixed;
+  word-wrap: break-word;
+}
+.content :deep(pre) {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.content :deep(code) {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 .content :deep(strong) {
   font-family: 'Roboto';

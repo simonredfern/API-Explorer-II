@@ -106,7 +106,6 @@ const searchEvent = (event) => {
 <style scoped>
 .tabs {
   display: flex;
-  max-height: 90vh;
 }
 
 .alphabet {
@@ -155,8 +154,6 @@ const searchEvent = (event) => {
 }
 
 .tab-items {
-  overflow: auto;
-  max-height: 100vh;
   margin-top: 10px;
   margin-right: -8px;
 }
