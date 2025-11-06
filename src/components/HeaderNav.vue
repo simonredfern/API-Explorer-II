@@ -137,25 +137,31 @@ const getCurrentPath = () => {
       <a v-if="showObpApiManagerButton && hasObpApiManagerHost" v-bind:href="obpApiManagerHost" class="router-link" id="header-nav-api-manager">
         {{ $t('header.api_manager') }}
       </a>
-      <span class="el-dropdown-link">
-        <el-dropdown class="menu-right router-link" id="header-nav-more" @command="handleMore">
-          <span class="el-dropdown-link">
-            {{ $t('header.more') }}
-            <el-icon class="el-icon--right">
-              <arrow-down />
-            </el-icon>
-          </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item v-for="value in obpApiVersions" :command="value" key="value">{{
-                value
-              }}</el-dropdown-item>
-              <el-dropdown-item v-for="value in obpMessageDocs" :command="value" key="value">
-                Message Docs for: {{ value }}</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-      </span>
+      <el-dropdown 
+        class="menu-right router-link" 
+        id="header-nav-more" 
+        @command="handleMore"
+        trigger="hover"
+        placement="bottom-end"
+        :teleported="true"
+        max-height="700px"
+      >
+        <span class="el-dropdown-link">
+          {{ $t('header.more') }}
+          <el-icon class="el-icon--right">
+            <arrow-down />
+          </el-icon>
+        </span>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item v-for="value in obpApiVersions" :command="value" :key="value">{{
+              value
+            }}</el-dropdown-item>
+            <el-dropdown-item v-for="value in obpMessageDocs" :command="value" :key="value">
+              Message Docs for: {{ value }}</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
       <!--<span class="el-dropdown-link">
         <RouterLink class="router-link" id="header-nav-spaces" to="/spaces">{{
           $t('header.spaces')
@@ -250,5 +256,18 @@ a.logoff-button {
 /*override element plus*/
 .el-dropdown-menu__item:hover {
   color: v-bind(headerLinksHoverColor) !important;
+}
+
+/* Fix dropdown menu overflow */
+.el-dropdown-menu {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Ensure dropdown trigger behaves correctly */
+#header-nav-more .el-dropdown-link {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
 }
 </style>

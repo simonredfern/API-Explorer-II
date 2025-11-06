@@ -127,10 +127,17 @@ const setDocs = () => {
   text-decoration: none;
   color: #39455f;
   display: inline-block;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .api-router-tab {
   border-left: 2px solid var(--el-menu-border-color);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .api-router-tab:hover,
@@ -150,11 +157,18 @@ const setDocs = () => {
   text-decoration: none;
   color: #39455f;
   display: inline-block;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .message-docs-router-tab {
   border-left: 2px solid var(--el-menu-border-color);
   line-height: 30px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .message-docs-router-tab:hover,
