@@ -39,7 +39,7 @@ describe('OBPConsentsService.createUserConsentsClient', () => {
         mockSession = {
             clientConfig: <APIClientConfig>{
                 baseUri: 'https://test.openbankproject.com',
-                version: 'v5.1.0',
+                version: 'v6.0.0',
                 oauthConfig: <OAuthConfig>{
                     consumerKey: 'jgaawf2fnj4yixqdsfaq4gipt4v1wvgsxgre',
                     consumerSecret: 'asdofasdpfjawpefapwehhpfawheofphawfefh',
@@ -91,7 +91,7 @@ describe('OBPConsentsService.createConsent', () => {
         mockSession = {
             clientConfig: <APIClientConfig>{
                 baseUri: 'https://test.openbankproject.com',
-                version: 'v5.1.0',
+                version: 'v6.0.0',
                 oauthConfig: <OAuthConfig>{
                     consumerKey: 'jgaawf2fnj4yixqdsfaq4gipt4v1wvgsxgre',
                     consumerSecret: 'asdofasdpfjawpefapwehhpfawheofphawfefh',
@@ -178,7 +178,7 @@ describe('OBPConsentsService.getExistingOpeyConsentId', () => {
         mockSession = {
             clientConfig: <APIClientConfig>{
                 baseUri: 'https://test.openbankproject.com',
-                version: 'v5.1.0',
+                version: 'v6.0.0',
                 oauthConfig: <OAuthConfig>{
                     consumerKey: 'jgaawf2fnj4yixqdsfaq4gipt4v1wvgsxgre',
                     consumerSecret: 'asdofasdpfjawpefapwehhpfawheofphawfefh',

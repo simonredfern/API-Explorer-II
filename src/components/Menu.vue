@@ -52,7 +52,7 @@ const clearCacheStorage = (event: any) => {
   <el-row>
     <el-col :span="10" class="menu-left">
       &nbsp;&nbsp;
-      <span id="selected-api-version" class="host">OBPv5.1.0</span>
+      <span id="selected-api-version" class="host"></span>
     </el-col>
     <el-col :span="14" class="menu-right">
       <span class="host" id="cache-storage-status" @click="clearCacheStorage">App Version: {{ APP_VERSION }}</span>
