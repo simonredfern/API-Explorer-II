@@ -134,11 +134,18 @@ const searchEvent = (event) => {
   text-decoration: none;
   color: #39455f;
   display: inline-block;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .glossary-router-tab {
   border-left: 2px solid var(--el-menu-border-color);
   line-height: 30px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .glossary-router-tab:hover,
@@ -156,5 +163,9 @@ const searchEvent = (event) => {
 .tab-items {
   margin-top: 10px;
   margin-right: -8px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
 }
 </style>
