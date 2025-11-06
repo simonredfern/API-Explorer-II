@@ -37,7 +37,7 @@ async function getOBPSuggestedTimeout() {
     let timeoutInSeconds: number;
     // Fetch the suggested timeout from the OBP API
 
-    const response = await fetch(`${obpApiHost}/obp/v5.1.0/ui/suggested-session-timeout`);
+    const response = await fetch(`${obpApiHost}/obp/${import.meta.env.VITE_OBP_API_VERSION}/ui/suggested-session-timeout`);
     const json = await response.json();
     if(json.timeout_in_seconds) {
       timeoutInSeconds = json.timeout_in_seconds;
