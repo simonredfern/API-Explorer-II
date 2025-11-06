@@ -68,12 +68,15 @@ function showDependentEndpoints(value: any) {
 </script>
 
 <template>
-  <el-container class="root">
+  <el-container class="message-docs-container">
     <el-aside class="search-nav" width="20%">
-      <SearchNav />
+      <el-scrollbar>
+        <SearchNav />
+      </el-scrollbar>
     </el-aside>
-    <el-main>
-      <el-container class="main" direction="vertical">
+    <el-main class="message-docs-content">
+      <el-scrollbar>
+        <el-backtop :right="100" :bottom="100" />
         <div v-for="(group, key) of messageDocs" :key="key">
           <div v-for="(value, key) of group" :key="value">
             <el-divider></el-divider>
@@ -123,8 +126,7 @@ function showDependentEndpoints(value: any) {
             </section>
           </div>
         </div>
-
-      </el-container>
+      </el-scrollbar>
     </el-main>
   </el-container>
 
@@ -177,45 +179,63 @@ function showDependentEndpoints(value: any) {
 </template>
 
 <style scoped>
-.root {
-  height: 100%;
+.message-docs-container {
+  height: calc(100vh - 60px);
 }
-
-.main {
-  height: 100%;
-  overflow-y: auto;
-  flex-direction: column;
+.search-nav :deep(.el-scrollbar__wrap) {
+  overflow-x: hidden;
 }
-
-.search-nav {
-  height: 100%;
-  max-height: 100%;
-  overflow: hidden;
+.search-nav :deep(.el-scrollbar__view) {
+  padding: 10px;
 }
-
-main {
-  margin: 25px;
+.message-docs-content {
   color: #39455f;
   font-family: 'Roboto';
+  padding: 0;
+}
+.message-docs-content :deep(.el-scrollbar__wrap) {
+  overflow-x: hidden;
+}
+.message-docs-content :deep(.el-scrollbar__view) {
+  padding: 25px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
+h2 {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
 
-
-div {
-  font-size: 14px;
+section {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 pre {
   font-family: 'Roboto';
-}
-
-.content :deep(strong) {
-  font-family: 'Roboto';
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 a {
   text-decoration: none;
   color: #39455f;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+div {
+  font-size: 14px;
+}
+
+.content :deep(strong) {
+  font-family: 'Roboto';
 }
 
 /* .content :deep(a) {
