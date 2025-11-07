@@ -63,13 +63,17 @@ export default class OBPClientService {
   private oauthConfig: OAuthConfig
   private clientConfig: APIClientConfig
   constructor() {
+    if (!process.env.VITE_OBP_CONSUMER_KEY) throw new Error('VITE_OBP_CONSUMER_KEY is not set')
+    if (!process.env.VITE_OBP_CONSUMER_SECRET) throw new Error('VITE_OBP_CONSUMER_SECRET is not set')
+    if (!process.env.VITE_OBP_REDIRECT_URL) throw new Error('VITE_OBP_REDIRECT_URL is not set')
+    if (!process.env.VITE_OBP_API_HOST) throw new Error('VITE_OBP_API_HOST is not set')
     this.oauthConfig = {
-      consumerKey: process.env.VITE_OBP_CONSUMER_KEY,
-      consumerSecret: process.env.VITE_OBP_CONSUMER_SECRET,
-      redirectUrl: process.env.VITE_OBP_REDIRECT_URL
+      consumerKey: process.env.VITE_OBP_CONSUMER_KEY!,
+      consumerSecret: process.env.VITE_OBP_CONSUMER_SECRET!,
+      redirectUrl: process.env.VITE_OBP_REDIRECT_URL!
     }
     this.clientConfig = {
-      baseUri: process.env.VITE_OBP_API_HOST,
+      baseUri: process.env.VITE_OBP_API_HOST!,
       version: (process.env.VITE_OBP_API_VERSION ?? DEFAULT_OBP_API_VERSION) as Version,
       oauthConfig: this.oauthConfig
     }
