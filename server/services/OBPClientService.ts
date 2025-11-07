@@ -26,6 +26,7 @@
  */
 
 import { Service } from 'typedi'
+import { DEFAULT_OBP_API_VERSION } from '../../shared-constants'
 import {
   Version,
   API,
@@ -69,7 +70,7 @@ export default class OBPClientService {
     }
     this.clientConfig = {
       baseUri: process.env.VITE_OBP_API_HOST,
-      version: process.env.VITE_OBP_API_VERSION as Version,
+      version: (process.env.VITE_OBP_API_VERSION ?? DEFAULT_OBP_API_VERSION) as Version,
       oauthConfig: this.oauthConfig
     }
     

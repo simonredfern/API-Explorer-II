@@ -5,6 +5,7 @@ import OauthInjectedService from './OauthInjectedService'
 import { AxiosResponse } from 'axios'
 import axios from 'axios'
 import { Session } from 'express-session'
+import { DEFAULT_OBP_API_VERSION } from '../../shared-constants'
 
 @Service()
 /**
@@ -79,7 +80,7 @@ export default class OBPConsentsService {
         // I.e. give permission to Opey to do anything on behalf of the logged in user
 
         // Get the Consents API client from the OBP SDK
-        const client = await this.createUserConsentsClient(session, `/obp/${process.env.VITE_OBP_API_VERSION}/my/consents/IMPLICIT`, 'POST')
+        const client = await this.createUserConsentsClient(session, `/obp/${process.env.VITE_OBP_API_VERSION ?? DEFAULT_OBP_API_VERSION}/my/consents/IMPLICIT`, 'POST')
         if (!client) {
             throw new Error('Could not create Consents API client')
         }
@@ -150,7 +151,7 @@ export default class OBPConsentsService {
         }
 
         try {
-            const response = await this._sendOBPRequest(`/obp/${process.env.VITE_OBP_API_VERSION}/user/current/consents/${consentId}`, 'GET', clientConfig)
+            const response = await this._sendOBPRequest(`/obp/${process.env.VITE_OBP_API_VERSION ?? DEFAULT_OBP_API_VERSION}/user/current/consents/${consentId}`, 'GET', clientConfig)
             
             session['opeyConfig'] = {
                 authConfig: {
@@ -182,7 +183,7 @@ export default class OBPConsentsService {
 
         // Get the Consents API client from the OBP SDK
         // The OBP SDK is messed up here, so we'll need to use Fetch until the SWAGGER WILL ACTUALLY WORK
-        // const client = await this.createUserConsentsClient(session, `/obp/${process.env.VITE_OBP_API_VERSION}/my/consents/IMPLICIT`, 'POST')
+        // const client = await this.createUserConsentsClient(session, `/obp/${process.env.VITE_OBP_API_VERSION ?? DEFAULT_OBP_API_VERSION}/my/consents/IMPLICIT`, 'POST')
         // if (!client) {
         //     throw new Error('Could not create Consents API client')
         // }
@@ -197,8 +198,8 @@ export default class OBPConsentsService {
 
         // We need to change this back to consent infos once OBP shows 'EXPIRED' in the status
         // Right now we have to check the JWT ourselves
-        const consentInfosPath = `/obp/${process.env.VITE_OBP_API_VERSION}/my/consents`
-        //const consentInfosPath = `/obp/${process.env.VITE_OBP_API_VERSION}/my/consent-infos`
+        const consentInfosPath = `/obp/${process.env.VITE_OBP_API_VERSION ?? DEFAULT_OBP_API_VERSION}/my/consents`
+        //const consentInfosPath = `/obp/${process.env.VITE_OBP_API_VERSION ?? DEFAULT_OBP_API_VERSION}/my/consent-infos`
 
         let opeyConsentId: string | null = null
         try {
