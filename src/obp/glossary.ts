@@ -33,5 +33,47 @@ export async function getOBPGlossary(): Promise<any> {
   const logMessage = `Loading glossary { version: ${OBP_API_VERSION} }`
   console.log(logMessage)
   updateLoadingInfoMessage(logMessage)
-  return await get(`obp/${OBP_API_VERSION}/api/glossary`)
+  const glossary = await get(`obp/${OBP_API_VERSION}/api/glossary`)
+
+  // Check if the API call failed
+  if (glossary && glossary.error) {
+    console.error('Failed to load glossary:', glossary.error)
+    return glossary
+  }
+
+  if (glossary && glossary.glossary_items) {
+    const itemCount = glossary.glossary_items.length
+    console.log(`✓ Loaded ${itemCount} glossary items`)
+
+    // Log specific items of interest
+    const helpItem = glossary.glossary_items.find(
+      (item: any) => item.title === 'API-Explorer-II-Help'
+    )
+    if (helpItem) {
+      console.log('✓ Found glossary item: API-Explorer-II-Help')
+    } else {
+      console.warn(
+        '⚠ Glossary item not found: API-Explorer-II-Help (Help page will show error message)'
+      )
+    }
+  } else {
+    console.warn('⚠ Glossary response does not contain glossary_items array')
+  }
+
+  return glossary
+}
+
+// Get a specific glossary item by title
+export function getGlossaryItemByTitle(glossary: any, title: string): any | null {
+  if (!glossary || !glossary.glossary_items) {
+    console.warn(`Cannot retrieve glossary item "${title}": glossary data is not available`)
+    return null
+  }
+  const item = glossary.glossary_items.find((item: any) => item.title === title)
+  if (item) {
+    console.log(`Retrieved glossary item: ${title}`)
+  } else {
+    console.warn(`Glossary item not found: ${title}`)
+  }
+  return item || null
 }

@@ -27,6 +27,7 @@
 
 import { createRouter, createWebHistory } from 'vue-router'
 import GlossaryView from '../views/GlossaryView.vue'
+import HelpView from '../views/HelpView.vue'
 import MessageDocsView from '../views/MessageDocsView.vue'
 import BodyView from '../views/BodyView.vue'
 import Content from '../components/Content.vue'
@@ -59,9 +60,14 @@ export default async function router(): Promise<any> {
         component: isServerActive ? GlossaryView : InternalServerErrorView
       },
       {
+        path: '/help',
+        name: 'help',
+        component: isServerActive ? HelpView : InternalServerErrorView
+      },
+      {
         path: '/message-docs/:id',
         name: 'message-docs',
-        component: isServerActive ? MessageDocsView : InternalServerErrorView,
+        component: isServerActive ? MessageDocsView : InternalServerErrorView
       },
       {
         path: '/operationid',

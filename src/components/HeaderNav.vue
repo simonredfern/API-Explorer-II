@@ -134,12 +134,15 @@ const getCurrentPath = () => {
       <RouterLink class="router-link" id="header-nav-glossary" to="/glossary">{{
         $t('header.glossary')
       }}</RouterLink>
+      <RouterLink class="router-link" id="header-nav-help" to="/help">{{
+        $t('header.help')
+      }}</RouterLink>
       <a v-if="showObpApiManagerButton && hasObpApiManagerHost" v-bind:href="obpApiManagerHost" class="router-link" id="header-nav-api-manager">
         {{ $t('header.api_manager') }}
       </a>
-      <el-dropdown 
-        class="menu-right router-link" 
-        id="header-nav-more" 
+      <el-dropdown
+        class="menu-right router-link"
+        id="header-nav-more"
         @command="handleMore"
         trigger="hover"
         placement="bottom-end"
