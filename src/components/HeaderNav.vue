@@ -58,7 +58,7 @@ const headerLinksHoverColor = ref(headerLinksHoverColorSetting)
 const headerLinksBackgroundColor = ref(headerLinksBackgroundColorSetting)
 
 const clearActiveTab = () => {
-  const activeLinks = document.querySelectorAll('.router-link')
+  const activeLinks = document.querySelectorAll<HTMLElement>('.router-link')
   for (const active of activeLinks) {
     // Skip login and logoff buttons
     if (active.id && active.id !== 'login' && active.id !== 'logoff') {
@@ -68,7 +68,7 @@ const clearActiveTab = () => {
   }
 }
 
-const setActive = (target) => {
+const setActive = (target: HTMLElement | null) => {
   if (target) {
     clearActiveTab()
     target.style.backgroundColor = headerLinksBackgroundColor.value
@@ -102,11 +102,11 @@ onMounted(async () => {
 })
 
 watchEffect(() => {
-  const path = route.name
-  if (path && route.params && !route.params.id) {
-    setActive(document.getElementById('header-nav-' + path))
+  const routeName = typeof route.name === 'string' ? route.name : null
+  if (routeName && route.params && !route.params.id) {
+    setActive(document.getElementById(`header-nav-${routeName}`))
   } else {
-    if (path == 'message-docs') {
+    if (routeName === 'message-docs') {
       clearActiveTab()
     } else {
       setActive(document.getElementById('header-nav-tags'))
