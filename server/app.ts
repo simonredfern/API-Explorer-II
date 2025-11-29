@@ -34,7 +34,8 @@ import express, { Application } from 'express'
 import { useExpressServer, useContainer } from 'routing-controllers'
 import { Container } from 'typedi'
 import path from 'path'
-import { execSync } from 'child_process';
+import { execSync } from 'child_process'
+import { OAuth2Service } from './services/OAuth2Service'
 
 const port = 8085
 const app: Application = express()
@@ -106,6 +107,46 @@ if (app.get('env') === 'production') {
 app.use(session(sessionObject))
 useContainer(Container)
 
+// Initialize OAuth2 Service
+console.log(`--- OAuth2/OIDC setup -------------------------------------------`)
+const useOAuth2 = process.env.VITE_USE_OAUTH2 === 'true'
+console.log(`OAuth2/OIDC enabled: ${useOAuth2}`)
+
+if (useOAuth2) {
+  const wellKnownUrl = process.env.VITE_OBP_OAUTH2_WELL_KNOWN_URL
+
+  if (!wellKnownUrl) {
+    console.warn('VITE_OBP_OAUTH2_WELL_KNOWN_URL not set. OAuth2 will not function.')
+  } else {
+    console.log(`OIDC Well-Known URL: ${wellKnownUrl}`)
+
+    // Get OAuth2Service from container
+    const oauth2Service = Container.get(OAuth2Service)
+
+    // Initialize OAuth2 service from OIDC discovery document
+    oauth2Service
+      .initializeFromWellKnown(wellKnownUrl)
+      .then(() => {
+        console.log('OAuth2Service: Initialization successful')
+        console.log('  Client ID:', process.env.VITE_OBP_OAUTH2_CLIENT_ID || 'NOT SET')
+        console.log('  Redirect URI:', process.env.VITE_OBP_OAUTH2_REDIRECT_URL || 'NOT SET')
+        console.log('OAuth2/OIDC ready for authentication')
+      })
+      .catch((error) => {
+        console.error('OAuth2Service: Initialization failed:', error.message)
+        console.error('OAuth2/OIDC authentication will not be available')
+        console.error('Please check:')
+        console.error('  1. OBP-OIDC server is running')
+        console.error('  2. VITE_OBP_OAUTH2_WELL_KNOWN_URL is correct')
+        console.error('  3. Network connectivity to OIDC provider')
+      })
+  }
+} else {
+  console.log('OAuth2/OIDC is disabled. Using OAuth 1.0a authentication.')
+  console.log('To enable OAuth2, set VITE_USE_OAUTH2=true in environment')
+}
+console.log(`-----------------------------------------------------------------`)
+
 const routePrefix = '/api'
 
 const server = useExpressServer(app, {
@@ -121,31 +162,31 @@ console.log(
 )
 
 // Get commit ID
-export let commitId = '';
+export let commitId = ''
 
 try {
-    // Try to get the commit ID
-    commitId = execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim();
-    console.log('Current Commit ID:', commitId);
+  // Try to get the commit ID
+  commitId = execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim()
+  console.log('Current Commit ID:', commitId)
 } catch (error) {
-    // Log the error but do not terminate the process
-    console.error('Warning: Failed to retrieve the commit ID. Proceeding without it.');
-    console.error('Error details:', error.message);
-    commitId = 'unknown'; // Assign a fallback value
+  // Log the error but do not terminate the process
+  console.error('Warning: Failed to retrieve the commit ID. Proceeding without it.')
+  console.error('Error details:', error.message)
+  commitId = 'unknown' // Assign a fallback value
 }
 // Continue execution with or without a valid commit ID
-console.log('Execution continues with commitId:', commitId);
+console.log('Execution continues with commitId:', commitId)
 
 // Error Handling to Shut Down the App
 server.on('error', (err) => {
-  redisClient.disconnect();
+  redisClient.disconnect()
   if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${port} is already in use.`);
-    process.exit(1);
-     // Shut down the app
+    console.error(`Port ${port} is already in use.`)
+    process.exit(1)
+    // Shut down the app
   } else {
-    console.error('An error occurred:', err);
+    console.error('An error occurred:', err)
   }
-});
+})
 
 export default app
