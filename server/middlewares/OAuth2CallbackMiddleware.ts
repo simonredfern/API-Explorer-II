@@ -27,7 +27,7 @@
 
 import { ExpressMiddlewareInterface } from 'routing-controllers'
 import { Request, Response } from 'express'
-import { Service } from 'typedi'
+import { Service, Container } from 'typedi'
 import { OAuth2Service } from '../services/OAuth2Service'
 import jwt from 'jsonwebtoken'
 
@@ -60,7 +60,12 @@ import jwt from 'jsonwebtoken'
  */
 @Service()
 export default class OAuth2CallbackMiddleware implements ExpressMiddlewareInterface {
-  constructor(private oauth2Service: OAuth2Service) {}
+  private oauth2Service: OAuth2Service
+
+  constructor() {
+    // Explicitly get OAuth2Service from the container to avoid injection issues
+    this.oauth2Service = Container.get(OAuth2Service)
+  }
 
   /**
    * Handle the OAuth2 callback
@@ -308,9 +313,7 @@ export default class OAuth2CallbackMiddleware implements ExpressMiddlewareInterf
 
       // Get redirect page and clean up
       const redirectPage =
-        (session['oauth2_redirect_page'] as string) ||
-        process.env.VITE_OBP_API_EXPLORER_HOST ||
-        '/'
+        (session['oauth2_redirect_page'] as string) || process.env.VITE_OBP_API_EXPLORER_HOST || '/'
       delete session['oauth2_redirect_page']
 
       console.log('OAuth2CallbackMiddleware: Redirecting to:', redirectPage)

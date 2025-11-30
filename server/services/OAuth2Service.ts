@@ -237,12 +237,11 @@ export class OAuth2Service {
    * authUrl.searchParams.set('code_challenge_method', 'S256')
    * response.redirect(authUrl.toString())
    */
-  createAuthorizationURL(
-    state: string,
-    scopes: string[] = ['openid', 'profile', 'email']
-  ): URL {
+  createAuthorizationURL(state: string, scopes: string[] = ['openid', 'profile', 'email']): URL {
     if (!this.isInitialized() || !this.oidcConfig) {
-      throw new Error('OAuth2Service: Service not initialized. Call initializeFromWellKnown() first')
+      throw new Error(
+        'OAuth2Service: Service not initialized. Call initializeFromWellKnown() first'
+      )
     }
 
     console.log('OAuth2Service: Creating authorization URL')
@@ -274,7 +273,9 @@ export class OAuth2Service {
    */
   async exchangeCodeForTokens(code: string, codeVerifier: string): Promise<TokenResponse> {
     if (!this.isInitialized() || !this.oidcConfig) {
-      throw new Error('OAuth2Service: Service not initialized. Call initializeFromWellKnown() first')
+      throw new Error(
+        'OAuth2Service: Service not initialized. Call initializeFromWellKnown() first'
+      )
     }
 
     console.log('OAuth2Service: Exchanging authorization code for tokens')
@@ -316,7 +317,9 @@ export class OAuth2Service {
    */
   async refreshAccessToken(refreshToken: string): Promise<TokenResponse> {
     if (!this.isInitialized() || !this.oidcConfig) {
-      throw new Error('OAuth2Service: Service not initialized. Call initializeFromWellKnown() first')
+      throw new Error(
+        'OAuth2Service: Service not initialized. Call initializeFromWellKnown() first'
+      )
     }
 
     console.log('OAuth2Service: Refreshing access token')
@@ -377,7 +380,9 @@ export class OAuth2Service {
    */
   async getUserInfo(accessToken: string): Promise<UserInfo> {
     if (!this.isInitialized() || !this.oidcConfig) {
-      throw new Error('OAuth2Service: Service not initialized. Call initializeFromWellKnown() first')
+      throw new Error(
+        'OAuth2Service: Service not initialized. Call initializeFromWellKnown() first'
+      )
     }
 
     console.log('OAuth2Service: Fetching user info')

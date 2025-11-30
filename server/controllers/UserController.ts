@@ -28,20 +28,16 @@
 import { Controller, Session, Req, Res, Get } from 'routing-controllers'
 import { Request, Response } from 'express'
 import OBPClientService from '../services/OBPClientService'
-import OauthInjectedService from '../services/OauthInjectedService'
 import { Service } from 'typedi'
-import superagent from 'superagent'
 import { OAuth2Service } from '../services/OAuth2Service'
 
 @Service()
 @Controller('/user')
 export class UserController {
   private obpExplorerHome = process.env.VITE_OBP_API_EXPLORER_HOST
-  private useOAuth2 = process.env.VITE_USE_OAUTH2 === 'true'
 
   constructor(
     private obpClientService: OBPClientService,
-    private oauthInjectedService: OauthInjectedService,
     private oauth2Service: OAuth2Service
   ) {}
   @Get('/logoff')
@@ -51,11 +47,6 @@ export class UserController {
     @Res() response: Response
   ): Response {
     console.log('UserController: Logging out user')
-
-    // Clear OAuth 1.0a session data
-    this.oauthInjectedService.requestTokenKey = undefined
-    this.oauthInjectedService.requestTokenSecret = undefined
-    session['clientConfig'] = undefined
 
     // Clear OAuth2 session data
     delete session['oauth2_access_token']
@@ -95,10 +86,9 @@ export class UserController {
     @Res() response: Response
   ): Response {
     console.log('UserController: Getting current user')
-    console.log('  OAuth2 enabled:', this.useOAuth2)
 
-    // Check OAuth2 session first (if OAuth2 is enabled)
-    if (this.useOAuth2 && session['oauth2_user']) {
+    // Check OAuth2 session
+    if (session['oauth2_user']) {
       console.log('UserController: Returning OAuth2 user info')
       const oauth2User = session['oauth2_user']
 
@@ -146,24 +136,8 @@ export class UserController {
       })
     }
 
-    // Fall back to OAuth 1.0a
-    console.log('UserController: Checking OAuth 1.0a session')
-    const oauthConfig = session['clientConfig']
-
-    if (!oauthConfig) {
-      console.log('UserController: No authentication session found')
-      return response.json({})
-    }
-
-    console.log('UserController: Returning OAuth 1.0a user info')
-    const version = this.obpClientService.getOBPVersion()
-
-    try {
-      const userData = await this.obpClientService.get(`/obp/${version}/users/current`, oauthConfig)
-      return response.json(userData)
-    } catch (error) {
-      console.error('UserController: Failed to get user from OBP API:', error)
-      return response.json({})
-    }
+    // No authentication session found
+    console.log('UserController: No authentication session found')
+    return response.json({})
   }
 }

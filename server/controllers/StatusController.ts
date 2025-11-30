@@ -28,7 +28,7 @@
 import { Controller, Session, Req, Res, Get } from 'routing-controllers'
 import { Request, Response } from 'express'
 import OBPClientService from '../services/OBPClientService'
-import OauthInjectedService from '../services/OauthInjectedService'
+
 import { Service } from 'typedi'
 import { OAuthConfig } from 'obp-typescript'
 import { commitId } from '../app'
@@ -43,10 +43,7 @@ export class StatusController {
     'stored_procedure_vDec2019',
     'rabbitmq_vOct2024'
   ]
-  constructor(
-    private obpClientService: OBPClientService,
-    private oauthInjectedService: OauthInjectedService
-  ) {}
+  constructor(private obpClientService: OBPClientService) {}
   @Get('/')
   async index(
     @Session() session: any,
@@ -55,7 +52,10 @@ export class StatusController {
   ): Response {
     const oauthConfig = session['clientConfig']
     const version = this.obpClientService.getOBPVersion()
-    const currentUser = await this.obpClientService.get(`/obp/${version}/users/current`, oauthConfig)
+    const currentUser = await this.obpClientService.get(
+      `/obp/${version}/users/current`,
+      oauthConfig
+    )
     const apiVersions = await this.checkApiVersions(oauthConfig, version)
     const messageDocs = await this.checkMessagDocs(oauthConfig, version)
     const resourceDocs = await this.checkResourceDocs(oauthConfig, version)
@@ -85,10 +85,7 @@ export class StatusController {
   async checkResourceDocs(oauthConfig: OAuthConfig, version: string): Promise<boolean> {
     try {
       const path = `/obp/${version}/resource-docs/${version}/obp`
-      const resourceDocs = await this.obpClientService.get(
-        path,
-        oauthConfig
-      )
+      const resourceDocs = await this.obpClientService.get(path, oauthConfig)
       return !this.isCodeError(resourceDocs, path)
     } catch (error) {
       return false
@@ -99,13 +96,7 @@ export class StatusController {
       const messageDocsCodeResult = await Promise.all(
         this.connectors.map(async (connector) => {
           const path = `/obp/${version}/message-docs/${connector}`
-          return !this.isCodeError(
-            await this.obpClientService.get(
-              path,
-              oauthConfig
-            ),
-            path
-          )
+          return !this.isCodeError(await this.obpClientService.get(path, oauthConfig), path)
         })
       )
       return messageDocsCodeResult.every((isCodeError: boolean) => isCodeError)

@@ -6,7 +6,7 @@
     "jest"
   ],
   "scripts": {
-    "dev": "vite & ts-node server/app.ts",
+    "dev": "vite & tsx --tsconfig tsconfig.server.json server/app.ts",
     "build": "run-p build-only",
     "build-server": "tsc --project tsconfig.server.json",
     "preview": "vite preview",
@@ -41,7 +41,6 @@
     "langchain": "^0.3.19",
     "markdown-it": "^14.1.0",
     "node-fetch": "^2.6.7",
-    "oauth": "^0.10.0",
     "obp-api-typescript": "^1.0.1",
     "obp-typescript": "^1.0.36",
     "pinia": "^2.0.37",
@@ -92,6 +91,7 @@
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.1",
+    "tsx": "^4.20.6",
     "typescript": "~5.2.2",
     "unplugin-auto-import": "^0.18.0",
     "unplugin-element-plus": "^0.8.0",
