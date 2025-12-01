@@ -1,53 +1,25 @@
-### OBP-API mode ###################################
-# If OBP-API split to two instances, eg: apis,portal
-# Then API_Explorer need to set two api hosts: api_hostname and this api_portal_hostname, for all Rest Apis will call api_hostname
-# but for all the portal home page link, we need to use this props. If do not set this, it will use api_hostname value instead.
+### OBP-API Configuration ###
 VITE_OBP_API_PORTAL_HOST=http://127.0.0.1:8080
-
-
 VITE_OBP_API_HOST=http://127.0.0.1:8080
 VITE_OBP_API_VERSION=v5.1.0
 VITE_OBP_API_MANAGER_HOST=https://apimanagersandbox.openbankproject.com
-VITE_OBP_API_EXPLORER_HOST=http://localhost:5173
-VITE_OBP_CONSUMER_KEY=0xzsimlrhdguiiuuj1ncykcxzjrogxibjff3dthl
-VITE_OBP_CONSUMER_SECRET=ikf5wykke1oonykb33kmx3deh5ukbdak44ieg1l5
-VITE_OBP_REDIRECT_URL=http://localhost:5173/api/callback
+VITE_OBP_API_EXPLORER_HOST=http://localhost:5174
 VITE_OPB_SERVER_SESSION_PASSWORD=asidudhiuh33875
-# The above code connects to localhost on port 6379.
-# To connect to a different host or port, use a connection string in the format
-# redis[s]://[[username][:password]@][host][:port][/db-number]
-# Be sure to secure your Redis instance
-VITE_OBP_REDIS_URL = redis://127.0.0.1:6379
 
-# Enable the chatbot interface "Opey"
+### Redis Configuration ###
+VITE_OBP_REDIS_URL=redis://127.0.0.1:6379
+
+### Opey Configuration ###
 VITE_CHATBOT_ENABLED=true
 VITE_CHATBOT_URL=http://localhost:5000
 
-# Product styling setting
-#VITE_OBP_LINKS_COLOR="#52b165"
-#VITE_OBP_HEADER_LINKS_COLOR="#39455f"
-#VITE_OBP_HEADER_LINKS_HOVER_COLOR="#39455f"
-#VITE_OBP_HEADER_LINKS_BACKGROUND_COLOR="#eef0f4"
-#VITE_OBP_LOGO_URL=https://static.openbankproject.com/images/obp_logo.png
-
-# https://nodejs.org/en/learn/getting-started/nodejs-the-difference-between-development-and-production
-# The value could be: development, staging, production
-# NODE_ENV=development
-
-#DEBUG=express-session
-
-### OAuth2/OIDC Configuration (New - Phase 1 Implementation) ###
-# Set to 'true' to use OAuth2 instead of OAuth 1.0a
-VITE_USE_OAUTH2=false
-
+### OAuth2/OIDC Configuration ###
 # OAuth2 Client Credentials (from OBP-OIDC)
-# These should match the values in OBP-OIDC/run-server.sh
-VITE_OBP_OAUTH2_CLIENT_ID=obp-explorer-ii-client
-VITE_OBP_OAUTH2_CLIENT_SECRET=CHANGE_THIS_TO_EXPLORER_SECRET_2024
-VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/oauth2/callback
+VITE_OBP_OAUTH2_CLIENT_ID=48ac28e9-9ee3-47fd-8448-69a62764b779
+VITE_OBP_OAUTH2_CLIENT_SECRET=fOTQF7jfg8C74u7ZhSjVQpoBYvD0KpWfM5UsEZBSFFM
+VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/api/oauth2/callback
 
 # OIDC Well-Known Configuration URL
-# For local development with OBP-OIDC:
 VITE_OBP_OAUTH2_WELL_KNOWN_URL=http://127.0.0.1:9000/obp-oidc/.well-known/openid-configuration
 
 # Optional: Token refresh threshold (seconds before expiry)
