@@ -300,11 +300,23 @@ export default class OAuth2CallbackMiddleware implements ExpressMiddlewareInterf
 
       session['oauth2_user'] = user
 
+      // Create clientConfig for OBP API calls with OAuth2 Bearer token
+      // This allows OBPClientService to work with OAuth2 authentication
+      session['clientConfig'] = {
+        baseUri: process.env.VITE_OBP_API_HOST || 'http://localhost:8080',
+        version: process.env.VITE_OBP_API_VERSION || 'v5.1.0',
+        oauth2: {
+          accessToken: tokens.accessToken,
+          tokenType: tokens.tokenType || 'Bearer'
+        }
+      }
+
       console.log('OAuth2CallbackMiddleware: User authenticated successfully')
       console.log('  User ID (sub):', user.sub)
       console.log('  Username:', user.username)
       console.log('  Email:', user.email)
       console.log('  Name:', user.name)
+      console.log('OAuth2CallbackMiddleware: Created clientConfig for OBP API calls')
 
       // Clear OAuth2 flow parameters (keep tokens and user data)
       delete session['oauth2_state']

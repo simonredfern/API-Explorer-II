@@ -44,7 +44,25 @@ export class OBPController {
   async get(@Session() session: any, @Req() request: Request, @Res() response: Response): Response {
     const path = request.query.path
     const oauthConfig = session['clientConfig']
-    return response.json(await this.obpClientService.get(path, oauthConfig))
+
+    // Check if user is authenticated
+    if (!oauthConfig || !oauthConfig.oauth2?.accessToken) {
+      return response.status(401).json({
+        code: 401,
+        message: 'OBP-20001: User not logged in. Authentication is required!'
+      })
+    }
+
+    try {
+      const result = await this.obpClientService.get(path, oauthConfig)
+      return response.json(result)
+    } catch (error: any) {
+      console.error('RequestController.get error:', error)
+      return response.status(error.status || 500).json({
+        code: error.status || 500,
+        message: error.message || 'Internal server error'
+      })
+    }
   }
 
   @Post('/create')
@@ -56,7 +74,25 @@ export class OBPController {
     const path = request.query.path
     const data = request.body
     const oauthConfig = session['clientConfig']
-    return response.json(await this.obpClientService.create(path, data, oauthConfig))
+
+    // Check if user is authenticated
+    if (!oauthConfig || !oauthConfig.oauth2?.accessToken) {
+      return response.status(401).json({
+        code: 401,
+        message: 'OBP-20001: User not logged in. Authentication is required!'
+      })
+    }
+
+    try {
+      const result = await this.obpClientService.create(path, data, oauthConfig)
+      return response.json(result)
+    } catch (error: any) {
+      console.error('RequestController.create error:', error)
+      return response.status(error.status || 500).json({
+        code: error.status || 500,
+        message: error.message || 'Internal server error'
+      })
+    }
   }
 
   @Put('/update')
@@ -68,7 +104,25 @@ export class OBPController {
     const path = request.query.path
     const data = request.body
     const oauthConfig = session['clientConfig']
-    return response.json(await this.obpClientService.update(path, data, oauthConfig))
+
+    // Check if user is authenticated
+    if (!oauthConfig || !oauthConfig.oauth2?.accessToken) {
+      return response.status(401).json({
+        code: 401,
+        message: 'OBP-20001: User not logged in. Authentication is required!'
+      })
+    }
+
+    try {
+      const result = await this.obpClientService.update(path, data, oauthConfig)
+      return response.json(result)
+    } catch (error: any) {
+      console.error('RequestController.update error:', error)
+      return response.status(error.status || 500).json({
+        code: error.status || 500,
+        message: error.message || 'Internal server error'
+      })
+    }
   }
 
   @Delete('/delete')
@@ -79,6 +133,24 @@ export class OBPController {
   ): Response {
     const path = request.query.path
     const oauthConfig = session['clientConfig']
-    return response.json(await this.obpClientService.discard(path, oauthConfig))
+
+    // Check if user is authenticated
+    if (!oauthConfig || !oauthConfig.oauth2?.accessToken) {
+      return response.status(401).json({
+        code: 401,
+        message: 'OBP-20001: User not logged in. Authentication is required!'
+      })
+    }
+
+    try {
+      const result = await this.obpClientService.discard(path, oauthConfig)
+      return response.json(result)
+    } catch (error: any) {
+      console.error('RequestController.delete error:', error)
+      return response.status(error.status || 500).json({
+        code: error.status || 500,
+        message: error.message || 'Internal server error'
+      })
+    }
   }
 }

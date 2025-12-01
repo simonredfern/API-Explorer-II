@@ -58,19 +58,33 @@ export class StatusController {
   ): Response {
     const oauthConfig = session['clientConfig']
     const version = this.obpClientService.getOBPVersion()
-    const currentUser = await this.obpClientService.get(
-      `/obp/${version}/users/current`,
-      oauthConfig
-    )
-    const apiVersions = await this.checkApiVersions(oauthConfig, version)
-    const messageDocs = await this.checkMessagDocs(oauthConfig, version)
-    const resourceDocs = await this.checkResourceDocs(oauthConfig, version)
+
+    // Check if user is authenticated
+    const isAuthenticated = oauthConfig && oauthConfig.oauth2?.accessToken
+
+    let currentUser = null
+    let apiVersions = false
+    let messageDocs = false
+    let resourceDocs = false
+
+    if (isAuthenticated) {
+      try {
+        currentUser = await this.obpClientService.get(`/obp/${version}/users/current`, oauthConfig)
+        apiVersions = await this.checkApiVersions(oauthConfig, version)
+        messageDocs = await this.checkMessagDocs(oauthConfig, version)
+        resourceDocs = await this.checkResourceDocs(oauthConfig, version)
+      } catch (error) {
+        console.error('StatusController: Error fetching authenticated data:', error)
+      }
+    }
+
     return response.json({
       status: apiVersions && messageDocs && resourceDocs,
       apiVersions,
       messageDocs,
       resourceDocs,
       currentUser,
+      isAuthenticated,
       commitId
     })
   }
