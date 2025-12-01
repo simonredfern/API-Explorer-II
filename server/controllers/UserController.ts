@@ -28,18 +28,22 @@
 import { Controller, Session, Req, Res, Get } from 'routing-controllers'
 import { Request, Response } from 'express'
 import OBPClientService from '../services/OBPClientService'
-import { Service } from 'typedi'
+import { Service, Container } from 'typedi'
 import { OAuth2Service } from '../services/OAuth2Service'
 
 @Service()
 @Controller('/user')
 export class UserController {
   private obpExplorerHome = process.env.VITE_OBP_API_EXPLORER_HOST
+  private obpClientService: OBPClientService
+  private oauth2Service: OAuth2Service
 
-  constructor(
-    private obpClientService: OBPClientService,
-    private oauth2Service: OAuth2Service
-  ) {}
+  constructor() {
+    // Explicitly get services from the container to avoid injection issues
+    this.obpClientService = Container.get(OBPClientService)
+    this.oauth2Service = Container.get(OAuth2Service)
+  }
+
   @Get('/logoff')
   async logout(
     @Session() session: any,

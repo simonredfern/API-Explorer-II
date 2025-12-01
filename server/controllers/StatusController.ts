@@ -29,7 +29,7 @@ import { Controller, Session, Req, Res, Get } from 'routing-controllers'
 import { Request, Response } from 'express'
 import OBPClientService from '../services/OBPClientService'
 
-import { Service } from 'typedi'
+import { Service, Container } from 'typedi'
 import { OAuthConfig } from 'obp-typescript'
 import { commitId } from '../app'
 
@@ -43,7 +43,13 @@ export class StatusController {
     'stored_procedure_vDec2019',
     'rabbitmq_vOct2024'
   ]
-  constructor(private obpClientService: OBPClientService) {}
+  private obpClientService: OBPClientService
+
+  constructor() {
+    // Explicitly get OBPClientService from the container to avoid injection issues
+    this.obpClientService = Container.get(OBPClientService)
+  }
+
   @Get('/')
   async index(
     @Session() session: any,

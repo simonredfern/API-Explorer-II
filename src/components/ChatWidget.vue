@@ -1,6 +1,6 @@
 <!--
 placeholder for Opey II Chat widget
---> 
+-->
 <script lang="ts">
 
 import { ref, reactive } from 'vue'
@@ -14,7 +14,7 @@ import { useChat } from '@/stores/chat';
 
 export default {
     setup () {
-        return { 
+        return {
             Close,
             ElTop,
             WarnTriangleFilled,
@@ -36,7 +36,7 @@ export default {
         this.chat = useChat()
         const isLoggedIn = await this.checkLoginStatus()
         console.log('Is logged in: ', isLoggedIn)
-        
+
     },
     methods: {
         async toggleChat() {
@@ -55,14 +55,14 @@ export default {
                         this.errorState.message = "Woops! Looks like we are having trouble connecting to Opey..."
                         this.errorState.icon = WarnTriangleFilled
                     }
-                    
+
                 }
                 return true
             } else {
                 return false
             }
         },
-        
+
         async onSubmit() {
             // Add user message to the messages array
             const userMessage: UserMessage = {
@@ -71,7 +71,7 @@ export default {
                 content: this.input,
                 isToolCallApproval: false,
             };
-            
+
             // Set status to loading // Clear input field after sending
             this.chat.status = 'loading';
             this.input = '';
@@ -80,7 +80,7 @@ export default {
                 await this.chat.stream({
                     message: userMessage,
                 }
-                    
+
                 )
                 console.log('Opey Status: ', this.chat.status)
             } catch (error) {
@@ -112,11 +112,11 @@ export default {
         <div class="chat-container-inner" id="chat-container">
             <el-container direction="vertical">
                 <el-header>
-                    <img alt="Opey Logo" src="@/assets/opey-logo-inv.png"> 
+                    <img alt="Opey Logo" src="@/assets/opey-logo-inv.png">
                     <el-button type="danger" :icon="Close" @click="toggleChat" size="small" circle></el-button>
                 </el-header>
                 <el-main>
-                    
+
                     <div v-if="errorState.type === 'authenticationError'" class="login-container">
                         <el-icon :size="40" color="#FF4D4F">
                             <component :is="errorState.icon" />
@@ -125,7 +125,7 @@ export default {
                     </div>
                     <div v-else-if="!chat.userIsAuthenticated" class="login-container">
                         <p class="login-message" size="large">Opey is only available once logged on.</p>
-                        <a href="/api/connect" class="login-button router-link">Log on</a>
+                        <a href="/api/oauth2/connect" class="login-button router-link">Log on</a>
                     </div>
                     <div v-else class="messages-container" v-bind:class="{ disabled: !chat.userIsAuthenticated }">
                         <el-scrollbar>
@@ -322,7 +322,7 @@ textarea::-webkit-scrollbar-thumb {
 
 /* Handle on hover */
 textarea::-webkit-scrollbar-thumb:hover {
-  
+
   background: #888;
 }
 

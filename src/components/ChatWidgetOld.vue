@@ -54,10 +54,10 @@
     setup() {
       /**
        * Pinia stores only work properly in the vue composition API, hence the setup() call here, which allows us to use the vue composition API within the vue options API
-       * See https://vueschool.io/articles/vuejs-tutorials/options-api-vs-composition-api/ 
+       * See https://vueschool.io/articles/vuejs-tutorials/options-api-vs-composition-api/
        * and https://vuejs.org/api/composition-api-setup.html
-       * */ 
-       
+       * */
+
       // We use a pinia store to store the chat messages, and status data like if there is a message stream currently happening or an error state.
       const chatStore = useChatStore();
 
@@ -139,7 +139,7 @@
               type: 'error'
             });
           }
-          
+
         } catch (error) {
           console.log('Error getting consent for opey from OBP: ', error)
           this.errorState = true
@@ -147,9 +147,9 @@
             message: 'Error getting consent for opey from OBP',
             type: 'error'
           });
-          
+
         }
-      
+
       },
       async answerConsentChallenge() {
         const challengeAnswer = this.consentChallengeAnswer
@@ -160,7 +160,7 @@
 
         try {
           console.log(`Answering consent challenge with: ${challengeAnswer} and consent_id: ${this.consentId}`)
-          
+
 
           // send the challenge answer to Opey for approval
           const response = await axios.post(
@@ -174,7 +174,7 @@
               withCredentials: true,
             }
           )
-          
+
           console.log("Consent challenge response: ", response.status, response.headers)
           if (response.status === 200) {
             console.log('Consent challenge answered successfully, Consent approved')
@@ -185,7 +185,7 @@
             } else {
               console.log('Consent denied')
             }
-          } 
+          }
         } catch (error) {
 
             console.log('Error answering consent challenge: ', error)
@@ -230,9 +230,9 @@
       },
       /**
        * This function highlights code blocks in the chat messages
-       * 
-       * @param content 
-       * @param language 
+       *
+       * @param content
+       * @param language
        */
       highlightCode(content, language) {
         if (Prism.languages[language]) {
@@ -365,7 +365,7 @@
                 </button>
               </el-tooltip>
               <div class="detail">
-                
+
               </div>
             </div>
           </div>
@@ -374,11 +374,11 @@
             <div class="dot"></div>
             <div class="dot"></div>
           </div>
-          
-          
+
+
         </div>
         <div v-else class="chat-messages">
-          <p>Opey is only availabled when logged in. <a v-bind:href="'/api/connect'">Log In</a> </p>
+          <p>Opey is only availabled when logged in. <a v-bind:href="'/api/oauth2/connect'">Log In</a> </p>
         </div>
         <el-alert
           v-if="this.errorState"
@@ -397,8 +397,8 @@
           >
           </el-input>
           <!--<textarea v-model="userInput" placeholder="Type your message..." @keypress="submitEnter"></textarea>-->
-          <button 
-            @click="sendMessage" 
+          <button
+            @click="sendMessage"
             :disabled="!isLoggedIn || this.awaitingConnection ? '' : disabled"
             :style="!isLoggedIn || this.awaitingConnection ? 'background-color:#929292; cursor:not-allowed' : ''"
           >
@@ -462,8 +462,8 @@
 
 .quit-button {
   position: absolute;
-  top: -12px; 
-  right: -12px; 
+  top: -12px;
+  right: -12px;
   width: 24px;
   height: 24px;
   background-color: red;

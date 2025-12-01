@@ -28,12 +28,18 @@
 import { Controller, Session, Req, Res, Get, Delete, Post, Put } from 'routing-controllers'
 import { Request, Response } from 'express'
 import OBPClientService from '../services/OBPClientService'
-import { Service } from 'typedi'
+import { Service, Container } from 'typedi'
 
 @Service()
 @Controller()
 export class OBPController {
-  constructor(private obpClientService: OBPClientService) {}
+  private obpClientService: OBPClientService
+
+  constructor() {
+    // Explicitly get OBPClientService from the container to avoid injection issues
+    this.obpClientService = Container.get(OBPClientService)
+  }
+
   @Get('/get')
   async get(@Session() session: any, @Req() request: Request, @Res() response: Response): Response {
     const path = request.query.path

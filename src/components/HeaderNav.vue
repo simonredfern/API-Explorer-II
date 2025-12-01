@@ -173,7 +173,7 @@ const getCurrentPath = () => {
           <arrow-down />
         </el-icon>
       </span>-->
-      <a v-bind:href="'/api/connect?redirect='+ encodeURIComponent(getCurrentPath())" v-show="isShowLoginButton" class="login-button router-link" id="login">
+      <a v-bind:href="'/api/oauth2/connect?redirect='+ encodeURIComponent(getCurrentPath())" v-show="isShowLoginButton" class="login-button router-link" id="login">
         {{ $t('header.login') }}
       </a>
       <span v-show="isShowLogOffButton" class="login-user">{{ loginUsername }}</span>
