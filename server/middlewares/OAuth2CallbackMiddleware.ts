@@ -263,6 +263,21 @@ export default class OAuth2CallbackMiddleware implements ExpressMiddlewareInterf
       console.log('OAuth2CallbackMiddleware: Fetching user info')
       const userInfo = await this.oauth2Service.getUserInfo(tokens.accessToken)
 
+      // Debug: Decode access token to see what user ID OBP-API will see
+      try {
+        const accessTokenDecoded: any = jwt.decode(tokens.accessToken)
+        console.log('\n\n========================================')
+        console.log('🔍 ACCESS TOKEN DECODED - THIS IS WHAT OBP-API SEES')
+        console.log('========================================')
+        console.log('  sub (user ID):', accessTokenDecoded?.sub)
+        console.log('  email:', accessTokenDecoded?.email)
+        console.log('  preferred_username:', accessTokenDecoded?.preferred_username)
+        console.log('  Full payload:', JSON.stringify(accessTokenDecoded, null, 2))
+        console.log('========================================\n\n')
+      } catch (error) {
+        console.warn('OAuth2CallbackMiddleware: Failed to decode access token:', error)
+      }
+
       // Store tokens in session
       session['oauth2_access_token'] = tokens.accessToken
       session['oauth2_refresh_token'] = tokens.refreshToken || null

@@ -45,8 +45,17 @@ export class OBPController {
     const path = request.query.path
     const oauthConfig = session['clientConfig']
 
+    // Debug logging
+    console.log('RequestController.get - Path:', path)
+    console.log('RequestController.get - Has session:', !!session)
+    console.log('RequestController.get - Has clientConfig:', !!oauthConfig)
+    console.log('RequestController.get - Has oauth2:', !!oauthConfig?.oauth2)
+    console.log('RequestController.get - Has accessToken:', !!oauthConfig?.oauth2?.accessToken)
+    console.log('RequestController.get - Session keys:', Object.keys(session || {}))
+
     // Check if user is authenticated
     if (!oauthConfig || !oauthConfig.oauth2?.accessToken) {
+      console.log('RequestController.get - User not authenticated')
       return response.status(401).json({
         code: 401,
         message: 'OBP-20001: User not logged in. Authentication is required!'

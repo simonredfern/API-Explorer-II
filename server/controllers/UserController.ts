@@ -61,6 +61,8 @@ export class UserController {
     delete session['oauth2_token_timestamp']
     delete session['oauth2_user_info']
     delete session['oauth2_user']
+    delete session['clientConfig']
+    delete session['opeyConfig']
 
     // Destroy the session completely
     session.destroy((err: any) => {
