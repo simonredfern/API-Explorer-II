@@ -132,18 +132,34 @@ export class UserController {
 
       // Get actual user ID from OBP-API
       let obpUserId = oauth2User.sub // Default to sub if OBP call fails
-      try {
-        const version = process.env.VITE_OBP_API_VERSION ?? DEFAULT_OBP_API_VERSION
-        const obpUser = await this.obpClientService.get(
-          `/obp/${version}/users/current`,
-          session['clientConfig']
-        )
-        if (obpUser && obpUser.user_id) {
-          obpUserId = obpUser.user_id
-          console.log('UserController: Got OBP user ID:', obpUserId)
+      const clientConfig = session['clientConfig']
+
+      if (clientConfig && clientConfig.oauth2?.accessToken) {
+        try {
+          const version = process.env.VITE_OBP_API_VERSION ?? DEFAULT_OBP_API_VERSION
+          console.log('UserController: Fetching OBP user from /obp/' + version + '/users/current')
+          const obpUser = await this.obpClientService.get(
+            `/obp/${version}/users/current`,
+            clientConfig
+          )
+          if (obpUser && obpUser.user_id) {
+            obpUserId = obpUser.user_id
+            console.log('UserController: Got OBP user ID:', obpUserId, '(was:', oauth2User.sub, ')')
+          } else {
+            console.warn('UserController: OBP user response has no user_id:', obpUser)
+          }
+        } catch (error: any) {
+          console.warn(
+            'UserController: Could not fetch OBP user ID, using token sub:',
+            oauth2User.sub
+          )
+          console.warn('UserController: Error details:', error.message)
         }
-      } catch (error) {
-        console.warn('UserController: Could not fetch OBP user ID, using token sub:', error)
+      } else {
+        console.warn(
+          'UserController: No valid clientConfig or access token, using token sub:',
+          oauth2User.sub
+        )
       }
 
       // Return user info in format compatible with frontend

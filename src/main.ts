@@ -47,9 +47,17 @@ import './assets/main.css'
 import '@fontsource/roboto/300.css'
 import '@fontsource/roboto/400.css'
 import '@fontsource/roboto/700.css'
-import { obpApiActiveVersionsKey, obpApiHostKey, obpGlossaryKey, obpGroupedMessageDocsKey, obpGroupedResourceDocsKey, obpMyCollectionsEndpointKey, obpResourceDocsKey } from './obp/keys'
+import {
+  obpApiActiveVersionsKey,
+  obpApiHostKey,
+  obpGlossaryKey,
+  obpGroupedMessageDocsKey,
+  obpGroupedResourceDocsKey,
+  obpMyCollectionsEndpointKey,
+  obpResourceDocsKey
+} from './obp/keys'
 import { getCacheStorageInfo } from './obp/common-functions'
-(async () => {
+;(async () => {
   const app = createApp(App)
   const router = await appRouter()
   for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
@@ -65,7 +73,7 @@ import { getCacheStorageInfo } from './obp/common-functions'
       fallbackLocale: 'ES',
       messages
     })
-    
+
     const pinia = createPinia()
 
     app.provide('i18n', i18n)
@@ -135,20 +143,33 @@ async function setupData(app: App<Element>, worker: Worker) {
     const glossary = await getOBPGlossary()
     app.provide(obpGlossaryKey, glossary)
 
-    const apiCollections = (await getMyAPICollections()).api_collections
-    if (apiCollections && apiCollections.length > 0) {
-      //Uncomment this when other collection will be supported.
-      //for (const { api_collection_name } of apiCollections) {
-      //  const apiCollectionsEndpoint = (
-      //    await getMyAPICollectionsEndpoint(api_collection_name)
-      //  ).api_collection_endpoints.map((api) => api.operation_id)
-      //  app.provide(obpMyCollectionsEndpointKey, apiCollectionsEndpoint)
-      //}
-      const apiCollectionsEndpoint = (
-        await getMyAPICollectionsEndpoint('Favourites')
-      ).api_collection_endpoints.map((api) => api.operation_id)
-      app.provide(obpMyCollectionsEndpointKey, apiCollectionsEndpoint)
-    } else {
+    // Try to load user's API collections (requires authentication)
+    try {
+      console.log('[MAIN] Attempting to load user API collections...')
+      const apiCollections = (await getMyAPICollections()).api_collections
+      if (apiCollections && apiCollections.length > 0) {
+        console.log(`[MAIN] Loaded ${apiCollections.length} API collection(s)`)
+        //Uncomment this when other collection will be supported.
+        //for (const { api_collection_name } of apiCollections) {
+        //  const apiCollectionsEndpoint = (
+        //    await getMyAPICollectionsEndpoint(api_collection_name)
+        //  ).api_collection_endpoints.map((api) => api.operation_id)
+        //  app.provide(obpMyCollectionsEndpointKey, apiCollectionsEndpoint)
+        //}
+        const apiCollectionsEndpoint = (
+          await getMyAPICollectionsEndpoint('Favourites')
+        ).api_collection_endpoints.map((api: any) => api.operation_id)
+        app.provide(obpMyCollectionsEndpointKey, apiCollectionsEndpoint)
+      } else {
+        console.log('[MAIN] No API collections found')
+        app.provide(obpMyCollectionsEndpointKey, undefined)
+      }
+    } catch (error: any) {
+      if (error?.status === 401) {
+        console.log('[MAIN] User not authenticated - skipping API collections (expected behavior)')
+      } else {
+        console.warn('[MAIN] Failed to load API collections:', error?.message || error)
+      }
       app.provide(obpMyCollectionsEndpointKey, undefined)
     }
     return true

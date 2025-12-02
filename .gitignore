@@ -61,3 +61,4 @@ src/test/integration/playwright/.auth/
 test-results/
 playwright-report/
 playwright-coverage/
+shared-constants.js

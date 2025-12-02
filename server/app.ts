@@ -116,75 +116,82 @@ useContainer(Container)
 console.log(`--- OAuth2/OIDC setup -------------------------------------------`)
 const wellKnownUrl = process.env.VITE_OBP_OAUTH2_WELL_KNOWN_URL
 
-if (!wellKnownUrl) {
-  console.error('VITE_OBP_OAUTH2_WELL_KNOWN_URL not set. OAuth2 will not function.')
-  console.error('Please set this environment variable to continue.')
-} else {
-  console.log(`OIDC Well-Known URL: ${wellKnownUrl}`)
+// Async IIFE to initialize OAuth2 and start server
+let instance: any
+;(async function initializeAndStartServer() {
+  if (!wellKnownUrl) {
+    console.warn('VITE_OBP_OAUTH2_WELL_KNOWN_URL not set. OAuth2 will not function.')
+    console.warn('Server will start but OAuth2 authentication will be unavailable.')
+  } else {
+    console.log(`OIDC Well-Known URL: ${wellKnownUrl}`)
 
-  // Get OAuth2Service from container
-  const oauth2Service = Container.get(OAuth2Service)
+    // Get OAuth2Service from container
+    const oauth2Service = Container.get(OAuth2Service)
 
-  // Initialize OAuth2 service from OIDC discovery document
-  oauth2Service
-    .initializeFromWellKnown(wellKnownUrl)
-    .then(() => {
+    // Initialize OAuth2 service from OIDC discovery document (await it!)
+    try {
+      await oauth2Service.initializeFromWellKnown(wellKnownUrl)
       console.log('OAuth2Service: Initialization successful')
       console.log('  Client ID:', process.env.VITE_OBP_OAUTH2_CLIENT_ID || 'NOT SET')
       console.log('  Redirect URI:', process.env.VITE_OBP_OAUTH2_REDIRECT_URL || 'NOT SET')
       console.log('OAuth2/OIDC ready for authentication')
-    })
-    .catch((error) => {
+    } catch (error: any) {
       console.error('OAuth2Service: Initialization failed:', error.message)
       console.error('OAuth2/OIDC authentication will not be available')
       console.error('Please check:')
       console.error('  1. OBP-OIDC server is running')
       console.error('  2. VITE_OBP_OAUTH2_WELL_KNOWN_URL is correct')
       console.error('  3. Network connectivity to OIDC provider')
-    })
-}
-console.log(`-----------------------------------------------------------------`)
-
-const routePrefix = '/api'
-
-const server = useExpressServer(app, {
-  routePrefix: routePrefix,
-  controllers: [path.join(__dirname + '/controllers/*.*s')],
-  middlewares: [path.join(__dirname + '/middlewares/*.*s')]
-})
-
-export const instance = server.listen(port)
-
-console.log(
-  `Backend is running. You can check a status at http://localhost:${port}${routePrefix}/status`
-)
-
-// Get commit ID
-export let commitId = ''
-
-try {
-  // Try to get the commit ID
-  commitId = execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim()
-  console.log('Current Commit ID:', commitId)
-} catch (error) {
-  // Log the error but do not terminate the process
-  console.error('Warning: Failed to retrieve the commit ID. Proceeding without it.')
-  console.error('Error details:', error.message)
-  commitId = 'unknown' // Assign a fallback value
-}
-// Continue execution with or without a valid commit ID
-console.log('Execution continues with commitId:', commitId)
-
-// Error Handling to Shut Down the App
-server.on('error', (err) => {
-  redisClient.disconnect()
-  if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${port} is already in use.`)
-    process.exit(1)
-    // Shut down the app
-  } else {
-    console.error('An error occurred:', err)
+      console.warn('Server will start but OAuth2 authentication will fail.')
+    }
   }
-})
+  console.log(`-----------------------------------------------------------------`)
+
+  const routePrefix = '/api'
+
+  const server = useExpressServer(app, {
+    routePrefix: routePrefix,
+    controllers: [path.join(__dirname + '/controllers/*.*s')],
+    middlewares: [path.join(__dirname + '/middlewares/*.*s')]
+  })
+
+  instance = server.listen(port)
+
+  console.log(
+    `Backend is running. You can check a status at http://localhost:${port}${routePrefix}/status`
+  )
+
+  // Get commit ID
+  try {
+    // Try to get the commit ID
+    commitId = execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim()
+    console.log('Current Commit ID:', commitId)
+  } catch (error) {
+    // Log the error but do not terminate the process
+    console.error('Warning: Failed to retrieve the commit ID. Proceeding without it.')
+    console.error('Error details:', error.message)
+    commitId = 'unknown' // Assign a fallback value
+  }
+  // Continue execution with or without a valid commit ID
+  console.log('Execution continues with commitId:', commitId)
+
+  // Error Handling to Shut Down the App
+  instance.on('error', (err) => {
+    redisClient.disconnect()
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${port} is already in use.`)
+      process.exit(1)
+      // Shut down the app
+    } else {
+      console.error('An error occurred:', err)
+    }
+  })
+})()
+
+// Export instance for use in other modules
+export { instance }
+
+// Commit ID variable
+export let commitId = ''
 
 export default app

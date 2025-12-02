@@ -80,8 +80,9 @@ export default class OBPClientService {
   async get(path: string, clientConfig: any): Promise<any> {
     const config = this.getSessionConfig(clientConfig)
 
-    if (!config.oauth2?.accessToken) {
-      throw new Error('OAuth2 access token not found. Please authenticate first.')
+    // If no config or no access token, make unauthenticated request
+    if (!config || !config.oauth2?.accessToken) {
+      return await this.getWithoutAuth(path)
     }
 
     return await this.getWithBearer(path, config.oauth2.accessToken)
@@ -90,8 +91,8 @@ export default class OBPClientService {
   async create(path: string, body: any, clientConfig: any): Promise<any> {
     const config = this.getSessionConfig(clientConfig)
 
-    if (!config.oauth2?.accessToken) {
-      throw new Error('OAuth2 access token not found. Please authenticate first.')
+    if (!config || !config.oauth2?.accessToken) {
+      throw new Error('Authentication required for creating resources.')
     }
 
     return await this.createWithBearer(path, body, config.oauth2.accessToken)
@@ -100,8 +101,8 @@ export default class OBPClientService {
   async update(path: string, body: any, clientConfig: any): Promise<any> {
     const config = this.getSessionConfig(clientConfig)
 
-    if (!config.oauth2?.accessToken) {
-      throw new Error('OAuth2 access token not found. Please authenticate first.')
+    if (!config || !config.oauth2?.accessToken) {
+      throw new Error('Authentication required for updating resources.')
     }
 
     return await this.updateWithBearer(path, body, config.oauth2.accessToken)
@@ -110,8 +111,8 @@ export default class OBPClientService {
   async discard(path: string, clientConfig: any): Promise<any> {
     const config = this.getSessionConfig(clientConfig)
 
-    if (!config.oauth2?.accessToken) {
-      throw new Error('OAuth2 access token not found. Please authenticate first.')
+    if (!config || !config.oauth2?.accessToken) {
+      throw new Error('Authentication required for deleting resources.')
     }
 
     return await this.discardWithBearer(path, config.oauth2.accessToken)
@@ -129,6 +130,39 @@ export default class OBPClientService {
   }
 
   /**
+   * Make a GET request without authentication (for public endpoints)
+   *
+   * @param path - The API endpoint path (e.g., /obp/v5.1.0/api/versions)
+   * @returns Response data from the API
+   */
+  private async getWithoutAuth(path: string): Promise<any> {
+    // Ensure proper slash handling between base URI and path
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`
+    const url = `${this.clientConfig.baseUri}${normalizedPath}`
+    console.log('OBPClientService: GET request without authentication to:', url)
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      // 401 errors are expected when user is not authenticated
+      if (response.status === 401) {
+        console.log(`[OBPClientService] 401 Unauthorized: ${url} (authentication required)`)
+      } else {
+        console.error('[OBPClientService] GET request failed:', response.status, errorText)
+      }
+      throw new OBPAPIError(response.status, errorText)
+    }
+
+    return await response.json()
+  }
+
+  /**
    * Make a GET request with OAuth2 Bearer token authentication
    *
    * @param path - The API endpoint path (e.g., /obp/v5.1.0/banks)
@@ -136,7 +170,9 @@ export default class OBPClientService {
    * @returns Response data from the API
    */
   private async getWithBearer(path: string, accessToken: string): Promise<any> {
-    const url = `${this.clientConfig.baseUri}${path}`
+    // Ensure proper slash handling between base URI and path
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`
+    const url = `${this.clientConfig.baseUri}${normalizedPath}`
     console.log('OBPClientService: GET request with Bearer token to:', url)
 
     const response = await fetch(url, {
@@ -149,7 +185,18 @@ export default class OBPClientService {
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('OBPClientService: GET request failed:', response.status, errorText)
+      // 401 errors indicate token expiration or invalid token
+      if (response.status === 401) {
+        console.warn(
+          `[OBPClientService] 401 Unauthorized with Bearer token: ${url} (token may be expired)`
+        )
+      } else {
+        console.error(
+          '[OBPClientService] GET request with Bearer failed:',
+          response.status,
+          errorText
+        )
+      }
       throw new OBPAPIError(response.status, errorText)
     }
 
@@ -165,7 +212,9 @@ export default class OBPClientService {
    * @returns Response data from the API
    */
   private async createWithBearer(path: string, body: any, accessToken: string): Promise<any> {
-    const url = `${this.clientConfig.baseUri}${path}`
+    // Ensure proper slash handling between base URI and path
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`
+    const url = `${this.clientConfig.baseUri}${normalizedPath}`
     console.log('OBPClientService: POST request with Bearer token to:', url)
 
     const response = await fetch(url, {
@@ -179,7 +228,11 @@ export default class OBPClientService {
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('OBPClientService: POST request failed:', response.status, errorText)
+      if (response.status === 401) {
+        console.warn(`[OBPClientService] 401 Unauthorized on POST: ${url} (token may be expired)`)
+      } else {
+        console.error('[OBPClientService] POST request failed:', response.status, errorText)
+      }
       throw new OBPAPIError(response.status, errorText)
     }
 
@@ -195,7 +248,9 @@ export default class OBPClientService {
    * @returns Response data from the API
    */
   private async updateWithBearer(path: string, body: any, accessToken: string): Promise<any> {
-    const url = `${this.clientConfig.baseUri}${path}`
+    // Ensure proper slash handling between base URI and path
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`
+    const url = `${this.clientConfig.baseUri}${normalizedPath}`
     console.log('OBPClientService: PUT request with Bearer token to:', url)
 
     const response = await fetch(url, {
@@ -209,7 +264,11 @@ export default class OBPClientService {
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('OBPClientService: PUT request failed:', response.status, errorText)
+      if (response.status === 401) {
+        console.warn(`[OBPClientService] 401 Unauthorized on PUT: ${url} (token may be expired)`)
+      } else {
+        console.error('[OBPClientService] PUT request failed:', response.status, errorText)
+      }
       throw new OBPAPIError(response.status, errorText)
     }
 
@@ -224,7 +283,9 @@ export default class OBPClientService {
    * @returns Response data from the API
    */
   private async discardWithBearer(path: string, accessToken: string): Promise<any> {
-    const url = `${this.clientConfig.baseUri}${path}`
+    // Ensure proper slash handling between base URI and path
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`
+    const url = `${this.clientConfig.baseUri}${normalizedPath}`
     console.log('OBPClientService: DELETE request with Bearer token to:', url)
 
     const response = await fetch(url, {
@@ -237,7 +298,11 @@ export default class OBPClientService {
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('OBPClientService: DELETE request failed:', response.status, errorText)
+      if (response.status === 401) {
+        console.warn(`[OBPClientService] 401 Unauthorized on DELETE: ${url} (token may be expired)`)
+      } else {
+        console.error('[OBPClientService] DELETE request failed:', response.status, errorText)
+      }
       throw new OBPAPIError(response.status, errorText)
     }
 

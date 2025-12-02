@@ -45,28 +45,18 @@ export class OBPController {
     const path = request.query.path
     const oauthConfig = session['clientConfig']
 
-    // Debug logging
-    console.log('RequestController.get - Path:', path)
-    console.log('RequestController.get - Has session:', !!session)
-    console.log('RequestController.get - Has clientConfig:', !!oauthConfig)
-    console.log('RequestController.get - Has oauth2:', !!oauthConfig?.oauth2)
-    console.log('RequestController.get - Has accessToken:', !!oauthConfig?.oauth2?.accessToken)
-    console.log('RequestController.get - Session keys:', Object.keys(session || {}))
-
-    // Check if user is authenticated
-    if (!oauthConfig || !oauthConfig.oauth2?.accessToken) {
-      console.log('RequestController.get - User not authenticated')
-      return response.status(401).json({
-        code: 401,
-        message: 'OBP-20001: User not logged in. Authentication is required!'
-      })
-    }
-
     try {
       const result = await this.obpClientService.get(path, oauthConfig)
       return response.json(result)
     } catch (error: any) {
-      console.error('RequestController.get error:', error)
+      // 401 errors are expected when user is not authenticated - log as info, not error
+      if (error.status === 401) {
+        console.log(
+          `[RequestController] 401 Unauthorized for path: ${path} (user not authenticated)`
+        )
+      } else {
+        console.error('[RequestController] GET request error:', error)
+      }
       return response.status(error.status || 500).json({
         code: error.status || 500,
         message: error.message || 'Internal server error'
@@ -83,14 +73,6 @@ export class OBPController {
     const path = request.query.path
     const data = request.body
     const oauthConfig = session['clientConfig']
-
-    // Check if user is authenticated
-    if (!oauthConfig || !oauthConfig.oauth2?.accessToken) {
-      return response.status(401).json({
-        code: 401,
-        message: 'OBP-20001: User not logged in. Authentication is required!'
-      })
-    }
 
     try {
       const result = await this.obpClientService.create(path, data, oauthConfig)
@@ -114,14 +96,6 @@ export class OBPController {
     const data = request.body
     const oauthConfig = session['clientConfig']
 
-    // Check if user is authenticated
-    if (!oauthConfig || !oauthConfig.oauth2?.accessToken) {
-      return response.status(401).json({
-        code: 401,
-        message: 'OBP-20001: User not logged in. Authentication is required!'
-      })
-    }
-
     try {
       const result = await this.obpClientService.update(path, data, oauthConfig)
       return response.json(result)
@@ -142,14 +116,6 @@ export class OBPController {
   ): Response {
     const path = request.query.path
     const oauthConfig = session['clientConfig']
-
-    // Check if user is authenticated
-    if (!oauthConfig || !oauthConfig.oauth2?.accessToken) {
-      return response.status(401).json({
-        code: 401,
-        message: 'OBP-20001: User not logged in. Authentication is required!'
-      })
-    }
 
     try {
       const result = await this.obpClientService.discard(path, oauthConfig)
