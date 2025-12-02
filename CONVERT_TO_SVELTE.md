@@ -12,6 +12,7 @@
 This document explores the feasibility, benefits, challenges, and strategy for converting API Explorer II from Vue 3 to Svelte, aligning with the OBP-Portal architecture. The analysis covers technical considerations, migration strategies, effort estimation, and recommendations.
 
 **Key Findings:**
+
 - Svelte offers significant performance and bundle size improvements
 - Migration is feasible but requires substantial effort (estimated 4-8 weeks)
 - Alignment with OBP-Portal would improve maintainability across projects
@@ -49,6 +50,16 @@ API Explorer II (Current)
 ├── Pinia (State Management)
 ├── Highlight.js (Code highlighting)
 └── i18n (Internationalization)
+
+Target Architecture (Svelte 5)
+├── Svelte 5+ (with Runes)
+├── SvelteKit 2+
+├── TypeScript 5+
+├── Vite 5+ (Build tool)
+├── Component Library (TBD)
+├── Built-in routing
+├── Svelte Stores (State Management)
+└── svelte-i18n
 ```
 
 ### Backend Stack (Unchanged)
@@ -90,6 +101,7 @@ src/
 ### 1. **Alignment with OBP-Portal**
 
 The OBP-Portal project already uses Svelte, creating an opportunity for:
+
 - **Shared knowledge**: Developers can work across both projects seamlessly
 - **Reusable components**: Common UI components can be shared
 - **Consistent patterns**: Unified architecture across OBP ecosystem
@@ -98,6 +110,7 @@ The OBP-Portal project already uses Svelte, creating an opportunity for:
 ### 2. **Performance Benefits**
 
 Svelte compiles to vanilla JavaScript, resulting in:
+
 - **Smaller bundle sizes**: No runtime framework overhead
 - **Faster execution**: No virtual DOM diffing
 - **Better TTI** (Time to Interactive): Faster initial load
@@ -105,19 +118,23 @@ Svelte compiles to vanilla JavaScript, resulting in:
 
 ### 3. **Developer Experience**
 
-Svelte offers:
+Svelte 5 with Runes offers:
+
 - **Less boilerplate**: No `ref()`, `reactive()`, or `computed()`
-- **Intuitive reactivity**: Variables are reactive by default
+- **Runes-based reactivity**: Modern, explicit reactivity with `$state`, `$derived`, `$effect`
+- **Better TypeScript support**: Improved type inference and autocomplete
 - **Cleaner syntax**: Less ceremony, more readable code
 - **Built-in animations**: No additional libraries needed
 - **Scoped styles**: CSS scoped by default without configuration
+- **Fine-grained reactivity**: More performant than Svelte 4
 
 ### 4. **Modern Tooling**
 
-- **SvelteKit**: Full-stack framework with SSR/SSG capabilities
+- **SvelteKit 2.x**: Full-stack framework with SSR/SSG capabilities
+- **Svelte 5**: Latest version with Runes for better reactivity
 - **Vite native support**: Already using Vite, smooth transition
-- **TypeScript support**: First-class TypeScript integration
-- **Testing**: Vitest works seamlessly with Svelte
+- **TypeScript support**: First-class TypeScript integration with improved inference
+- **Testing**: Vitest works seamlessly with Svelte 5
 
 ---
 
@@ -172,56 +189,64 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.api-endpoint { padding: 1rem; }
-.error { color: red; }
+.api-endpoint {
+  padding: 1rem;
+}
+.error {
+  color: red;
+}
 </style>
 ```
 
-#### Svelte Component (Converted)
+#### Svelte 5 Component (with Runes)
 
 ```svelte
 <script lang="ts">
-  import { onMount } from 'svelte'
   import { get } from '../obp'
 
-  export let endpoint: string
-  
-  let items: any[] = []
-  let loading = false
-  let error: string | null = null
-  
-  // Reactive statement - automatically computed
-  $: title = endpoint.toUpperCase()
-  
+  interface Props {
+    endpoint: string
+  }
+
+  let { endpoint }: Props = $props()
+
+  // Runes-based reactive state
+  let items = $state<any[]>([])
+  let loading = $state(false)
+  let error = $state<string | null>(null)
+
+  // Derived state - automatically computed
+  let title = $derived(endpoint.toUpperCase())
+
   async function fetchData() {
     loading = true
     error = null
     try {
       const response = await get(endpoint)
       items = response.data
-      dispatch('success', response)
+      onsuccess?.(response)
     } catch (err: any) {
       error = err.message
     } finally {
       loading = false
     }
   }
-  
-  onMount(() => {
+
+  // Effect runs on mount
+  $effect(() => {
     fetchData()
   })
-  
-  // Event dispatcher
-  import { createEventDispatcher } from 'svelte'
-  const dispatch = createEventDispatcher()
+
+  // Event handler prop
+  let { onsuccess }: { onsuccess?: (data: any) => void } = $props()
 </script>
 
 <div class="api-endpoint">
   <h3>{title}</h3>
-  <button on:click={fetchData}>
+  <button onclick={fetchData}>
     {loading ? 'Loading...' : 'Fetch'}
   </button>
-  
+
   {#if error}
     <div class="error">{error}</div>
   {:else}
@@ -241,17 +266,18 @@ onMounted(() => {
 
 ### Key Differences
 
-| Aspect | Vue 3 | Svelte |
-|--------|-------|--------|
-| **Reactivity** | `ref()`, `reactive()` | Variables are reactive |
-| **Computed** | `computed()` function | `$:` reactive statements |
-| **Props** | `defineProps<T>()` | `export let prop` |
-| **Events** | `defineEmits<T>()` | `createEventDispatcher()` |
-| **Lifecycle** | `onMounted()`, `onUnmounted()` | `onMount()`, `onDestroy()` |
-| **Conditionals** | `v-if`, `v-else` | `{#if}`, `{:else}`, `{/if}` |
-| **Loops** | `v-for` | `{#each}`, `{/each}` |
-| **Bundle Size** | ~34 KB (runtime) | ~2 KB (compiler output) |
-| **Performance** | Virtual DOM | Direct DOM manipulation |
+| Aspect            | Vue 3                          | Svelte 5 (with Runes)                 |
+| ----------------- | ------------------------------ | ------------------------------------- |
+| **Reactivity**    | `ref()`, `reactive()`          | `$state()`, `$state.raw()`            |
+| **Computed**      | `computed()` function          | `$derived()` rune                     |
+| **Props**         | `defineProps<T>()`             | `let { prop } = $props()`             |
+| **Events**        | `defineEmits<T>()`             | Event handler props (e.g., `onclick`) |
+| **Lifecycle**     | `onMounted()`, `onUnmounted()` | `$effect()` rune                      |
+| **Conditionals**  | `v-if`, `v-else`               | `{#if}`, `{:else}`, `{/if}`           |
+| **Loops**         | `v-for`                        | `{#each}`, `{/each}`                  |
+| **Event Binding** | `@click`                       | `onclick` (native)                    |
+| **Bundle Size**   | ~34 KB (runtime)               | ~2 KB (compiler output)               |
+| **Performance**   | Virtual DOM                    | Direct DOM, fine-grained reactivity   |
 
 ---
 
@@ -260,12 +286,23 @@ onMounted(() => {
 ### OBP-Portal Stack
 
 ```
-OBP-Portal
+OBP-Portal (Current)
 ├── SvelteKit 2.x
+├── Svelte 4.x (legacy syntax)
 ├── TypeScript
 ├── Vite
 ├── Tailwind CSS
 ├── Svelte Stores (State)
+├── Svelte Router (built-in)
+└── OAuth2 integration
+
+Recommended Update
+├── SvelteKit 2.x
+├── Svelte 5.x (with Runes)
+├── TypeScript
+├── Vite
+├── Tailwind CSS
+├── Svelte 5 Runes ($state, $derived)
 ├── Svelte Router (built-in)
 └── OAuth2 integration
 ```
@@ -273,6 +310,7 @@ OBP-Portal
 ### Lessons from OBP-Portal
 
 **What Works Well:**
+
 1. **SvelteKit's file-based routing** - Intuitive and maintainable
 2. **Svelte stores** - Simple, effective state management
 3. **TypeScript integration** - Smooth developer experience
@@ -280,37 +318,54 @@ OBP-Portal
 5. **Component reusability** - Easy to create shared components
 
 **Challenges Encountered:**
+
 1. **SSR complexity** - Server-side rendering requires careful handling
 2. **Third-party libraries** - Some Vue/React libraries need Svelte alternatives
-3. **Learning curve** - Team needs time to adapt to Svelte paradigms
+3. **Learning curve** - Team needs time to adapt to Svelte paradigms (especially Runes)
 4. **Ecosystem** - Smaller ecosystem compared to Vue/React
+5. **Migration to Runes** - OBP-Portal itself may need updating from Svelte 4 to Svelte 5
 
-### Reusable Patterns from OBP-Portal
+### Reusable Patterns for Svelte 5
 
 ```typescript
-// Shared authentication store pattern
-// stores/auth.ts
-import { writable } from 'svelte/store'
+// Shared authentication state with Runes
+// lib/stores/auth.svelte.ts
+export class AuthStore {
+  user = $state<User | null>(null)
+  isAuthenticated = $derived(this.user !== null)
 
-export const user = writable<User | null>(null)
-export const isAuthenticated = writable(false)
+  setUser(newUser: User | null) {
+    this.user = newUser
+  }
+}
 
-// Shared API client pattern
+export const authStore = new AuthStore()
+
+// Shared API client pattern (unchanged)
 // lib/api.ts
 export async function obpGet(path: string) {
   const response = await fetch(`/api/get?path=${encodeURIComponent(path)}`)
   return response.json()
 }
 
-// Shared component pattern
+// Shared component pattern with Runes
 // components/OBPButton.svelte
 <script lang="ts">
-  export let variant: 'primary' | 'secondary' = 'primary'
-  export let disabled = false
+  interface Props {
+    variant?: 'primary' | 'secondary'
+    disabled?: boolean
+    onclick?: () => void
+  }
+
+  let {
+    variant = 'primary',
+    disabled = false,
+    onclick
+  }: Props = $props()
 </script>
 
-<button class="obp-btn {variant}" {disabled} on:click>
-  <slot />
+<button class="obp-btn {variant}" {disabled} {onclick}>
+  {@render children?.()}
 </button>
 ```
 
@@ -321,6 +376,7 @@ export async function obpGet(path: string) {
 ### Approach: Incremental Migration
 
 **Phase 1: Preparation (1 week)**
+
 - [ ] Set up parallel Svelte build configuration
 - [ ] Create proof-of-concept with 1-2 simple components
 - [ ] Establish component migration patterns
@@ -328,6 +384,7 @@ export async function obpGet(path: string) {
 - [ ] Document migration guidelines
 
 **Phase 2: Core Infrastructure (2 weeks)**
+
 - [ ] Migrate routing (Vue Router → SvelteKit routing)
 - [ ] Migrate state management (Pinia → Svelte stores)
 - [ ] Migrate API client layer (minimal changes)
@@ -335,6 +392,7 @@ export async function obpGet(path: string) {
 - [ ] Create Svelte equivalents of utility functions
 
 **Phase 3: Component Migration (3-4 weeks)**
+
 - [ ] Migrate simple components first (buttons, cards, etc.)
 - [ ] Migrate medium complexity components (forms, tables)
 - [ ] Migrate complex components (SearchNav, Content, Preview)
@@ -344,6 +402,7 @@ export async function obpGet(path: string) {
   - Option C: Build custom components
 
 **Phase 4: Integration & Testing (1-2 weeks)**
+
 - [ ] End-to-end testing
 - [ ] Performance benchmarking
 - [ ] Accessibility audit
@@ -351,6 +410,7 @@ export async function obpGet(path: string) {
 - [ ] Documentation updates
 
 **Phase 5: Deployment**
+
 - [ ] Staged rollout
 - [ ] Monitor for issues
 - [ ] Gather user feedback
@@ -359,11 +419,13 @@ export async function obpGet(path: string) {
 ### Alternative Approach: Big Bang Rewrite
 
 **Pros:**
+
 - Clean slate, no legacy code
 - Faster if done right
 - No Vue/Svelte coexistence issues
 
 **Cons:**
+
 - Higher risk
 - Longer time before visible progress
 - More difficult to test incrementally
@@ -380,12 +442,12 @@ export async function obpGet(path: string) {
 **Current:** Element Plus (Vue)  
 **Options:**
 
-| Library | Pros | Cons |
-|---------|------|------|
-| **Carbon Components Svelte** | Enterprise-grade, accessible | Large bundle, IBM-specific design |
-| **Svelte Material UI** | Material Design, comprehensive | Material design may not fit brand |
-| **Attraction** | Lightweight, modern | Less mature, smaller community |
-| **Custom Components** | Full control, aligned with brand | Most effort, maintenance burden |
+| Library                      | Pros                             | Cons                              |
+| ---------------------------- | -------------------------------- | --------------------------------- |
+| **Carbon Components Svelte** | Enterprise-grade, accessible     | Large bundle, IBM-specific design |
+| **Svelte Material UI**       | Material Design, comprehensive   | Material design may not fit brand |
+| **Attraction**               | Lightweight, modern              | Less mature, smaller community    |
+| **Custom Components**        | Full control, aligned with brand | Most effort, maintenance burden   |
 
 **Recommendation:** Start with **Svelte Material UI** or **Carbon Components**, create custom components where needed.
 
@@ -401,19 +463,42 @@ import { defineStore } from 'pinia'
 export const useUserStore = defineStore('user', {
   state: () => ({ user: null, authenticated: false }),
   actions: {
-    setUser(user) { this.user = user }
+    setUser(user) {
+      this.user = user
+    }
   }
 })
 
-// After (Svelte Store)
+// After (Svelte 5 with Runes - Recommended)
+// lib/stores/user.svelte.ts
+export class UserStore {
+  user = $state<User | null>(null)
+  authenticated = $derived(this.user !== null)
+
+  setUser(user: User | null) {
+    this.user = user
+  }
+
+  reset() {
+    this.user = null
+  }
+}
+
+export const userStore = new UserStore()
+
+// Usage in component:
+// import { userStore } from '$lib/stores/user.svelte'
+// <p>{userStore.user?.name}</p>
+
+// Alternative (Svelte 4 Store - Legacy)
 import { writable } from 'svelte/store'
 
 function createUserStore() {
   const { subscribe, set, update } = writable({ user: null, authenticated: false })
-  
+
   return {
     subscribe,
-    setUser: (user) => update(state => ({ ...state, user })),
+    setUser: (user) => update((state) => ({ ...state, user })),
     reset: () => set({ user: null, authenticated: false })
   }
 }
@@ -453,16 +538,33 @@ export async function get(path: string): Promise<any> {
   return response.json()
 }
 
-// Usage in Svelte component
+// Usage in Svelte 5 component with Runes
 <script lang="ts">
   import { get } from '$lib/obp'
-  
-  let data = $state(null)
-  
+
+  let data = $state<any>(null)
+  let loading = $state(false)
+
   async function loadData() {
-    data = await get('/obp/v5.1.0/banks')
+    loading = true
+    try {
+      data = await get('/obp/v5.1.0/banks')
+    } finally {
+      loading = false
+    }
   }
+
+  // Auto-load on mount
+  $effect(() => {
+    loadData()
+  })
 </script>
+
+{#if loading}
+  <p>Loading...</p>
+{:else if data}
+  <pre>{JSON.stringify(data, null, 2)}</pre>
+{/if}
 ```
 
 ### 5. Backend Compatibility
@@ -487,11 +589,13 @@ export async function get(path: string): Promise<any> {
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 
-// After (svelte-i18n)
-import { _, locale } from 'svelte-i18n'
+// After (svelte-i18n with Svelte 5)
+<script lang="ts">
+  import { _, locale } from 'svelte-i18n'
+</script>
 
 <p>{$_('welcome.message')}</p>
-<button on:click={() => $locale = 'es'}>Español</button>
+<button onclick={() => $locale = 'es'}>Español</button>
 ```
 
 ### 7. Code Highlighting
@@ -502,7 +606,13 @@ import { _, locale } from 'svelte-i18n'
 ```svelte
 <script lang="ts">
   import hljs from 'highlight.js'
-  
+
+  interface Props {
+    code: string
+  }
+
+  let { code }: Props = $props()
+
   function highlight(node: HTMLElement) {
     hljs.highlightElement(node)
     return {
@@ -541,28 +651,31 @@ export default defineConfig({
 
 ### Time Estimates (Conservative)
 
-| Phase | Duration | Team Size | Total Effort |
-|-------|----------|-----------|--------------|
-| Preparation | 1 week | 1 dev | 1 week |
-| Core Infrastructure | 2 weeks | 2 devs | 4 weeks |
-| Component Migration | 4 weeks | 2-3 devs | 8-12 weeks |
-| Testing & Integration | 2 weeks | 2 devs | 4 weeks |
-| **Total** | **9 weeks** | **2-3 devs** | **17-21 weeks** |
+| Phase                 | Duration    | Team Size    | Total Effort    |
+| --------------------- | ----------- | ------------ | --------------- |
+| Preparation           | 1 week      | 1 dev        | 1 week          |
+| Core Infrastructure   | 2 weeks     | 2 devs       | 4 weeks         |
+| Component Migration   | 4 weeks     | 2-3 devs     | 8-12 weeks      |
+| Testing & Integration | 2 weeks     | 2 devs       | 4 weeks         |
+| **Total**             | **9 weeks** | **2-3 devs** | **17-21 weeks** |
 
 ### Complexity Breakdown
 
 **Low Complexity (1-2 days each):**
+
 - Simple display components
 - Buttons, cards, badges
 - Layout components
 
 **Medium Complexity (3-5 days each):**
+
 - Form components
 - Tables with sorting/filtering
 - Modal dialogs
 - Navigation components
 
 **High Complexity (1-2 weeks each):**
+
 - SearchNav component (API version selector, filters)
 - Content component (API endpoint details, dynamic forms)
 - Preview component (Try it out functionality, response display)
@@ -571,6 +684,7 @@ export default defineConfig({
 ### Risk Buffer
 
 Add **25% contingency** for:
+
 - Unexpected technical challenges
 - Learning curve
 - Testing and bug fixes
@@ -585,16 +699,19 @@ Add **25% contingency** for:
 ### Technical Risks
 
 1. **Third-Party Library Compatibility**
+
    - **Risk:** Some libraries may not have Svelte equivalents
    - **Mitigation:** Research alternatives early, build custom if needed
    - **Impact:** Medium
 
 2. **Element Plus Replacement**
+
    - **Risk:** Feature parity with Element Plus components
    - **Mitigation:** Incremental replacement, custom components for gaps
    - **Impact:** High
 
 3. **SSR/Hydration Issues**
+
    - **Risk:** SvelteKit SSR may cause issues with OAuth flow
    - **Mitigation:** Use client-side only mode initially, add SSR later
    - **Impact:** Low
@@ -607,16 +724,19 @@ Add **25% contingency** for:
 ### Organizational Risks
 
 1. **Team Learning Curve**
+
    - **Risk:** Developers unfamiliar with Svelte
    - **Mitigation:** Training sessions, pair programming, good documentation
    - **Impact:** Medium
 
 2. **Feature Development Freeze**
+
    - **Risk:** No new features during migration
    - **Mitigation:** Incremental migration allows parallel development
    - **Impact:** Medium
 
 3. **User-Facing Bugs**
+
    - **Risk:** Migration introduces regressions
    - **Mitigation:** Comprehensive testing, staged rollout, quick rollback plan
    - **Impact:** High
@@ -632,6 +752,7 @@ Add **25% contingency** for:
 ## Risk Mitigation Plan
 
 ### Before Migration
+
 - [ ] Complete prototype with 3-5 key components
 - [ ] Performance benchmark current Vue version
 - [ ] Document all critical user flows
@@ -639,6 +760,7 @@ Add **25% contingency** for:
 - [ ] Establish rollback procedures
 
 ### During Migration
+
 - [ ] Daily progress tracking
 - [ ] Weekly performance testing
 - [ ] Continuous integration testing
@@ -646,6 +768,7 @@ Add **25% contingency** for:
 - [ ] Feature freeze communication
 
 ### After Migration
+
 - [ ] Monitor error rates
 - [ ] Track performance metrics
 - [ ] Gather user feedback
@@ -659,19 +782,20 @@ Add **25% contingency** for:
 
 ### Quantitative Benefits
 
-| Metric | Vue 3 (Current) | Svelte (Expected) | Improvement |
-|--------|-----------------|-------------------|-------------|
-| **Bundle Size** | ~450 KB | ~200 KB | 55% smaller |
-| **Initial Load** | 1.2s | 0.7s | 42% faster |
-| **TTI** | 2.5s | 1.5s | 40% faster |
-| **Memory Usage** | 45 MB | 28 MB | 38% less |
-| **Build Time** | 8s | 5s | 37% faster |
+| Metric           | Vue 3 (Current) | Svelte (Expected) | Improvement |
+| ---------------- | --------------- | ----------------- | ----------- |
+| **Bundle Size**  | ~450 KB         | ~200 KB           | 55% smaller |
+| **Initial Load** | 1.2s            | 0.7s              | 42% faster  |
+| **TTI**          | 2.5s            | 1.5s              | 40% faster  |
+| **Memory Usage** | 45 MB           | 28 MB             | 38% less    |
+| **Build Time**   | 8s              | 5s                | 37% faster  |
 
-*Note: These are estimated improvements based on typical Vue-to-Svelte migrations.*
+_Note: These are estimated improvements based on typical Vue-to-Svelte migrations._
 
 ### Qualitative Benefits
 
 **For Developers:**
+
 - ✅ Simpler, more readable code
 - ✅ Less boilerplate
 - ✅ Faster development iteration
@@ -679,6 +803,7 @@ Add **25% contingency** for:
 - ✅ Easier onboarding for new developers
 
 **For Users:**
+
 - ✅ Faster page loads
 - ✅ Smoother interactions
 - ✅ Better mobile performance
@@ -686,6 +811,7 @@ Add **25% contingency** for:
 - ✅ More responsive UI
 
 **For Organization:**
+
 - ✅ Consistent technology stack
 - ✅ Shared components across projects
 - ✅ Easier knowledge transfer
@@ -695,12 +821,14 @@ Add **25% contingency** for:
 ### Cost-Benefit Analysis
 
 **Costs:**
+
 - 3-4 months of development effort
 - Learning curve for team
 - Temporary feature freeze
 - Testing and QA effort
 
 **Benefits:**
+
 - Long-term maintainability
 - Performance improvements
 - Stack alignment
@@ -716,16 +844,19 @@ Add **25% contingency** for:
 ### Option 1: Full Migration (Recommended for Long-Term)
 
 **When:**
+
 - Planning major feature updates
 - Have 3-4 months available
 - Want full alignment with OBP-Portal
 
 **Pros:**
+
 - Complete modernization
 - Maximum long-term benefits
 - Clean, maintainable codebase
 
 **Cons:**
+
 - Significant upfront effort
 - Temporary feature freeze
 - Higher risk
@@ -733,21 +864,25 @@ Add **25% contingency** for:
 ### Option 2: Hybrid Approach
 
 **When:**
+
 - Need to maintain feature velocity
 - Limited developer resources
 - Risk-averse environment
 
 **Strategy:**
+
 - Keep Vue for existing features
 - Build new features in Svelte
 - Gradual replacement over time
 
 **Pros:**
+
 - Lower risk
 - Continuous feature development
 - Flexible timeline
 
 **Cons:**
+
 - Maintenance complexity
 - Longer transition period
 - Two frameworks to support
@@ -755,16 +890,19 @@ Add **25% contingency** for:
 ### Option 3: Stay with Vue 3
 
 **When:**
+
 - No strong business case for change
 - Limited resources
 - Vue 3 performance is sufficient
 
 **Pros:**
+
 - No migration effort
 - Stable, known technology
 - Focus on features
 
 **Cons:**
+
 - Stack fragmentation with OBP-Portal
 - Miss performance benefits
 - No shared components
@@ -772,12 +910,14 @@ Add **25% contingency** for:
 ### Final Recommendation
 
 **Proceed with Option 1 (Full Migration) if:**
+
 1. ✅ OBP-Portal is successful and stable with Svelte
 2. ✅ Team has bandwidth for 3-4 month project
 3. ✅ Performance improvements are valuable
 4. ✅ Stack alignment is a priority
 
 **Timeline Recommendation:**
+
 - **Q1 2025:** Planning and preparation
 - **Q2 2025:** Core infrastructure and component migration
 - **Q3 2025:** Testing, deployment, stabilization
@@ -804,33 +944,36 @@ src/components/
 ### B. Svelte Learning Resources
 
 **Official Documentation:**
+
 - Svelte Tutorial: https://svelte.dev/tutorial
 - SvelteKit Docs: https://kit.svelte.dev/docs
 - Svelte Society: https://sveltesociety.dev/
 
 **Migration Guides:**
+
 - Vue to Svelte: https://svelte.dev/blog/frameworks-without-the-framework
 - Component Patterns: https://svelte.dev/repl
 
 **Video Tutorials:**
+
 - Svelte Crash Course (YouTube)
 - SvelteKit Full Tutorial
 - Svelte State Management
 
 ### C. Component Library Comparison
 
-| Feature | Element Plus | Carbon Svelte | Svelte Material UI |
-|---------|--------------|---------------|-------------------|
-| Buttons | ✅ | ✅ | ✅ |
-| Forms | ✅ | ✅ | ✅ |
-| Tables | ✅ | ✅ | ✅ |
-| Modals | ✅ | ✅ | ✅ |
-| Notifications | ✅ | ✅ | ✅ |
-| Date Pickers | ✅ | ✅ | ✅ |
-| Trees | ✅ | ✅ | ❌ |
-| Bundle Size | Large | Large | Medium |
-| TypeScript | ✅ | ✅ | ✅ |
-| Accessibility | Good | Excellent | Good |
+| Feature       | Element Plus | Carbon Svelte | Svelte Material UI |
+| ------------- | ------------ | ------------- | ------------------ |
+| Buttons       | ✅           | ✅            | ✅                 |
+| Forms         | ✅           | ✅            | ✅                 |
+| Tables        | ✅           | ✅            | ✅                 |
+| Modals        | ✅           | ✅            | ✅                 |
+| Notifications | ✅           | ✅            | ✅                 |
+| Date Pickers  | ✅           | ✅            | ✅                 |
+| Trees         | ✅           | ✅            | ❌                 |
+| Bundle Size   | Large        | Large         | Medium             |
+| TypeScript    | ✅           | ✅            | ✅                 |
+| Accessibility | Good         | Excellent     | Good               |
 
 ### D. Performance Benchmarks
 
@@ -861,29 +1004,37 @@ Svelte (Expected):
 ## Component Migration Checklist
 
 ### Pre-Migration
+
 - [ ] Document component API (props, events, slots)
 - [ ] Identify dependencies
 - [ ] Write unit tests (if missing)
 - [ ] Screenshot current behavior
 - [ ] Note any quirks or edge cases
+- [ ] Check if component uses reactive patterns suitable for Runes
 
 ### Migration
-- [ ] Create new Svelte component file
+
+- [ ] Create new Svelte 5 component file
 - [ ] Convert template syntax
-- [ ] Convert script logic
+- [ ] Convert script logic to use Runes ($state, $derived, $effect)
+- [ ] Convert props using $props()
+- [ ] Convert events to event handler props
 - [ ] Convert styles
 - [ ] Update imports/exports
 - [ ] Test in isolation
 
 ### Post-Migration
+
 - [ ] Verify visual appearance matches
 - [ ] Test all interactions
+- [ ] Verify reactivity works correctly with Runes
 - [ ] Check accessibility
-- [ ] Performance test
+- [ ] Performance test (should be better with Runes)
 - [ ] Update documentation
 - [ ] Code review
 
 ### Integration
+
 - [ ] Update parent component imports
 - [ ] Test in full application
 - [ ] Cross-browser testing
@@ -900,7 +1051,11 @@ Svelte (Expected):
 const count = ref(0)
 const doubled = computed(() => count.value * 2)
 
-// Svelte
+// Svelte 5 (Runes - Recommended)
+let count = $state(0)
+let doubled = $derived(count * 2)
+
+// Svelte 4 (Legacy)
 let count = 0
 $: doubled = count * 2
 ```
@@ -912,7 +1067,15 @@ $: doubled = count * 2
 const props = defineProps<{ title: string }>()
 const emit = defineEmits<{ close: [] }>()
 
-// Svelte
+// Svelte 5 (Runes - Recommended)
+interface Props {
+  title: string
+  onclose?: () => void
+}
+let { title, onclose }: Props = $props()
+// Call event: onclose?.()
+
+// Svelte 4 (Legacy)
 export let title: string
 import { createEventDispatcher } from 'svelte'
 const dispatch = createEventDispatcher()
@@ -926,11 +1089,16 @@ dispatch('close')
 onMounted(() => console.log('mounted'))
 onUnmounted(() => console.log('cleanup'))
 
-// Svelte
-onMount(() => {
-  console.log('mounted')
+// Svelte 5 (Runes - Recommended)
+$effect(() => {
+  console.log('effect runs on mount and when dependencies change')
   return () => console.log('cleanup')
 })
+
+// Svelte 4 (Legacy)
+import { onMount, onDestroy } from 'svelte'
+onMount(() => console.log('mounted'))
+onDestroy(() => console.log('cleanup'))
 ```
 
 #### Pattern 4: Conditional Rendering
@@ -942,9 +1110,9 @@ onMount(() => {
 
 <!-- Svelte -->
 {#if condition}
-  <div>Show</div>
+<div>Show</div>
 {:else}
-  <div>Hide</div>
+<div>Hide</div>
 {/if}
 ```
 
@@ -953,31 +1121,44 @@ onMount(() => {
 ```html
 <!-- Vue 3 -->
 <ul>
-  <li v-for="item in items" :key="item.id">
-    {{ item.name }}
-  </li>
+  <li v-for="item in items" :key="item.id">{{ item.name }}</li>
 </ul>
 
-<!-- Svelte -->
+<!-- Svelte 5 (same as Svelte 4) -->
 <ul>
   {#each items as item (item.id)}
-    <li>{item.name}</li>
+  <li>{item.name}</li>
   {/each}
 </ul>
+
+<!-- Note: With Runes, items would be: let items = $state([...]) -->
 ```
 
 ---
 
 ## Conclusion
 
-Converting API Explorer II from Vue 3 to Svelte is **technically feasible** and offers **significant long-term benefits**, particularly in alignment with OBP-Portal and performance improvements. The migration requires **3-4 months of focused effort** but positions the project for better maintainability and developer experience.
+Converting API Explorer II from Vue 3 to **Svelte 5 with Runes** is **technically feasible** and offers **significant long-term benefits**, particularly in alignment with OBP-Portal (which should also upgrade to Svelte 5) and performance improvements. The migration requires **3-4 months of focused effort** but positions the project for better maintainability, developer experience, and future-proof architecture.
+
+### Why Svelte 5 with Runes?
+
+- **Modern reactivity**: Fine-grained, explicit reactivity system
+- **Better performance**: More efficient than both Vue 3 and Svelte 4
+- **Improved TypeScript**: Better type inference and autocomplete
+- **Future-proof**: Official direction for Svelte going forward
+- **Cleaner code**: Less magic, more explicit and understandable
 
 **Next Steps:**
+
 1. Review this document with the team
-2. Build a proof-of-concept with 2-3 key components
-3. Make a go/no-go decision based on PoC results
-4. If approved, create detailed migration plan
-5. Begin Phase 1 preparation
+2. Build a proof-of-concept with 2-3 key components using Svelte 5 Runes
+3. Evaluate if OBP-Portal should also upgrade to Svelte 5
+4. Make a go/no-go decision based on PoC results
+5. If approved, create detailed migration plan
+6. Begin Phase 1 preparation
+
+**Important Note on OBP-Portal:**  
+If OBP-Portal is currently using Svelte 4, consider upgrading it to Svelte 5 first or in parallel. This ensures both projects use the same modern patterns and maximizes code sharing opportunities.
 
 **Questions or Feedback?**  
 Please contact the development team or open a discussion in the project repository.
@@ -985,4 +1166,6 @@ Please contact the development team or open a discussion in the project reposito
 ---
 
 **Document History:**
+
 - v1.0 - December 2024 - Initial exploration document
+- v1.1 - December 2024 - Updated to focus on Svelte 5 with Runes
