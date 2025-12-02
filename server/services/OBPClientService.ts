@@ -28,6 +28,16 @@
 import { Service } from 'typedi'
 import { DEFAULT_OBP_API_VERSION } from '../../shared-constants'
 
+// Custom error class to preserve HTTP status codes
+class OBPAPIError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+    this.name = 'OBPAPIError'
+  }
+}
+
 // OAuth2 Bearer token configuration
 interface OAuth2Config {
   accessToken: string
@@ -140,7 +150,7 @@ export default class OBPClientService {
     if (!response.ok) {
       const errorText = await response.text()
       console.error('OBPClientService: GET request failed:', response.status, errorText)
-      throw new Error(`HTTP ${response.status}: ${errorText}`)
+      throw new OBPAPIError(response.status, errorText)
     }
 
     return await response.json()
@@ -170,7 +180,7 @@ export default class OBPClientService {
     if (!response.ok) {
       const errorText = await response.text()
       console.error('OBPClientService: POST request failed:', response.status, errorText)
-      throw new Error(`HTTP ${response.status}: ${errorText}`)
+      throw new OBPAPIError(response.status, errorText)
     }
 
     return await response.json()
@@ -200,7 +210,7 @@ export default class OBPClientService {
     if (!response.ok) {
       const errorText = await response.text()
       console.error('OBPClientService: PUT request failed:', response.status, errorText)
-      throw new Error(`HTTP ${response.status}: ${errorText}`)
+      throw new OBPAPIError(response.status, errorText)
     }
 
     return await response.json()
@@ -228,7 +238,7 @@ export default class OBPClientService {
     if (!response.ok) {
       const errorText = await response.text()
       console.error('OBPClientService: DELETE request failed:', response.status, errorText)
-      throw new Error(`HTTP ${response.status}: ${errorText}`)
+      throw new OBPAPIError(response.status, errorText)
     }
 
     return await response.json()

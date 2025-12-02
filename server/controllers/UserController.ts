@@ -30,6 +30,7 @@ import { Request, Response } from 'express'
 import OBPClientService from '../services/OBPClientService'
 import { Service, Container } from 'typedi'
 import { OAuth2Service } from '../services/OAuth2Service'
+import { DEFAULT_OBP_API_VERSION } from '../../shared-constants'
 
 @Service()
 @Controller('/user')
@@ -129,9 +130,25 @@ export class UserController {
         }
       }
 
+      // Get actual user ID from OBP-API
+      let obpUserId = oauth2User.sub // Default to sub if OBP call fails
+      try {
+        const version = process.env.VITE_OBP_API_VERSION ?? DEFAULT_OBP_API_VERSION
+        const obpUser = await this.obpClientService.get(
+          `/obp/${version}/users/current`,
+          session['clientConfig']
+        )
+        if (obpUser && obpUser.user_id) {
+          obpUserId = obpUser.user_id
+          console.log('UserController: Got OBP user ID:', obpUserId)
+        }
+      } catch (error) {
+        console.warn('UserController: Could not fetch OBP user ID, using token sub:', error)
+      }
+
       // Return user info in format compatible with frontend
       return response.json({
-        user_id: oauth2User.sub,
+        user_id: obpUserId,
         username: oauth2User.username,
         email: oauth2User.email,
         email_verified: oauth2User.email_verified,

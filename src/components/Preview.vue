@@ -184,32 +184,156 @@ const highlightCode = (json) => {
   }
 }
 const submitEntitlement = async () => {
-  requiredRoles.value.forEach(async (formRole, idx) => {
+  for (const [idx, formRole] of requiredRoles.value.entries()) {
+    const role = roleForm[`role${formRole.role}${idx}`]
+
     if (formRole.requires_bank_id) {
-      const role = roleForm[`role${formRole.role}${idx}`]
+      // Bank-level entitlement
       const bankId = roleForm[`bankId${formRole.role}${idx}`]
-      if (role && bankId && isUserLogon) {
-        const response = await createEntitlement(bankId, role)
-        let type = 'success'
-        if ('code' in response && response['code'] >= 400) {
-          type = 'error'
-        }
+
+      if (!role || !bankId) {
         ElNotification({
           duration: elMessageDuration,
-          message: response.message,
+          title: 'Missing Information',
+          message: 'Bank ID is required for this role.',
           position: 'bottom-right',
-          type
+          type: 'error'
         })
-      } else {
+        continue
+      }
+
+      if (!isUserLogon) {
         ElNotification({
           duration: elMessageDuration,
-          message: 'Bank Id is required.',
+          title: 'Not Authenticated',
+          message: 'Please login to request this role.',
+          position: 'bottom-right',
+          type: 'error'
+        })
+        continue
+      }
+
+      try {
+        const response = await createEntitlement(bankId, role)
+
+        // Check if response is an error object (from superagent)
+        const isError = response && response.error && response.error.response
+        const errorBody = isError ? response.error.response.body : null
+        const statusCode = isError ? response.error.status : null
+
+        if (isError && errorBody && errorBody.code >= 400) {
+          // Parse error message from body
+          let errorMessage = 'Failed to create entitlement'
+          if (errorBody.message) {
+            // Message might be double-encoded JSON string
+            try {
+              const parsedMessage = JSON.parse(errorBody.message)
+              errorMessage = parsedMessage.message || errorBody.message
+            } catch {
+              errorMessage = errorBody.message
+            }
+          }
+
+          ElNotification({
+            duration: elMessageDuration,
+            title: `Error (${errorBody.code})`,
+            message: errorMessage,
+            position: 'bottom-right',
+            type: 'error'
+          })
+        } else {
+          // Success
+          ElNotification({
+            duration: elMessageDuration,
+            title: 'Success',
+            message: `Entitlement "${role}" requested successfully for bank "${bankId}"`,
+            position: 'bottom-right',
+            type: 'success'
+          })
+        }
+      } catch (error: any) {
+        ElNotification({
+          duration: elMessageDuration,
+          title: 'Request Failed',
+          message: error.message || 'An error occurred while requesting the entitlement',
+          position: 'bottom-right',
+          type: 'error'
+        })
+      }
+    } else {
+      // System-wide entitlement (no bank_id required)
+      if (!role) {
+        ElNotification({
+          duration: elMessageDuration,
+          title: 'Missing Information',
+          message: 'Role name is required.',
+          position: 'bottom-right',
+          type: 'error'
+        })
+        continue
+      }
+
+      if (!isUserLogon) {
+        ElNotification({
+          duration: elMessageDuration,
+          title: 'Not Authenticated',
+          message: 'Please login to request this role.',
+          position: 'bottom-right',
+          type: 'error'
+        })
+        continue
+      }
+
+      try {
+        // System-wide entitlement uses empty string for bank_id
+        const response = await createEntitlement('', role)
+
+        // Check if response is an error object (from superagent)
+        const isError = response && response.error && response.error.response
+        const errorBody = isError ? response.error.response.body : null
+        const statusCode = isError ? response.error.status : null
+
+        if (isError && errorBody && errorBody.code >= 400) {
+          // Parse error message from body
+          let errorMessage = 'Failed to create entitlement'
+          if (errorBody.message) {
+            // Message might be double-encoded JSON string
+            try {
+              const parsedMessage = JSON.parse(errorBody.message)
+              errorMessage = parsedMessage.message || errorBody.message
+            } catch {
+              errorMessage = errorBody.message
+            }
+          }
+
+          ElNotification({
+            duration: elMessageDuration,
+            title: `Error (${errorBody.code})`,
+            message: errorMessage,
+            position: 'bottom-right',
+            type: 'error'
+          })
+        } else {
+          // Success
+          ElNotification({
+            duration: elMessageDuration,
+            title: 'Success',
+            message: `System-wide entitlement "${role}" requested successfully`,
+            position: 'bottom-right',
+            type: 'success'
+          })
+        }
+      } catch (error: any) {
+        ElNotification({
+          duration: elMessageDuration,
+          title: 'Request Failed',
+          message: error.message || 'An error occurred while requesting the entitlement',
           position: 'bottom-right',
           type: 'error'
         })
       }
     }
-  })
+  }
 }
 onBeforeMount(async () => {
   const route = useRoute()

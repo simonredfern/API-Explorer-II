@@ -10,7 +10,7 @@ VITE_OPB_SERVER_SESSION_PASSWORD=asidudhiuh33875
 VITE_OBP_REDIS_URL=redis://127.0.0.1:6379
 
 ### Opey Configuration ###
-VITE_CHATBOT_ENABLED=true
+VITE_CHATBOT_ENABLED=false
 VITE_CHATBOT_URL=http://localhost:5000
 
 ### OAuth2/OIDC Configuration ###
