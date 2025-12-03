@@ -98,11 +98,13 @@ let sessionObject = {
   store: redisStore,
   secret: process.env.VITE_OPB_SERVER_SESSION_PASSWORD,
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false, // Don't save empty sessions (better for authenticated apps)
   cookie: {
     httpOnly: true,
     secure: false,
-    maxAge: 300 * 1000 // 5 minutes in milliseconds
+    maxAge: process.env.VITE_SESSION_MAX_AGE
+      ? parseInt(process.env.VITE_SESSION_MAX_AGE) * 1000
+      : 60 * 60 * 1000 // Default: 1 hour in milliseconds (value in env should be in seconds)
   }
 }
 if (app.get('env') === 'production') {

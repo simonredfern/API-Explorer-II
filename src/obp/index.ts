@@ -45,8 +45,12 @@ export async function isServerUp(): Promise<boolean> {
 export async function get(path: string): Promise<any> {
   try {
     return (await superagent.get(`/api/get?path=${path}`)).body
-  } catch (error) {
+  } catch (error: any) {
     console.log(error)
+    // Extract the full OBP error message from the response body
+    if (error.response && error.response.body) {
+      return { error: error.response.body }
+    }
     return { error }
   }
 }
@@ -70,8 +74,12 @@ export async function create(path: string, body?: any): Promise<any> {
       }
     }
     return (await request).body
-  } catch (error) {
+  } catch (error: any) {
     console.log(error)
+    // Extract the full OBP error message from the response body
+    if (error.response && error.response.body) {
+      return { error: error.response.body }
+    }
     return { error }
   }
 }
@@ -95,8 +103,12 @@ export async function update(path: string, body?: any): Promise<any> {
       }
     }
     return (await request).body
-  } catch (error) {
+  } catch (error: any) {
     console.log(error)
+    // Extract the full OBP error message from the response body
+    if (error.response && error.response.body) {
+      return { error: error.response.body }
+    }
     return { error }
   }
 }
@@ -104,8 +116,12 @@ export async function update(path: string, body?: any): Promise<any> {
 export async function discard(path: string): Promise<any> {
   try {
     return (await superagent.delete(`/api/delete?path=${path}`)).body
-  } catch (error) {
+  } catch (error: any) {
     console.log(error)
+    // Extract the full OBP error message from the response body
+    if (error.response && error.response.body) {
+      return { error: error.response.body }
+    }
     return { error }
   }
 }
@@ -113,8 +129,12 @@ export async function discard(path: string): Promise<any> {
 export async function getCurrentUser(): Promise<any> {
   try {
     return (await superagent.get(`/api/user/current`)).body
-  } catch (error) {
+  } catch (error: any) {
     console.log(error)
+    // Extract the full OBP error message from the response body
+    if (error.response && error.response.body) {
+      return { error: error.response.body }
+    }
     return { error }
   }
 }

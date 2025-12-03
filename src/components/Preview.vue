@@ -174,7 +174,10 @@ const submit = async (form: FormInstance, fn: () => void) => {
 }
 const highlightCode = (json) => {
   if (json.error) {
-    successResponseBody.value = json.error.message
+    // Display the full OBP error object with proper formatting
+    successResponseBody.value = hljs.lineNumbersValue(
+      hljs.highlightAuto(JSON.stringify(json.error, null, 4), ['JSON']).value
+    )
   } else if (json) {
     successResponseBody.value = hljs.lineNumbersValue(
       hljs.highlightAuto(JSON.stringify(json, null, 4), ['JSON']).value

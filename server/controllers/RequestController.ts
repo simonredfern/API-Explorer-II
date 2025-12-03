@@ -74,6 +74,16 @@ export class OBPController {
     const data = request.body
     const oauthConfig = session['clientConfig']
 
+    // Debug logging to diagnose authentication issues
+    console.log('RequestController.create - Debug Info:')
+    console.log('  Path:', path)
+    console.log('  Session exists:', !!session)
+    console.log('  Session keys:', session ? Object.keys(session) : 'N/A')
+    console.log('  clientConfig exists:', !!oauthConfig)
+    console.log('  oauth2 exists:', oauthConfig?.oauth2 ? 'YES' : 'NO')
+    console.log('  accessToken exists:', oauthConfig?.oauth2?.accessToken ? 'YES' : 'NO')
+    console.log('  oauth2_user exists:', session?.oauth2_user ? 'YES' : 'NO')
+
     try {
       const result = await this.obpClientService.create(path, data, oauthConfig)
       return response.json(result)
