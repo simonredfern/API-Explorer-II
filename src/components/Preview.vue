@@ -174,9 +174,26 @@ const submit = async (form: FormInstance, fn: () => void) => {
 }
 const highlightCode = (json) => {
   if (json.error) {
+    // Parse double-encoded JSON error messages to display them cleanly
+    let errorObj = json.error
+
+    // Check if the error message is a JSON string that needs parsing
+    if (errorObj.message && typeof errorObj.message === 'string') {
+      try {
+        const parsedMessage = JSON.parse(errorObj.message)
+        // If successful, replace the string with the parsed object
+        errorObj = {
+          ...errorObj,
+          ...parsedMessage
+        }
+      } catch (e) {
+        // If parsing fails, keep the original error object
+      }
+    }
+
     // Display the full OBP error object with proper formatting
     successResponseBody.value = hljs.lineNumbersValue(
-      hljs.highlightAuto(JSON.stringify(json.error, null, 4), ['JSON']).value
+      hljs.highlightAuto(JSON.stringify(errorObj, null, 4), ['JSON']).value
     )
   } else if (json) {
     successResponseBody.value = hljs.lineNumbersValue(
