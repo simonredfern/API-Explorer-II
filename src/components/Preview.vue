@@ -172,32 +172,58 @@ const submit = async (form: FormInstance, fn: () => void) => {
   if (!form) return
   fn(form).then(() => {})
 }
+// Helper function to recursively parse double-encoded JSON strings
+const parseDoubleEncodedJson = (obj: any): any => {
+  if (obj === null || obj === undefined) {
+    return obj
+  }
+
+  // If it's a string, try to parse it as JSON
+  if (typeof obj === 'string') {
+    try {
+      const parsed = JSON.parse(obj)
+      // Recursively parse the result in case it's triple-encoded or more
+      return parseDoubleEncodedJson(parsed)
+    } catch (e) {
+      // If parsing fails, return the original string
+      return obj
+    }
+  }
+
+  // If it's an array, recursively parse each element
+  if (Array.isArray(obj)) {
+    return obj.map(item => parseDoubleEncodedJson(item))
+  }
+
+  // If it's an object, recursively parse each property
+  if (typeof obj === 'object') {
+    const result = {}
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        result[key] = parseDoubleEncodedJson(obj[key])
+      }
+    }
+    return result
+  }
+
+  // For other types (numbers, booleans, etc.), return as-is
+  return obj
+}
+
 const highlightCode = (json) => {
   if (json.error) {
     // Parse double-encoded JSON error messages to display them cleanly
-    let errorObj = json.error
-
-    // Check if the error message is a JSON string that needs parsing
-    if (errorObj.message && typeof errorObj.message === 'string') {
-      try {
-        const parsedMessage = JSON.parse(errorObj.message)
-        // If successful, replace the string with the parsed object
-        errorObj = {
-          ...errorObj,
-          ...parsedMessage
-        }
-      } catch (e) {
-        // If parsing fails, keep the original error object
-      }
-    }
+    const errorObj = parseDoubleEncodedJson(json.error)
 
     // Display the full OBP error object with proper formatting
     successResponseBody.value = hljs.lineNumbersValue(
       hljs.highlightAuto(JSON.stringify(errorObj, null, 4), ['JSON']).value
     )
   } else if (json) {
+    // Parse double-encoded JSON in successful responses too
+    const parsedJson = parseDoubleEncodedJson(json)
     successResponseBody.value = hljs.lineNumbersValue(
-      hljs.highlightAuto(JSON.stringify(json, null, 4), ['JSON']).value
+      hljs.highlightAuto(JSON.stringify(parsedJson, null, 4), ['JSON']).value
     )
   } else {
     successResponseBody.value = ''
