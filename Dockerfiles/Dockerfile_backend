@@ -17,5 +17,3 @@ RUN mkdir /home/node/node_modules
 COPY --from=builder /home/node/app/node_modules /home/node/node_modules
 WORKDIR /home/node/app
 CMD ["node", "app.js"]
-
-
