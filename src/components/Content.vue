@@ -230,7 +230,7 @@ onBeforeRouteUpdate(async (to) => {
             <div class="tags-grid">
               <a
                 class="tag-link tag-link-all"
-                :class="{ 'tag-link-active': !route.query.tags }"
+                :class="{ 'tag-link-active': route.query.tags === undefined || route.query.tags === 'NONE' }"
                 @click.prevent="clearTagFilter()"
               >
                 All
@@ -263,7 +263,6 @@ onBeforeRouteUpdate(async (to) => {
             <a
               v-if="route.query.tags"
               class="tag-link tag-link-all"
-              :class="{ 'tag-link-active': !route.query.tags }"
               @click.prevent="clearTagFilter()"
             >
               All
