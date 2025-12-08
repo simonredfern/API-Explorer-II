@@ -51,6 +51,27 @@ const loginUsername = ref('')
 const logoffurl = ref('')
 const obpApiVersions = ref(inject(obpApiActiveVersionsKey)!)
 const obpMessageDocs = ref(Object.keys(inject(obpGroupedMessageDocsKey)!))
+
+// Split versions into main and other
+const mainVersions = ['BGv1.3', 'OBPv5.1.0', 'OBPv6.0.0', 'UKv3.1', 'dynamic-endpoints', 'dynamic-entities', 'OBPdynamic-endpoint', 'OBPdynamic-entity']
+const sortedVersions = computed(() => {
+  const all = obpApiVersions.value || []
+  console.log('All available versions:', all)
+  const main = mainVersions.filter(v => all.includes(v))
+  console.log('Main versions found:', main)
+  const others = all.filter(v => !mainVersions.includes(v)).sort()
+  console.log('Other versions:', others)
+
+  // Only add divider if we have both main and other versions
+  if (main.length > 0 && others.length > 0) {
+    return [...main, '---', ...others]
+  } else if (main.length > 0) {
+    return main
+  } else {
+    return others
+  }
+})
+
 const isShowLoginButton = ref(true)
 const isShowLogOffButton = ref(false)
 const logo = ref(logoSource)
@@ -78,6 +99,12 @@ const setActive = (target: HTMLElement | null) => {
 
 const handleMore = (command: string) => {
   console.log('handleMore called with command:', command)
+
+  // Ignore divider
+  if (command === '---') {
+    return
+  }
+
   let element = document.getElementById("selected-api-version")
   if (element !== null) {
     element.textContent = command;
@@ -153,7 +180,7 @@ const getCurrentPath = () => {
         class="menu-right"
         id="header-nav-versions"
         label="Versions"
-        :items="obpApiVersions"
+        :items="sortedVersions"
         :hover-color="headerLinksHoverColor"
         :background-color="headerLinksBackgroundColor"
         @select="handleMore"

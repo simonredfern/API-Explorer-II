@@ -122,12 +122,16 @@
     <div class="dropdown-menu">
       <div class="dropdown-content">
         {#each items as item}
-          <button
-            class="dropdown-item"
-            onclick={() => handleSelect(item)}
-          >
-            {item}
-          </button>
+          {#if item === '---'}
+            <div class="dropdown-divider"></div>
+          {:else}
+            <button
+              class="dropdown-item"
+              onclick={() => handleSelect(item)}
+            >
+              {item}
+            </button>
+          {/if}
         {/each}
       </div>
     </div>
@@ -229,6 +233,12 @@
   .dropdown-item:active {
     background-color: var(--hover-bg);
     opacity: 0.8;
+  }
+
+  .dropdown-divider {
+    height: 1px;
+    margin: 6px 0;
+    background-color: #e4e7ed;
   }
 
   /* Custom scrollbar styling */
