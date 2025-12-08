@@ -30,9 +30,11 @@ import SearchNav from '../components/SearchNav.vue'
 import Menu from '../components/Menu.vue'
 import AutoLogout from '../components/AutoLogout.vue'
 import ChatWidget from '../components/ChatWidget.vue'
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import {  getCurrentUser } from '../obp'
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
 const isLoggedIn = ref(false);
 
 onMounted(async () => {
@@ -41,13 +43,16 @@ onMounted(async () => {
   isLoggedIn.value = currentResponseKeys.includes('username')
 })
 
+const hasOperationId = computed(() => {
+  return !!route.query.operationid
+})
 
 const isChatbotEnabled = import.meta.env.VITE_CHATBOT_ENABLED === 'true'
 </script>
 
 <template>
 
-  <AutoLogout v-if=isLoggedIn /> 
+  <AutoLogout v-if=isLoggedIn />
   <el-container class="root">
     <el-aside class="search-nav" width="20%">
       <!--Left-->
@@ -62,10 +67,10 @@ const isChatbotEnabled = import.meta.env.VITE_CHATBOT_ENABLED === 'true'
           <Menu />
         </el-header>
         <el-container class="middle">
-          <el-aside class="summary" width="50%">
+          <el-aside class="summary" :width="hasOperationId ? '50%' : '100%'">
             <RouterView name="body" />
           </el-aside>
-          <el-main class="preview">
+          <el-main v-if="hasOperationId" class="preview">
             <!--right -->
             <RouterView class="preview" name="preview" />
           </el-main>
