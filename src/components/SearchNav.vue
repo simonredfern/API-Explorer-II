@@ -119,7 +119,12 @@ watch(
   async (version) => {
     console.log('SearchNav: version changed to:', version)
     selectedVersion = version
-    docs.value = getGroupedResourceDocs(version, resourceDocs.value)
+    selectedTags = route.query.tags ? route.query.tags : 'NONE'
+    if(selectedTags === 'NONE') {
+      docs.value = getGroupedResourceDocs(version, resourceDocs.value)
+    } else {
+      docs.value = getFilteredGroupedResourceDocs(version, selectedTags, resourceDocs.value)
+    }
     groups.value = JSON.parse(JSON.stringify(docs.value))
     activeKeys.value = Object.keys(groups.value)
     sortedKeys.value = activeKeys.value.sort()
@@ -134,6 +139,35 @@ watch(
       console.log('SearchNav: no operationid, not auto-routing')
     }
     countApis()
+  }
+)
+
+watch(
+  () => route.query.tags,
+  async (tags) => {
+    console.log('SearchNav: tags changed to:', tags)
+    selectedTags = tags ? tags : 'NONE'
+    if(selectedTags === 'NONE') {
+      docs.value = getGroupedResourceDocs(selectedVersion, resourceDocs.value)
+    } else {
+      docs.value = getFilteredGroupedResourceDocs(selectedVersion, selectedTags, resourceDocs.value)
+    }
+    groups.value = JSON.parse(JSON.stringify(docs.value))
+    activeKeys.value = Object.keys(groups.value)
+    sortedKeys.value = activeKeys.value.sort()
+    await initializeAPICollections()
+    await nextTick()
+    countApis()
+    // Update the version display text
+    let element = document.getElementById("selected-api-version")
+    if (element !== null) {
+      const totalRows = Object.values(groups.value).reduce((acc, currentValue) => acc + currentValue.length, 0)
+      if(selectedTags === 'NONE') {
+        element.textContent = `${selectedVersion} ( ${totalRows} APIs )`;
+      } else {
+        element.textContent = `${selectedVersion} ( ${totalRows} APIs filtered by tags: ${selectedTags})`;
+      }
+    }
   }
 )
 

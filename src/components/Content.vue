@@ -30,7 +30,7 @@ import { obpMyCollectionsEndpointKey, obpResourceDocsKey } from '@/obp/keys'
 import { ArrowLeftBold, ArrowRightBold } from '@element-plus/icons-vue'
 import { ElNotification } from 'element-plus'
 import { inject, onMounted, provide, ref } from 'vue'
-import { onBeforeRouteUpdate, useRoute } from 'vue-router'
+import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import {
 OBP_API_DEFAULT_RESOURCE_DOC_VERSION,
 createMyAPICollection,
@@ -43,9 +43,12 @@ import { SUMMARY_PAGER_LINKS_COLOR as summaryPagerLinksColorSetting } from '../o
 import { initializeAPICollections, setTabActive } from './SearchNav.vue'
 
 const route = useRoute()
+const router = useRouter()
 const obpVersion = OBP_API_DEFAULT_RESOURCE_DOC_VERSION
 const description = ref('')
 const summary = ref('')
+const tags = ref<string[]>([])
+const allTags = ref<string[]>([])
 const resourceDocs = inject(obpResourceDocsKey)
 const displayPrev = ref(true)
 const displayNext = ref(true)
@@ -63,8 +66,20 @@ let apiCollectionsEndpoint = inject(obpMyCollectionsEndpointKey)!
 
 const setOperationDetails = (id: string, version: string): void => {
   const operation = getOperationDetails(version, id, resourceDocs)
+  console.log('Operation details:', operation)
+  console.log('Tags from operation:', operation?.tags)
   description.value = operation?.description
   summary.value = operation?.summary
+  tags.value = operation?.tags || []
+  console.log('Tags ref value:', tags.value)
+}
+
+const filterByTag = (tag: string) => {
+  router.push({
+    name: 'api',
+    params: { version: version },
+    query: { tags: tag }
+  })
 }
 
 const setPager = (id: string): void => {
@@ -144,6 +159,17 @@ const showNotification = (message: string, type: string): void => {
   })
 }
 
+const getAllTags = (version: string) => {
+  const docs = resourceDocs[version]?.resource_docs || []
+  const tagSet = new Set<string>()
+  docs.forEach((doc: any) => {
+    if (doc.tags && Array.isArray(doc.tags)) {
+      doc.tags.forEach((tag: string) => tagSet.add(tag))
+    }
+  })
+  return Array.from(tagSet).sort()
+}
+
 onMounted(async () => {
   routeId = route.query.operationid
   version = route.params.version ? route.params.version : obpVersion
@@ -153,6 +179,7 @@ onMounted(async () => {
     showPlaceholder.value = true
     placeholderVersion.value = version
     totalEndpoints.value = resourceDocs[version]?.resource_docs?.length || 0
+    allTags.value = getAllTags(version)
   } else {
     showPlaceholder.value = false
     setOperationDetails(routeId, version)
@@ -165,10 +192,11 @@ onBeforeRouteUpdate(async (to) => {
   version = to.params.version ? to.params.version : obpVersion
 
   if (!routeId) {
-    // No operation selected, show placeholder
+    // Version changed but no endpoint selected
     showPlaceholder.value = true
     placeholderVersion.value = version
     totalEndpoints.value = resourceDocs[version]?.resource_docs?.length || 0
+    allTags.value = getAllTags(version)
   } else {
     showPlaceholder.value = false
     setOperationDetails(routeId, version)
@@ -186,6 +214,20 @@ onBeforeRouteUpdate(async (to) => {
           <h2>Version {{ placeholderVersion }} Selected</h2>
           <p>There are {{ totalEndpoints }} endpoints available in this version.</p>
           <p>Please click an endpoint on the left to view its details.</p>
+
+          <div v-if="allTags.length > 0" class="placeholder-tags">
+            <h3>Filter by Tag:</h3>
+            <div class="tags-grid">
+              <a
+                v-for="tag in allTags"
+                :key="tag"
+                class="tag-link"
+                @click.prevent="filterByTag(tag)"
+              >
+                {{ tag }}
+              </a>
+            </div>
+          </div>
         </div>
         <div v-else>
           <el-row>
@@ -197,6 +239,18 @@ onBeforeRouteUpdate(async (to) => {
               <!--<el-button text>★</el-button>-->
             </el-col>
           </el-row>
+          <div class="tags-section">
+            <span class="tags-label">Tags ({{ tags.length }}):</span>
+            <a
+              v-for="tag in tags"
+              :key="tag"
+              class="tag-link"
+              @click.prevent="filterByTag(tag)"
+            >
+              {{ tag }}
+            </a>
+            <span v-if="tags.length === 0" style="color: #909399; font-size: 12px;">No tags available</span>
+          </div>
           <div v-html="description" class="content"></div>
         </div>
       </el-main>
@@ -236,6 +290,39 @@ span {
   font-size: 28px;
 }
 
+.tags-section {
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tags-label {
+  font-size: 14px !important;
+  font-weight: 600;
+  color: #606266;
+}
+
+.tag-link {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 12px !important;
+  color: #409eff;
+  background-color: #ecf5ff;
+  border: 1px solid #d9ecff;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.tag-link:hover {
+  background-color: #409eff;
+  color: white;
+  border-color: #409eff;
+}
+
 .placeholder-message {
   text-align: center;
   padding: 60px 20px;
@@ -252,6 +339,24 @@ span {
   font-size: 16px;
   margin: 10px 0;
   line-height: 1.6;
+}
+
+.placeholder-tags {
+  margin-top: 40px;
+  text-align: left;
+}
+
+.placeholder-tags h3 {
+  font-size: 18px;
+  margin-bottom: 20px;
+  color: #39455f;
+}
+
+.tags-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-start;
 }
 
 div {
