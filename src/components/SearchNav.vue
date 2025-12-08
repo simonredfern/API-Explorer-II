@@ -26,6 +26,7 @@
   -->
 
 <script lang="ts">
+import { nextTick } from 'vue'
 import { obpResourceDocsKey } from '@/obp/keys'
 import { Search } from '@element-plus/icons-vue'
 import { inject, onBeforeMount, onMounted, reactive, ref, watch } from 'vue'
@@ -105,7 +106,8 @@ onBeforeMount(async () => {
   }
 })
 
-onMounted(() => {
+onMounted(async () => {
+  await nextTick()
   routeToFirstAPI()
 })
 
@@ -118,6 +120,7 @@ watch(
     activeKeys.value = Object.keys(groups.value)
     sortedKeys.value = activeKeys.value.sort()
     await initializeAPICollections()
+    await nextTick()
     routeToFirstAPI()
     countApis()
   }
