@@ -74,6 +74,13 @@ const roleForm = reactive({})
 
 const setOperationDetails = (id: string, version: string): void => {
   const operation = getOperationDetails(version, id, resourceDocs)
+
+  // Safety check: if operation doesn't exist (e.g., after version change), return early
+  if (!operation) {
+    console.warn(`Operation "${id}" not found in version "${version}"`)
+    return
+  }
+
   // Replace the version in the URL with the current viewing version
   // This ensures users test against the version they're viewing (e.g., v6.0.0)
   // even if the endpoint was originally defined in an earlier version (e.g., v3.1.0)

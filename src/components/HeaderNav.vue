@@ -77,14 +77,19 @@ const setActive = (target: HTMLElement | null) => {
 }
 
 const handleMore = (command: string) => {
+  console.log('handleMore called with command:', command)
   let element = document.getElementById("selected-api-version")
   if (element !== null) {
     element.textContent = command;
   }
   if (command.includes('_')) {
+    console.log('Navigating to message docs:', command)
     router.push({ name: 'message-docs', params: { id: command } })
   } else {
-    router.replace({ path: `/resource-docs/${command}` })
+    console.log('Navigating to resource docs:', `/resource-docs/${command}`)
+    console.log('Current route:', route.path)
+    // Clear operationid query param when changing versions to avoid showing non-existent operation
+    router.replace({ path: `/resource-docs/${command}`, query: {} })
   }
 }
 
