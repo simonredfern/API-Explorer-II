@@ -218,15 +218,19 @@ onBeforeRouteUpdate(async (to) => {
     <el-container>
       <el-main>
         <div v-if="showPlaceholder" class="placeholder-message">
-          <h2>Version {{ placeholderVersion }} Selected</h2>
-          <p>There are {{ totalEndpoints }} endpoints available in this version.</p>
-          <p>Please click an endpoint on the left or browse by tags below.</p>
+          <div class="version-header">
+            <h1>{{ placeholderVersion }}</h1>
+            <p class="version-subtitle">API Documentation</p>
+          </div>
+          <p class="version-info">There are {{ totalEndpoints }} endpoints available in this version.</p>
+          <p class="version-instructions">Please click an endpoint on the left or browse by tags below.</p>
 
           <div v-if="allTags.length > 0" class="placeholder-tags">
             <h3>Filter by Tag:</h3>
             <div class="tags-grid">
               <a
                 class="tag-link tag-link-all"
+                :class="{ 'tag-link-active': !route.query.tags }"
                 @click.prevent="clearTagFilter()"
               >
                 All
@@ -235,6 +239,7 @@ onBeforeRouteUpdate(async (to) => {
                 v-for="tag in allTags"
                 :key="tag"
                 class="tag-link"
+                :class="{ 'tag-link-active': route.query.tags === tag }"
                 @click.prevent="filterByTag(tag)"
               >
                 {{ tag }}
@@ -252,11 +257,13 @@ onBeforeRouteUpdate(async (to) => {
               <!--<el-button text>★</el-button>-->
             </el-col>
           </el-row>
+          <div v-html="description" class="content"></div>
           <div class="tags-section">
-            <span class="tags-label">Tags ({{ tags.length }}):</span>
+            <span class="tags-label">Tags:</span>
             <a
               v-if="route.query.tags"
               class="tag-link tag-link-all"
+              :class="{ 'tag-link-active': !route.query.tags }"
               @click.prevent="clearTagFilter()"
             >
               All
@@ -265,13 +272,13 @@ onBeforeRouteUpdate(async (to) => {
               v-for="tag in tags"
               :key="tag"
               class="tag-link"
+              :class="{ 'tag-link-active': route.query.tags === tag }"
               @click.prevent="filterByTag(tag)"
             >
               {{ tag }}
             </a>
             <span v-if="tags.length === 0" style="color: #909399; font-size: 12px;">No tags available</span>
           </div>
-          <div v-html="description" class="content"></div>
         </div>
       </el-main>
       <el-footer class="footer" v-if="!showPlaceholder">
@@ -355,26 +362,60 @@ span {
   border-color: #85ce61;
 }
 
+.tag-link-active {
+  background-color: #409eff;
+  color: white;
+  border-color: #409eff;
+  font-weight: 600;
+}
+
+.tag-link-all.tag-link-active {
+  background-color: #67c23a;
+  border-color: #67c23a;
+}
+
 .placeholder-message {
-  text-align: center;
-  padding: 60px 20px;
+  padding: 0;
   color: #606266;
 }
 
-.placeholder-message h2 {
-  font-size: 24px;
+.version-header {
+  padding: 20px 0;
+  border-bottom: 2px solid #e4e7ed;
   margin-bottom: 20px;
-  color: #39455f;
 }
 
-.placeholder-message p {
+.version-header h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #303133;
+  margin: 0 0 0.5rem 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.version-subtitle {
+  font-size: 1rem;
+  color: #909399;
+  margin: 0;
+}
+
+.version-info {
   font-size: 16px;
-  margin: 10px 0;
+  margin: 20px 0 10px 0;
   line-height: 1.6;
+  color: #606266;
+}
+
+.version-instructions {
+  font-size: 16px;
+  margin: 10px 0 20px 0;
+  line-height: 1.6;
+  color: #606266;
 }
 
 .placeholder-tags {
-  margin-top: 40px;
+  margin-top: 30px;
   text-align: left;
 }
 
