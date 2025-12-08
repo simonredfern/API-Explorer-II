@@ -82,6 +82,13 @@ const filterByTag = (tag: string) => {
   })
 }
 
+const clearTagFilter = () => {
+  router.push({
+    name: 'api',
+    params: { version: version }
+  })
+}
+
 const setPager = (id: string): void => {
   const target = document.getElementById(id)?.parentElement
   if (target) {
@@ -213,11 +220,17 @@ onBeforeRouteUpdate(async (to) => {
         <div v-if="showPlaceholder" class="placeholder-message">
           <h2>Version {{ placeholderVersion }} Selected</h2>
           <p>There are {{ totalEndpoints }} endpoints available in this version.</p>
-          <p>Please click an endpoint on the left to view its details.</p>
+          <p>Please click an endpoint on the left or browse by tags below.</p>
 
           <div v-if="allTags.length > 0" class="placeholder-tags">
             <h3>Filter by Tag:</h3>
             <div class="tags-grid">
+              <a
+                class="tag-link tag-link-all"
+                @click.prevent="clearTagFilter()"
+              >
+                All
+              </a>
               <a
                 v-for="tag in allTags"
                 :key="tag"
@@ -241,6 +254,13 @@ onBeforeRouteUpdate(async (to) => {
           </el-row>
           <div class="tags-section">
             <span class="tags-label">Tags ({{ tags.length }}):</span>
+            <a
+              v-if="route.query.tags"
+              class="tag-link tag-link-all"
+              @click.prevent="clearTagFilter()"
+            >
+              All
+            </a>
             <a
               v-for="tag in tags"
               :key="tag"
@@ -321,6 +341,18 @@ span {
   background-color: #409eff;
   color: white;
   border-color: #409eff;
+}
+
+.tag-link-all {
+  background-color: #67c23a;
+  border-color: #b3e19d;
+  color: white;
+  font-weight: 600;
+}
+
+.tag-link-all:hover {
+  background-color: #85ce61;
+  border-color: #85ce61;
 }
 
 .placeholder-message {
