@@ -53,6 +53,9 @@ const prev = ref({ id: 'prev' })
 const next = ref({ id: 'next' })
 const favoriteButtonStyle = ref('favorite favoriteButton')
 const summaryPagerLinksColor = ref(summaryPagerLinksColorSetting)
+const showPlaceholder = ref(false)
+const placeholderVersion = ref('')
+const totalEndpoints = ref(0)
 let routeId = ''
 let version = obpVersion
 let isFavorite = false
@@ -144,16 +147,34 @@ const showNotification = (message: string, type: string): void => {
 onMounted(async () => {
   routeId = route.query.operationid
   version = route.params.version ? route.params.version : obpVersion
-  setOperationDetails(routeId, version)
-  setPager(routeId)
-  await tagFavoriteButton(routeId)
+
+  if (!routeId) {
+    // No operation selected, show placeholder
+    showPlaceholder.value = true
+    placeholderVersion.value = version
+    totalEndpoints.value = resourceDocs[version]?.resource_docs?.length || 0
+  } else {
+    showPlaceholder.value = false
+    setOperationDetails(routeId, version)
+    setPager(routeId)
+    await tagFavoriteButton(routeId)
+  }
 })
 onBeforeRouteUpdate(async (to) => {
   routeId = to.query.operationid
   version = to.params.version ? to.params.version : obpVersion
-  setOperationDetails(routeId, version)
-  setPager(routeId)
-  await tagFavoriteButton(routeId)
+
+  if (!routeId) {
+    // No operation selected, show placeholder
+    showPlaceholder.value = true
+    placeholderVersion.value = version
+    totalEndpoints.value = resourceDocs[version]?.resource_docs?.length || 0
+  } else {
+    showPlaceholder.value = false
+    setOperationDetails(routeId, version)
+    setPager(routeId)
+    await tagFavoriteButton(routeId)
+  }
 })
 </script>
 
@@ -161,18 +182,25 @@ onBeforeRouteUpdate(async (to) => {
   <main>
     <el-container>
       <el-main>
-        <el-row>
-          <el-col :span="22">
-            <span>{{ summary }}</span>
-          </el-col>
-          <el-col :span="2">
-            <span :class="favoriteButtonStyle" @click="createDeleteFavorite()">★</span>
-            <!--<el-button text>★</el-button>-->
-          </el-col>
-        </el-row>
-        <div v-html="description" class="content"></div>
+        <div v-if="showPlaceholder" class="placeholder-message">
+          <h2>Version {{ placeholderVersion }} Selected</h2>
+          <p>There are {{ totalEndpoints }} endpoints available in this version.</p>
+          <p>Please click an endpoint on the left to view its details.</p>
+        </div>
+        <div v-else>
+          <el-row>
+            <el-col :span="22">
+              <span>{{ summary }}</span>
+            </el-col>
+            <el-col :span="2">
+              <span :class="favoriteButtonStyle" @click="createDeleteFavorite()">★</span>
+              <!--<el-button text>★</el-button>-->
+            </el-col>
+          </el-row>
+          <div v-html="description" class="content"></div>
+        </div>
       </el-main>
-      <el-footer class="footer">
+      <el-footer class="footer" v-if="!showPlaceholder">
         <el-divider class="divider" />
         <el-row>
           <el-col :span="12" class="pager-left">
@@ -206,6 +234,24 @@ main {
 
 span {
   font-size: 28px;
+}
+
+.placeholder-message {
+  text-align: center;
+  padding: 60px 20px;
+  color: #606266;
+}
+
+.placeholder-message h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #39455f;
+}
+
+.placeholder-message p {
+  font-size: 16px;
+  margin: 10px 0;
+  line-height: 1.6;
 }
 
 div {

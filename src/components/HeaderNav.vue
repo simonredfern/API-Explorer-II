@@ -89,7 +89,7 @@ const handleMore = (command: string) => {
     console.log('Navigating to resource docs:', `/resource-docs/${command}`)
     console.log('Current route:', route.path)
     // Clear operationid query param when changing versions to avoid showing non-existent operation
-    router.replace({ path: `/resource-docs/${command}`, query: {} })
+    router.push(`/resource-docs/${command}`)
   }
 }
 

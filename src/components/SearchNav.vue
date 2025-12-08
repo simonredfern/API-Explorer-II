@@ -107,21 +107,32 @@ onBeforeMount(async () => {
 })
 
 onMounted(async () => {
-  await nextTick()
-  routeToFirstAPI()
+  // Only auto-route if there's already an operationid in the URL
+  if (route.query.operationid) {
+    await nextTick()
+    routeToFirstAPI()
+  }
 })
 
 watch(
   () => route.params.version,
   async (version) => {
+    console.log('SearchNav: version changed to:', version)
     selectedVersion = version
     docs.value = getGroupedResourceDocs(version, resourceDocs.value)
     groups.value = JSON.parse(JSON.stringify(docs.value))
     activeKeys.value = Object.keys(groups.value)
     sortedKeys.value = activeKeys.value.sort()
+    console.log('SearchNav: groups loaded, total groups:', activeKeys.value.length)
     await initializeAPICollections()
     await nextTick()
-    routeToFirstAPI()
+    // Only auto-route if there's an operationid in the URL (user navigated directly to an endpoint)
+    if (route.query.operationid) {
+      console.log('SearchNav: calling routeToFirstAPI')
+      routeToFirstAPI()
+    } else {
+      console.log('SearchNav: no operationid, not auto-routing')
+    }
     countApis()
   }
 )
@@ -139,7 +150,9 @@ const countApis = () => {
 const routeToFirstAPI = () => {
   let element
   const elements = document.getElementsByClassName('api-router-link')
+  console.log('routeToFirstAPI: found', elements.length, 'api links')
   const id = route.query.operationid
+  console.log('routeToFirstAPI: looking for operationid:', id)
   for (const el of elements) {
     if (el.id === id) {
       element = el
@@ -147,9 +160,16 @@ const routeToFirstAPI = () => {
     }
   }
   if (element) {
+    console.log('routeToFirstAPI: clicking matching element:', id)
     element.click()
   } else {
-    if (elements.item(0)) elements.item(0).click()
+    console.log('routeToFirstAPI: no match, clicking first element')
+    if (elements.item(0)) {
+      console.log('routeToFirstAPI: first element id:', elements.item(0).id)
+      elements.item(0).click()
+    } else {
+      console.log('routeToFirstAPI: NO ELEMENTS FOUND!')
+    }
   }
 }
 

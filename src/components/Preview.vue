@@ -401,7 +401,11 @@ const submitEntitlement = async () => {
 onBeforeMount(async () => {
   const route = useRoute()
   const version = route.params.version ? route.params.version : configVersion
-  setOperationDetails(route.query.operationid, version)
+
+  // Only set operation details if operationid exists
+  if (route.query.operationid) {
+    setOperationDetails(route.query.operationid, version)
+  }
 
   const currentUser = await getCurrentUser()
   isUserLogon.value = currentUser.username
@@ -409,8 +413,13 @@ onBeforeMount(async () => {
 })
 onBeforeRouteUpdate((to) => {
   const version = to.params.version ? to.params.version : configVersion
-  setOperationDetails(to.query.operationid, version)
-  responseHeaderTitle.value = 'TYPICAL SUCCESSFUL RESPONSE'
+
+  // Only set operation details if operationid exists
+  if (to.query.operationid) {
+    setOperationDetails(to.query.operationid, version)
+    responseHeaderTitle.value = 'TYPICAL SUCCESSFUL RESPONSE'
+  }
+
   setRoleForm()
 })
 
