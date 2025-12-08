@@ -74,7 +74,17 @@ const roleForm = reactive({})
 
 const setOperationDetails = (id: string, version: string): void => {
   const operation = getOperationDetails(version, id, resourceDocs)
-  url.value = operation?.specified_url
+  // Replace the version in the URL with the current viewing version
+  // This ensures users test against the version they're viewing (e.g., v6.0.0)
+  // even if the endpoint was originally defined in an earlier version (e.g., v3.1.0)
+  if (operation?.specified_url) {
+    // Extract version without OBP prefix for URL replacement (e.g., "OBPv6.0.0" -> "v6.0.0")
+    const versionWithoutPrefix = version.replace('OBP', '')
+    // Replace /obp/vX.X.X/ with the current version
+    url.value = operation.specified_url.replace(/\/obp\/v\d+\.\d+\.\d+\//, `/obp/${versionWithoutPrefix}/`)
+  } else {
+    url.value = operation?.specified_url
+  }
   method.value = operation?.request_verb
   exampleRequestBody.value = operation.example_request_body
   requiredRoles.value = operation.roles || []
