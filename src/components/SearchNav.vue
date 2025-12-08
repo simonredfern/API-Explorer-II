@@ -93,7 +93,7 @@ onBeforeMount(async () => {
   activeKeys.value = Object.keys(groups.value)
   sortedKeys.value = activeKeys.value.sort()
   await initializeAPICollections()
-  setTabActive(route.params.id)
+  setTabActive(route.query.operationid)
   let element = document.getElementById("selected-api-version")
   if (element !== null) {
     const totalRows = Object.values(groups.value).reduce((acc, currentValue) => acc + currentValue.length, 0)
@@ -136,7 +136,7 @@ const countApis = () => {
 const routeToFirstAPI = () => {
   let element
   const elements = document.getElementsByClassName('api-router-link')
-  const id = route.params.id
+  const id = route.query.operationid
   for (const el of elements) {
     if (el.id === id) {
       element = el
