@@ -27,7 +27,6 @@
 
 <script setup lang="ts">
 import { ref, inject, watchEffect, onMounted, computed } from 'vue'
-import { ArrowDown } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { OBP_API_DEFAULT_RESOURCE_DOC_VERSION, getCurrentUser } from '../obp'
 import { getOBPAPIVersions } from '../obp/api-version'
@@ -38,6 +37,7 @@ import {
   HEADER_LINKS_BACKGROUND_COLOR as headerLinksBackgroundColorSetting
 } from '../obp/style-setting'
 import { obpApiActiveVersionsKey, obpGroupedMessageDocsKey, obpMyCollectionsEndpointKey } from '@/obp/keys'
+import SvelteDropdown from './SvelteDropdown.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -82,7 +82,11 @@ const handleMore = (command: string) => {
   if (element !== null) {
     element.textContent = command;
   }
-  if (command.includes('_')) {
+  if (command === '/message-docs') {
+    // Navigate to message docs list
+    console.log('Navigating to message docs list')
+    router.push({ name: 'message-docs-list' })
+  } else if (command.includes('_')) {
     console.log('Navigating to message docs:', command)
     router.push({ name: 'message-docs', params: { id: command } })
   } else {
@@ -145,31 +149,24 @@ const getCurrentPath = () => {
       <a v-if="showObpApiManagerButton && hasObpApiManagerHost" v-bind:href="obpApiManagerHost" class="router-link" id="header-nav-api-manager">
         {{ $t('header.api_manager') }}
       </a>
-      <el-dropdown
-        class="menu-right router-link"
-        id="header-nav-more"
-        @command="handleMore"
-        trigger="hover"
-        placement="bottom-end"
-        :teleported="true"
-        max-height="700px"
-      >
-        <span class="el-dropdown-link">
-          {{ $t('header.more') }}
-          <el-icon class="el-icon--right">
-            <arrow-down />
-          </el-icon>
-        </span>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item v-for="value in obpApiVersions" :command="value" :key="value">{{
-              value
-            }}</el-dropdown-item>
-            <el-dropdown-item v-for="value in obpMessageDocs" :command="value" :key="value">
-              Message Docs for: {{ value }}</el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
+      <SvelteDropdown
+        class="menu-right"
+        id="header-nav-versions"
+        label="Versions"
+        :items="obpApiVersions"
+        :hover-color="headerLinksHoverColor"
+        :background-color="headerLinksBackgroundColor"
+        @select="handleMore"
+      />
+      <SvelteDropdown
+        class="menu-right"
+        id="header-nav-message-docs"
+        label="Message Docs"
+        :items="obpMessageDocs"
+        :hover-color="headerLinksHoverColor"
+        :background-color="headerLinksBackgroundColor"
+        @select="handleMore"
+      />
       <!--<span class="el-dropdown-link">
         <RouterLink class="router-link" id="header-nav-spaces" to="/spaces">{{
           $t('header.spaces')
@@ -261,21 +258,10 @@ a.logoff-button {
   color: #39455f;
 }
 
-/*override element plus*/
-.el-dropdown-menu__item:hover {
-  color: v-bind(headerLinksHoverColor) !important;
-}
-
-/* Fix dropdown menu overflow */
-.el-dropdown-menu {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-/* Ensure dropdown trigger behaves correctly */
-#header-nav-more .el-dropdown-link {
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
+/* Custom dropdown containers */
+#header-nav-versions,
+#header-nav-message-docs {
+  display: inline-block;
+  vertical-align: middle;
 }
 </style>

@@ -3,6 +3,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { loadEnv, defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
+import { svelte } from '@sveltejs/vite-plugin-svelte'
 
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
@@ -14,6 +15,7 @@ export default defineConfig({
   plugins: [
     vue(),
     vueJsx(),
+    svelte(),
     AutoImport({
       resolvers: [ElementPlusResolver()]
     }),
@@ -28,7 +30,7 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
-    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json', '.vue']
+    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json', '.vue', '.svelte']
   },
   define: {
     __VUE_I18N_FULL_INSTALL__: true,
