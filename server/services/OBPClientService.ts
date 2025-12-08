@@ -72,9 +72,10 @@ export default class OBPClientService {
   constructor() {
     if (!process.env.VITE_OBP_API_HOST) throw new Error('VITE_OBP_API_HOST is not set')
 
+    // Always use v5.1.0 for application infrastructure - stable and debuggable
     this.clientConfig = {
       baseUri: process.env.VITE_OBP_API_HOST!,
-      version: process.env.VITE_OBP_API_VERSION ?? DEFAULT_OBP_API_VERSION
+      version: DEFAULT_OBP_API_VERSION
     }
   }
   async get(path: string, clientConfig: any): Promise<any> {

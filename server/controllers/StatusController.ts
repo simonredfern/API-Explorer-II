@@ -32,6 +32,11 @@ import OBPClientService from '../services/OBPClientService'
 import { Service, Container } from 'typedi'
 import { OAuthConfig } from 'obp-typescript'
 import { commitId } from '../app'
+import {
+  RESOURCE_DOCS_API_VERSION,
+  MESSAGE_DOCS_API_VERSION,
+  API_VERSIONS_LIST_API_VERSION
+} from '../../shared-constants'
 
 @Service()
 @Controller('/status')
@@ -104,7 +109,7 @@ export class StatusController {
 
   async checkResourceDocs(oauthConfig: OAuthConfig, version: string): Promise<boolean> {
     try {
-      const path = `/obp/${version}/resource-docs/${version}/obp`
+      const path = `/obp/${RESOURCE_DOCS_API_VERSION}/resource-docs/${version}/obp`
       const resourceDocs = await this.obpClientService.get(path, oauthConfig)
       return !this.isCodeError(resourceDocs, path)
     } catch (error) {
@@ -115,7 +120,7 @@ export class StatusController {
     try {
       const messageDocsCodeResult = await Promise.all(
         this.connectors.map(async (connector) => {
-          const path = `/obp/${version}/message-docs/${connector}`
+          const path = `/obp/${MESSAGE_DOCS_API_VERSION}/message-docs/${connector}`
           return !this.isCodeError(await this.obpClientService.get(path, oauthConfig), path)
         })
       )
@@ -127,7 +132,7 @@ export class StatusController {
 
   async checkApiVersions(oauthConfig: OAuthConfig, version: string): Promise<boolean> {
     try {
-      const path = `/obp/${version}/api/versions`
+      const path = `/obp/${API_VERSIONS_LIST_API_VERSION}/api/versions`
       const versions = await this.obpClientService.get(path, oauthConfig)
       return !this.isCodeError(versions, path)
     } catch (error) {

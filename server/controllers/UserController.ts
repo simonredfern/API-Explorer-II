@@ -136,7 +136,8 @@ export class UserController {
 
       if (clientConfig && clientConfig.oauth2?.accessToken) {
         try {
-          const version = process.env.VITE_OBP_API_VERSION ?? DEFAULT_OBP_API_VERSION
+          // Always use v5.1.0 for application infrastructure - stable and debuggable
+          const version = DEFAULT_OBP_API_VERSION
           console.log('UserController: Fetching OBP user from /obp/' + version + '/users/current')
           const obpUser = await this.obpClientService.get(
             `/obp/${version}/users/current`,

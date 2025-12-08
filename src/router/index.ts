@@ -36,18 +36,17 @@ import NotFoundView from '../views/NotFoundView.vue'
 import InternalServerErrorView from '../views/InternalServerErrorView.vue'
 import APIServerErrorView from '../views/APIServerErrorView.vue'
 import APIServerStatusView from '../views/APIServerStatusView.vue'
-import { isServerUp } from '../obp'
+import { isServerUp, OBP_API_DEFAULT_RESOURCE_DOC_VERSION } from '../obp'
 import MessageDocsContent from '@/components/CodeBlock.vue'
 
 export default async function router(): Promise<any> {
   const isServerActive = await isServerUp()
   const router = createRouter({
     history: createWebHistory(),
-    mode: 'history',
     routes: [
       {
         path: '/',
-        redirect: isServerActive ? '/operationid' : '/api-server-error'
+        redirect: isServerActive ? '/resource-docs' : '/api-server-error'
       },
       {
         path: '/status',
@@ -70,13 +69,14 @@ export default async function router(): Promise<any> {
         component: isServerActive ? MessageDocsView : InternalServerErrorView
       },
       {
-        path: '/operationid',
-        name: 'operationid',
-        component: isServerActive ? BodyView : InternalServerErrorView
+        path: '/resource-docs',
+        redirect: () => {
+          return { path: `/resource-docs/${OBP_API_DEFAULT_RESOURCE_DOC_VERSION}` }
+        }
       },
       {
-        path: '/operationid/:id',
-        name: 'operationid-path',
+        path: '/resource-docs/:version',
+        name: 'resource-docs-version',
         component: BodyView,
         children: [
           {
@@ -88,6 +88,22 @@ export default async function router(): Promise<any> {
             }
           }
         ]
+      },
+      {
+        path: '/operationid',
+        redirect: (to) => {
+          return { path: '/resource-docs', query: to.query }
+        }
+      },
+      {
+        path: '/operationid/:id',
+        redirect: (to) => {
+          const version = to.query.version || 'OBPv6.0.0'
+          return {
+            path: `/resource-docs/${version}`,
+            query: { operationid: to.params.id }
+          }
+        }
       },
       {
         path: '/callback',

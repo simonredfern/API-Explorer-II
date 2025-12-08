@@ -30,7 +30,7 @@ import { ref, reactive, inject, onBeforeMount } from 'vue'
 import { onBeforeRouteUpdate, useRoute } from 'vue-router'
 import { getOperationDetails } from '../obp/resource-docs'
 import { ElNotification, FormInstance } from 'element-plus'
-import { OBP_API_VERSION, get, create, update, discard, createEntitlement, getCurrentUser } from '../obp'
+import { OBP_API_DEFAULT_RESOURCE_DOC_VERSION, get, create, update, discard, createEntitlement, getCurrentUser } from '../obp'
 import { obpResourceDocsKey } from '@/obp/keys'
 import JsonEditorVue from 'json-editor-vue'
 import { Mode } from 'vanilla-jsoneditor'
@@ -38,7 +38,7 @@ import 'vanilla-jsoneditor/themes/jse-theme-dark.css'
 import * as cheerio from 'cheerio'
 
 const elMessageDuration = 5500
-const configVersion = 'OBP' + OBP_API_VERSION
+const configVersion = OBP_API_DEFAULT_RESOURCE_DOC_VERSION
 const url = ref('')
 const roleName = ref('')
 const method = ref('')
@@ -383,16 +383,16 @@ const submitEntitlement = async () => {
 }
 onBeforeMount(async () => {
   const route = useRoute()
-  const version = route.query.version ? route.query.version : configVersion
-  setOperationDetails(route.params.id, version)
+  const version = route.params.version ? route.params.version : configVersion
+  setOperationDetails(route.query.operationid, version)
 
   const currentUser = await getCurrentUser()
   isUserLogon.value = currentUser.username
   setRoleForm()
 })
 onBeforeRouteUpdate((to) => {
-  const version = to.query.version ? to.query.version : configVersion
-  setOperationDetails(to.params.id, version)
+  const version = to.params.version ? to.params.version : configVersion
+  setOperationDetails(to.query.operationid, version)
   responseHeaderTitle.value = 'TYPICAL SUCCESSFUL RESPONSE'
   setRoleForm()
 })

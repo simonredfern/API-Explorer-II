@@ -29,7 +29,7 @@
 import { ref, inject, watchEffect, onMounted, computed } from 'vue'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
-import { OBP_API_VERSION, getCurrentUser } from '../obp'
+import { OBP_API_DEFAULT_RESOURCE_DOC_VERSION, getCurrentUser } from '../obp'
 import { getOBPAPIVersions } from '../obp/api-version'
 import {
   LOGO_URL as logoSource,
@@ -84,7 +84,7 @@ const handleMore = (command: string) => {
   if (command.includes('_')) {
     router.push({ name: 'message-docs', params: { id: command } })
   } else {
-    router.replace({ path: '/operationid', query: { version: command } })
+    router.replace({ path: `/resource-docs/${command}` })
   }
 }
 
@@ -129,7 +129,7 @@ const getCurrentPath = () => {
       <a v-bind:href="obpApiHybridPost" class="router-link" id="header-nav-home">
         {{ $t('header.portal_home') }}
       </a>
-      <RouterLink class="router-link" id="header-nav-tags" :to="'/operationid?version=OBP' + OBP_API_VERSION">{{
+      <RouterLink class="router-link" id="header-nav-tags" :to="'/resource-docs/' + OBP_API_DEFAULT_RESOURCE_DOC_VERSION">{{
         $t('header.api_explorer') }}</RouterLink>
       <RouterLink class="router-link" id="header-nav-glossary" to="/glossary">{{
         $t('header.glossary')

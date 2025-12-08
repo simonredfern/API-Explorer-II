@@ -29,6 +29,7 @@ import { ExpressMiddlewareInterface } from 'routing-controllers'
 import { Request, Response } from 'express'
 import { Service, Container } from 'typedi'
 import { OAuth2Service } from '../services/OAuth2Service'
+import { DEFAULT_OBP_API_VERSION } from '../../shared-constants'
 import jwt from 'jsonwebtoken'
 
 /**
@@ -317,9 +318,11 @@ export default class OAuth2CallbackMiddleware implements ExpressMiddlewareInterf
 
       // Create clientConfig for OBP API calls with OAuth2 Bearer token
       // This allows OBPClientService to work with OAuth2 authentication
+      // Store session data for authenticated requests
+      // Always use v5.1.0 for application infrastructure - stable and debuggable
       session['clientConfig'] = {
         baseUri: process.env.VITE_OBP_API_HOST || 'http://localhost:8080',
-        version: process.env.VITE_OBP_API_VERSION || 'v5.1.0',
+        version: DEFAULT_OBP_API_VERSION,
         oauth2: {
           accessToken: tokens.accessToken,
           tokenType: tokens.tokenType || 'Bearer'

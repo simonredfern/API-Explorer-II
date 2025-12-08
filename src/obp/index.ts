@@ -28,9 +28,10 @@
 import superagent from 'superagent'
 import { DEFAULT_OBP_API_VERSION } from '../../shared-constants'
 
-export const OBP_API_VERSION = import.meta.env.VITE_OBP_API_VERSION ?? DEFAULT_OBP_API_VERSION
+// Always use v5.1.0 for application infrastructure - stable and debuggable
+export const OBP_API_VERSION = DEFAULT_OBP_API_VERSION
 export const OBP_API_DEFAULT_RESOURCE_DOC_VERSION =
-  import.meta.env.VITE_OBP_API_DEFAULT_RESOURCE_DOC_VERSION ?? `OBP${OBP_API_VERSION}`
+  import.meta.env.VITE_OBP_API_DEFAULT_RESOURCE_DOC_VERSION ?? `OBP${DEFAULT_OBP_API_VERSION}`
 const default_collection_name = 'Favourites'
 
 export async function serverStatus(): Promise<any> {

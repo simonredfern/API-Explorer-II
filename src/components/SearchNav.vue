@@ -80,7 +80,7 @@ export const initializeAPICollections = async () => {
 
 <script setup lang="ts">
 const route = useRoute()
-let selectedVersion = route.query.version ? route.query.version : `${OBP_API_DEFAULT_RESOURCE_DOC_VERSION}`
+let selectedVersion = route.params.version ? route.params.version : `${OBP_API_DEFAULT_RESOURCE_DOC_VERSION}`
 let selectedTags = route.query.tags ? route.query.tags : 'NONE'
 onBeforeMount(async () => {
   resourceDocs.value = inject(obpResourceDocsKey)!
@@ -110,7 +110,7 @@ onMounted(() => {
 })
 
 watch(
-  () => route.query.version,
+  () => route.params.version,
   async (version) => {
     selectedVersion = version
     docs.value = getGroupedResourceDocs(version, resourceDocs.value)
@@ -217,7 +217,7 @@ const searchEvent = (value) => {
             <div class="el-tabs--right">
               <div v-for="(value, key) of apiCollectionsEndpoint[api.api_collection_name]" :key="key" class="api-router-tab"
                 @click="setActive">
-                <RouterLink :to="{ name: 'api', params: { id: value }, query: { version: selectedVersion } }" :id="value"
+                <RouterLink :to="{ name: 'api', params: { version: selectedVersion }, query: { operationid: value } }" :id="value"
                   active-class="active-api-router-link" class="api-router-link">{{ operationIdTitle[value] }}</RouterLink>
               </div>
             </div>
@@ -227,14 +227,14 @@ const searchEvent = (value) => {
           <div class="el-tabs--right">
             <div v-for="(value, key) of sortLinks(groups[key])" :key="value" class="api-router-tab" @click="setActive">
               <RouterLink active-class="active-api-router-link" class="api-router-link" :id="value"
-                :to="{ name: 'api', params: { id: value }, query: { version: selectedVersion } }">{{ key }}</RouterLink>
+                :to="{ name: 'api', params: { version: selectedVersion }, query: { operationid: value } }">{{ key }}</RouterLink>
             </div>
           </div>
         </el-collapse-item>
       </el-collapse>
     </el-main>
   </el-container>
-  
+
 </template>
 
 <style scoped>
@@ -249,7 +249,7 @@ const searchEvent = (value) => {
   max-height: 100%;
   padding-right: 0;
   border-right: solid 1px var(--el-menu-border-color);
-  
+
 }
 .search-nav-collapse {
   height: 100%;

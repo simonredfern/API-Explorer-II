@@ -32,7 +32,7 @@ import { ElNotification } from 'element-plus'
 import { inject, onMounted, provide, ref } from 'vue'
 import { onBeforeRouteUpdate, useRoute } from 'vue-router'
 import {
-OBP_API_VERSION,
+OBP_API_DEFAULT_RESOURCE_DOC_VERSION,
 createMyAPICollection,
 createMyAPICollectionEndpoint,
 deleteMyAPICollectionEndpoint,
@@ -43,7 +43,7 @@ import { SUMMARY_PAGER_LINKS_COLOR as summaryPagerLinksColorSetting } from '../o
 import { initializeAPICollections, setTabActive } from './SearchNav.vue'
 
 const route = useRoute()
-const obpVersion = 'OBP' + OBP_API_VERSION
+const obpVersion = OBP_API_DEFAULT_RESOURCE_DOC_VERSION
 const description = ref('')
 const summary = ref('')
 const resourceDocs = inject(obpResourceDocsKey)
@@ -142,15 +142,15 @@ const showNotification = (message: string, type: string): void => {
 }
 
 onMounted(async () => {
-  routeId = route.params.id
-  version = route.query.version ? route.query.version : obpVersion
+  routeId = route.query.operationid
+  version = route.params.version ? route.params.version : obpVersion
   setOperationDetails(routeId, version)
   setPager(routeId)
   await tagFavoriteButton(routeId)
 })
 onBeforeRouteUpdate(async (to) => {
-  routeId = to.params.id
-  version = route.query.version ? route.query.version : obpVersion
+  routeId = to.query.operationid
+  version = to.params.version ? to.params.version : obpVersion
   setOperationDetails(routeId, version)
   setPager(routeId)
   await tagFavoriteButton(routeId)
@@ -180,12 +180,12 @@ onBeforeRouteUpdate(async (to) => {
               <ArrowLeftBold />
             </el-icon>
             <RouterLink v-show="displayPrev" class="pager-router-link"
-              :to="{ name: 'api', params: { id: prev.id }, query: { version: prev.version } }">{{ prev.title }}
+              :to="{ name: 'api', params: { version: prev.version }, query: { operationid: prev.id } }">{{ prev.title }}
             </RouterLink>
           </el-col>
           <el-col :span="12" class="pager-right">
             <RouterLink v-show="displayNext" class="pager-router-link"
-              :to="{ name: 'api', params: { id: next.id }, query: { version: next.version } }">{{ next.title }}
+              :to="{ name: 'api', params: { version: next.version }, query: { operationid: next.id } }">{{ next.title }}
             </RouterLink>
             <el-icon v-show="displayNext">
               <ArrowRightBold />

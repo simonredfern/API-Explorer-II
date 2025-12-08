@@ -25,16 +25,17 @@
  *
  */
 
-import { OBP_API_VERSION, get, isServerUp } from '../obp'
+import { get, isServerUp, OBP_API_DEFAULT_RESOURCE_DOC_VERSION } from '../obp'
 import { getOBPAPIVersions } from '../obp/api-version'
 import { updateLoadingInfoMessage } from './common-functions'
+import { RESOURCE_DOCS_API_VERSION } from '../../shared-constants'
 
 // Get Resource Docs
 export async function getOBPResourceDocs(apiStandardAndVersion: string): Promise<any> {
   const logMessage = `Loading API ${apiStandardAndVersion}`
   console.log(logMessage)
   updateLoadingInfoMessage(logMessage)
-  const path = `/obp/${OBP_API_VERSION}/resource-docs/${apiStandardAndVersion}/obp`
+  const path = `/obp/${RESOURCE_DOCS_API_VERSION}/resource-docs/${apiStandardAndVersion}/obp`
   try {
     return await get(path)
   } catch (error: any) {
@@ -50,7 +51,7 @@ export async function getOBPDynamicResourceDocs(apiStandardAndVersion: string): 
   const logMessage = `Loading Dynamic Docs for ${apiStandardAndVersion}`
   console.log(logMessage)
   updateLoadingInfoMessage(logMessage)
-  const path = `/obp/${OBP_API_VERSION}/resource-docs/${apiStandardAndVersion}/obp?content=dynamic`
+  const path = `/obp/${RESOURCE_DOCS_API_VERSION}/resource-docs/${apiStandardAndVersion}/obp?content=dynamic`
   try {
     return await get(path)
   } catch (error: any) {
@@ -192,7 +193,10 @@ export async function cache(cachedStorage: any, cachedResponse: any, worker: any
   try {
     worker.postMessage('update-resource-docs')
     const resourceDocs = await cachedResponse.json()
-    const groupedResourceDocs = getGroupedResourceDocs('OBP' + OBP_API_VERSION, resourceDocs)
+    const groupedResourceDocs = getGroupedResourceDocs(
+      OBP_API_DEFAULT_RESOURCE_DOC_VERSION,
+      resourceDocs
+    )
     return { resourceDocs, groupedDocs: groupedResourceDocs }
   } catch (error) {
     console.warn('No resource docs cache or malformed cache.')
@@ -200,7 +204,7 @@ export async function cache(cachedStorage: any, cachedResponse: any, worker: any
     const isServerActive = await isServerUp()
     if (!isServerActive) throw new Error('API Server is not responding.')
     const resourceDocs = await getCacheDoc(cachedStorage)
-    const groupedDocs = getGroupedResourceDocs('OBP' + OBP_API_VERSION, resourceDocs)
+    const groupedDocs = getGroupedResourceDocs(OBP_API_DEFAULT_RESOURCE_DOC_VERSION, resourceDocs)
     return { resourceDocs, groupedDocs }
   }
 }
