@@ -94,7 +94,7 @@ const setOperationDetails = (id: string, version: string): void => {
   showValidations.value = validations.value.length > 0
   showPossibleErrors.value = possibleErrors.value.length > 0
   showConnectorMethods.value = true
-  footNote.value.version = operation.operation_id
+  footNote.value.operationId = operation.operation_id
   footNote.value.version = operation.implemented_by.version
   footNote.value.functionName = operation.implemented_by.function
   footNote.value.messageTags = operation.tags.join(',')
@@ -581,8 +581,7 @@ const onError = (error) => {
     <el-divider class="divider" />
     <div>
       <p class="footnote">
-        Implemented by: {{ footNote.version }}, function_name: by {{ footNote.functionName }},
-        operation_id: {{ footNote.functionName }}, Message Tags: {{ footNote.messageTags }}
+        Implemented in: {{ footNote.version }} by function_name: {{ footNote.functionName }} (operation_id: {{ footNote.operationId }}). Message Tags: {{ footNote.messageTags }}
       </p>
     </div>
     <br />
