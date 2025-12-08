@@ -581,7 +581,7 @@ const onError = (error) => {
     <el-divider class="divider" />
     <div>
       <p class="footnote">
-        Version: {{ footNote.version }}, function_name: by {{ footNote.functionName }},
+        Implemented by: {{ footNote.version }}, function_name: by {{ footNote.functionName }},
         operation_id: {{ footNote.functionName }}, Message Tags: {{ footNote.messageTags }}
       </p>
     </div>
