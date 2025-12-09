@@ -72,6 +72,39 @@ const setOperationDetails = (id: string, version: string): void => {
   summary.value = operation?.summary
   tags.value = operation?.tags || []
   console.log('Tags ref value:', tags.value)
+  updateHeaderTags(tags.value)
+}
+
+const updateHeaderTags = (tagsList: string[]) => {
+  const element = document.getElementById('selected-endpoint-tags')
+  if (element) {
+    if (tagsList.length > 0) {
+      const tagsHTML = tagsList.map(tag =>
+        `<a class="tag-link" data-tag="${tag}" href="#">${tag}</a>`
+      ).join(', ')
+      element.innerHTML = `Tags: ${tagsHTML}`
+
+      // Add click handlers to the tags
+      element.querySelectorAll('.tag-link').forEach((tagElement) => {
+        tagElement.addEventListener('click', (e) => {
+          e.preventDefault()
+          const tag = (e.target as HTMLElement).getAttribute('data-tag')
+          if (tag) {
+            filterByTag(tag)
+          }
+        })
+      })
+    } else {
+      element.innerHTML = ''
+    }
+  }
+}
+
+const clearHeaderTags = () => {
+  const element = document.getElementById('selected-endpoint-tags')
+  if (element) {
+    element.innerHTML = ''
+  }
 }
 
 const filterByTag = (tag: string) => {
@@ -187,6 +220,7 @@ onMounted(async () => {
     placeholderVersion.value = version
     totalEndpoints.value = resourceDocs[version]?.resource_docs?.length || 0
     allTags.value = getAllTags(version)
+    clearHeaderTags()
   } else {
     showPlaceholder.value = false
     setOperationDetails(routeId, version)
@@ -204,6 +238,7 @@ onBeforeRouteUpdate(async (to) => {
     placeholderVersion.value = version
     totalEndpoints.value = resourceDocs[version]?.resource_docs?.length || 0
     allTags.value = getAllTags(version)
+    clearHeaderTags()
   } else {
     showPlaceholder.value = false
     setOperationDetails(routeId, version)

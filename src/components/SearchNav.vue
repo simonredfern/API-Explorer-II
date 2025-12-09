@@ -101,7 +101,22 @@ onBeforeMount(async () => {
     if(selectedTags === 'NONE') {
       element.textContent = `${selectedVersion} ( ${totalRows} APIs )`;
     } else {
-      element.textContent = `${selectedVersion} ( ${totalRows} APIs filtered by tags: ${selectedTags})`;
+      element.innerHTML = `${selectedVersion} ( ${totalRows} APIs filtered by tags: <a href="#" class="filter-tag-link" style="color: #409eff; text-decoration: none; cursor: pointer; transition: color 0.2s ease;">${selectedTags}</a>)`;
+
+      // Add hover effect
+      const tagLinkEl = element.querySelector('.filter-tag-link') as HTMLElement
+      if (tagLinkEl) {
+        tagLinkEl.addEventListener('mouseenter', () => {
+          tagLinkEl.style.color = '#66b1ff'
+          tagLinkEl.style.textDecoration = 'underline'
+        })
+        tagLinkEl.addEventListener('mouseleave', () => {
+          tagLinkEl.style.color = '#409eff'
+          tagLinkEl.style.textDecoration = 'none'
+        })
+      }
+
+
     }
   }
 })
@@ -165,7 +180,22 @@ watch(
       if(selectedTags === 'NONE') {
         element.textContent = `${selectedVersion} ( ${totalRows} APIs )`;
       } else {
-        element.textContent = `${selectedVersion} ( ${totalRows} APIs filtered by tags: ${selectedTags})`;
+        element.innerHTML = `${selectedVersion} ( ${totalRows} APIs filtered by tags: <a href="#" class="filter-tag-link" style="color: #409eff; text-decoration: none; cursor: pointer; transition: color 0.2s ease;">${selectedTags}</a>)`;
+
+        // Add hover effect
+        const tagLinkEl = element.querySelector('.filter-tag-link') as HTMLElement
+        if (tagLinkEl) {
+          tagLinkEl.addEventListener('mouseenter', () => {
+            tagLinkEl.style.color = '#66b1ff'
+            tagLinkEl.style.textDecoration = 'underline'
+          })
+          tagLinkEl.addEventListener('mouseleave', () => {
+            tagLinkEl.style.color = '#409eff'
+            tagLinkEl.style.textDecoration = 'none'
+          })
+        }
+
+
       }
     }
   }
