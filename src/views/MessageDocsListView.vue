@@ -31,7 +31,7 @@ import { useRouter } from 'vue-router'
 import { obpGroupedMessageDocsKey } from '@/obp/keys'
 
 const router = useRouter()
-const groupedMessageDocs = ref(inject(obpGroupedMessageDocsKey)!)
+const groupedMessageDocs = ref(inject(obpGroupedMessageDocsKey) || {})
 
 const connectorList = computed(() => {
   return Object.keys(groupedMessageDocs.value || {}).sort()

@@ -49,8 +49,8 @@ const hasObpApiManagerHost = computed(() => obpApiManagerHost.value ? true : fal
 const showObpApiManagerButton = computed(() => import.meta.env.VITE_SHOW_API_MANAGER_BUTTON === 'true')
 const loginUsername = ref('')
 const logoffurl = ref('')
-const obpApiVersions = ref(inject(obpApiActiveVersionsKey)!)
-const obpMessageDocs = ref(Object.keys(inject(obpGroupedMessageDocsKey)!))
+const obpApiVersions = ref(inject(obpApiActiveVersionsKey) || [])
+const obpMessageDocs = ref(Object.keys(inject(obpGroupedMessageDocsKey) || {}))
 
 // Split versions into main and other
 const mainVersions = ['BGv1.3', 'OBPv5.1.0', 'OBPv6.0.0', 'UKv3.1', 'dynamic-endpoints', 'dynamic-entities', 'OBPdynamic-endpoint', 'OBPdynamic-entity']

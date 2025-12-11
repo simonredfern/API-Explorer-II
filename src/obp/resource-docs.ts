@@ -88,6 +88,12 @@ export function getFilteredGroupedResourceDocs(
 export function getGroupedResourceDocs(apiStandardAndVersion: string, docs: any): Promise<any> {
   if (apiStandardAndVersion === undefined || docs === undefined) return Promise.resolve<any>({})
 
+  // Check if the specific version exists in docs
+  if (!docs[apiStandardAndVersion] || !docs[apiStandardAndVersion].resource_docs) {
+    console.warn(`No resource_docs found for ${apiStandardAndVersion}`)
+    return Promise.resolve<any>({})
+  }
+
   return docs[apiStandardAndVersion].resource_docs.reduce((values: any, doc: any) => {
     const tag = doc.tags[0] // Group by the first tag at resorce doc
     ;(values[tag] = values[tag] || []).push(doc)
@@ -96,6 +102,10 @@ export function getGroupedResourceDocs(apiStandardAndVersion: string, docs: any)
 }
 
 export function getOperationDetails(version: string, operation_id: string, docs: any): any {
+  if (!docs || !docs[version] || !docs[version].resource_docs) {
+    console.warn(`No resource_docs found for version ${version}`)
+    return undefined
+  }
   return docs[version].resource_docs.filter((doc: any) => doc.operation_id === operation_id)[0]
 }
 
@@ -111,15 +121,20 @@ export async function cacheDoc(cacheStorageOfResourceDocs: any): Promise<any> {
       return {}
     }
     const scannedAPIVersions = apiVersions.scanned_api_versions
+    // Filter to only include active versions
+    const activeVersions = scannedAPIVersions.filter((version: any) => version.active === true)
+    console.log(
+      `[CACHE] Found ${scannedAPIVersions.length} total versions, ${activeVersions.length} are active`
+    )
     const resourceDocsMapping: any = {}
-    for (const { apiStandard, API_VERSION } of scannedAPIVersions) {
+    for (const { api_standard, api_short_version } of activeVersions) {
       // we need this to cache the dynamic entities resource doc
-      if (API_VERSION === 'dynamic-entity') {
-        const logMessage = `Caching Dynamic API { standard: ${apiStandard}, version: ${API_VERSION} }`
+      if (api_short_version === 'dynamic-entity') {
+        const logMessage = `Caching Dynamic API { standard: ${api_standard}, version: ${api_short_version} }`
         console.log(logMessage)
-        if (apiStandard) {
+        if (api_standard) {
           try {
-            const version = `${apiStandard.toUpperCase()}${API_VERSION}`
+            const version = `${api_standard.toUpperCase()}${api_short_version}`
             console.log(`[CACHE] Attempting to load dynamic resource docs for: ${version}`)
             const resourceDocs = await getOBPDynamicResourceDocs(version)
             if (version && Object.keys(resourceDocs).includes('resource_docs')) {
@@ -129,11 +144,13 @@ export async function cacheDoc(cacheStorageOfResourceDocs: any): Promise<any> {
               console.warn(`[CACHE] WARNING: Response for ${version} missing 'resource_docs' field`)
             }
           } catch (error: any) {
-            console.warn(`[CACHE] WARNING: Skipping dynamic endpoint ${apiStandard}${API_VERSION}:`)
-            console.warn(`   API Version: ${API_VERSION}`)
-            console.warn(`   API Standard: ${apiStandard}`)
             console.warn(
-              `   Constructed version string: ${apiStandard.toUpperCase()}${API_VERSION}`
+              `[CACHE] WARNING: Skipping dynamic endpoint ${api_standard}${api_short_version}:`
+            )
+            console.warn(`   API Version: ${api_short_version}`)
+            console.warn(`   API Standard: ${api_standard}`)
+            console.warn(
+              `   Constructed version string: ${api_standard.toUpperCase()}${api_short_version}`
             )
             console.warn(`   Error status: ${error.status || 'unknown'}`)
             console.warn(`   Error message: ${error.message || 'No message'}`)
@@ -147,11 +164,11 @@ export async function cacheDoc(cacheStorageOfResourceDocs: any): Promise<any> {
         updateLoadingInfoMessage(logMessage)
         continue
       }
-      const logMessage = `Caching API { standard: ${apiStandard}, version: ${API_VERSION} }`
+      const logMessage = `Caching API { standard: ${api_standard}, version: ${api_short_version} }`
       console.log(logMessage)
-      if (apiStandard) {
+      if (api_standard) {
         try {
-          const version = `${apiStandard.toUpperCase()}${API_VERSION}`
+          const version = `${api_standard.toUpperCase()}${api_short_version}`
           console.log(`[CACHE] Attempting to load resource docs for: ${version}`)
           const resourceDocs = await getOBPResourceDocs(version)
           if (version && Object.keys(resourceDocs).includes('resource_docs')) {
@@ -161,13 +178,18 @@ export async function cacheDoc(cacheStorageOfResourceDocs: any): Promise<any> {
             console.warn(`[CACHE] WARNING: Response for ${version} missing 'resource_docs' field`)
           }
         } catch (error: any) {
-          console.warn(`[CACHE] WARNING: Skipping API version ${apiStandard}${API_VERSION}:`)
-          console.warn(`   API Version: ${API_VERSION}`)
-          console.warn(`   API Standard: ${apiStandard}`)
-          console.warn(`   Constructed version string: ${apiStandard.toUpperCase()}${API_VERSION}`)
+          console.warn(`[CACHE] WARNING: Skipping API version ${api_standard}${api_short_version}:`)
+          console.warn(`   API Version: ${api_short_version}`)
+          console.warn(`   API Standard: ${api_standard}`)
+          console.warn(
+            `   Constructed version string: ${api_standard.toUpperCase()}${api_short_version}`
+          )
           console.warn(`   Error status: ${error.status || 'unknown'}`)
           console.warn(`   Error message: ${error.message || 'No message'}`)
-          if (error.status === 500) {
+          if (error.status === 400) {
+            console.warn(`   NOTE: This API version is not enabled on the OBP-API server`)
+            console.warn(`   NOTE: Check your OBP-API server configuration for available versions`)
+          } else if (error.status === 500) {
             console.warn(`   NOTE: This API version may not be available on the OBP-API server`)
           } else if (error.status === 404) {
             console.warn(`   NOTE: This endpoint was not found on the OBP-API server`)
@@ -193,6 +215,24 @@ export async function cache(cachedStorage: any, cachedResponse: any, worker: any
   try {
     worker.postMessage('update-resource-docs')
     const resourceDocs = await cachedResponse.json()
+    console.log(
+      '[CACHE] Loaded cached resource docs, available versions:',
+      Object.keys(resourceDocs)
+    )
+
+    // Check if the default version exists
+    if (!resourceDocs[OBP_API_DEFAULT_RESOURCE_DOC_VERSION]) {
+      console.warn(
+        `[CACHE] Default version ${OBP_API_DEFAULT_RESOURCE_DOC_VERSION} not found in cache`
+      )
+      console.warn('[CACHE] Available versions:', Object.keys(resourceDocs))
+      // Try to use the first available version
+      const availableVersions = Object.keys(resourceDocs)
+      if (availableVersions.length > 0) {
+        console.log(`[CACHE] Using first available version: ${availableVersions[0]}`)
+      }
+    }
+
     const groupedResourceDocs = getGroupedResourceDocs(
       OBP_API_DEFAULT_RESOURCE_DOC_VERSION,
       resourceDocs
@@ -204,6 +244,27 @@ export async function cache(cachedStorage: any, cachedResponse: any, worker: any
     const isServerActive = await isServerUp()
     if (!isServerActive) throw new Error('API Server is not responding.')
     const resourceDocs = await getCacheDoc(cachedStorage)
+    console.log(
+      '[CACHE] Newly cached resource docs, available versions:',
+      Object.keys(resourceDocs)
+    )
+
+    // Check if we got any docs back
+    if (!resourceDocs || Object.keys(resourceDocs).length === 0) {
+      console.error('[CACHE] No resource docs were cached - API may have returned empty data')
+      throw new Error(
+        'No resource documentation available. API may be misconfigured or authentication required.'
+      )
+    }
+
+    // Check if the default version exists
+    if (!resourceDocs[OBP_API_DEFAULT_RESOURCE_DOC_VERSION]) {
+      console.warn(
+        `[CACHE] Default version ${OBP_API_DEFAULT_RESOURCE_DOC_VERSION} not found after caching`
+      )
+      console.warn('[CACHE] Available versions:', Object.keys(resourceDocs))
+    }
+
     const groupedDocs = getGroupedResourceDocs(OBP_API_DEFAULT_RESOURCE_DOC_VERSION, resourceDocs)
     return { resourceDocs, groupedDocs }
   }

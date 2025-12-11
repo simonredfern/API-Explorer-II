@@ -21,7 +21,7 @@ export const MESSAGE_DOCS_API_VERSION = 'v5.1.0'
  * API versions list endpoint version
  * Endpoint: GET /obp/{version}/api/versions
  */
-export const API_VERSIONS_LIST_API_VERSION = 'v5.1.0'
+export const API_VERSIONS_LIST_API_VERSION = 'v6.0.0'
 
 /**
  * Glossary endpoint version

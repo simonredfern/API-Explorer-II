@@ -160,7 +160,20 @@ export default class OBPClientService {
       throw new OBPAPIError(response.status, errorText)
     }
 
-    return await response.json()
+    const responseData = await response.json()
+    // Log count instead of full data to reduce log noise
+    if (
+      responseData &&
+      responseData.scanned_api_versions &&
+      Array.isArray(responseData.scanned_api_versions)
+    ) {
+      console.log(
+        `OBPClientService: Response data: ${responseData.scanned_api_versions.length} scanned_api_versions`
+      )
+    } else {
+      console.log('OBPClientService: Response data received:', typeof responseData)
+    }
+    return responseData
   }
 
   /**

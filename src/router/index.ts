@@ -116,7 +116,6 @@ export default async function router(): Promise<any> {
         name: 'callback',
         component: isServerActive ? BodyView : InternalServerErrorView
       },
-      { path: '/error', name: 'error', component: InternalServerErrorView },
       { path: '/api-server-error', name: 'apiServerError', component: APIServerErrorView },
       { path: '/:pathMatch(.*)*', name: 'notFound', component: NotFoundView }
     ]

@@ -36,7 +36,7 @@ import CodeBlock from '../components/CodeBlock.vue';
 
 let connector = connectors[0]
 const route = useRoute()
-const groupedMessageDocs = ref(inject(obpGroupedMessageDocsKey)!)
+const groupedMessageDocs = ref(inject(obpGroupedMessageDocsKey) || {})
 const messageDocs = ref(null as any)
 
 const activeNames = ref(['1', '2', '3', '4', '5', '6'])
