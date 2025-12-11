@@ -122,7 +122,7 @@ export async function cacheDoc(cacheStorageOfResourceDocs: any): Promise<any> {
     }
     const scannedAPIVersions = apiVersions.scanned_api_versions
     // Filter to only include active versions
-    const activeVersions = scannedAPIVersions.filter((version: any) => version.active === true)
+    const activeVersions = scannedAPIVersions.filter((version: any) => version.is_active === true)
     console.log(
       `[CACHE] Found ${scannedAPIVersions.length} total versions, ${activeVersions.length} are active`
     )
