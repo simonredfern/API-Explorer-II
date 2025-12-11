@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
-import { OpeyController } from "../controllers/OpeyIIController";
-import OpeyClientService from '../services/OpeyClientService';
-import OBPClientService from '../services/OBPClientService';
-import OBPConsentsService from '../services/OBPConsentsService';
+import { OpeyController } from "../controllers/OpeyIIController.js";
+import OpeyClientService from '../services/OpeyClientService.js';
+import OBPClientService from '../services/OBPClientService.js';
+import OBPConsentsService from '../services/OBPConsentsService.js';
 import Stream, { Readable } from 'stream';
 import { Request, Response } from 'express';
 import httpMocks from 'node-mocks-http'

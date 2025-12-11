@@ -26,10 +26,10 @@
  */
 
 import { ExpressMiddlewareInterface } from 'routing-controllers'
-import { Request, Response } from 'express'
+import type { Request, Response } from 'express'
 import { Service, Container } from 'typedi'
-import { OAuth2Service } from '../services/OAuth2Service'
-import { DEFAULT_OBP_API_VERSION } from '../../src/shared-constants'
+import { OAuth2Service } from '../services/OAuth2Service.js'
+import { DEFAULT_OBP_API_VERSION } from '../../src/shared-constants.js'
 import jwt from 'jsonwebtoken'
 
 /**

@@ -30,15 +30,31 @@ import 'dotenv/config'
 import session from 'express-session'
 import RedisStore from 'connect-redis'
 import { createClient } from 'redis'
-import express, { Application } from 'express'
+import express from 'express'
+import type { Application } from 'express'
 import { useExpressServer, useContainer } from 'routing-controllers'
 import { Container } from 'typedi'
 import path from 'path'
 import { execSync } from 'child_process'
-import { OAuth2Service } from './services/OAuth2Service'
+import { OAuth2Service } from './services/OAuth2Service.js'
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
 
-// __dirname is available in CommonJS
-// const __dirname is automatically available
+// Import controllers
+import { OpeyController } from './controllers/OpeyIIController.js'
+import { OBPController } from './controllers/RequestController.js'
+import { StatusController } from './controllers/StatusController.js'
+import { UserController } from './controllers/UserController.js'
+import { OAuth2CallbackController } from './controllers/OAuth2CallbackController.js'
+import { OAuth2ConnectController } from './controllers/OAuth2ConnectController.js'
+
+// Import middlewares
+import OAuth2AuthorizationMiddleware from './middlewares/OAuth2AuthorizationMiddleware.js'
+import OAuth2CallbackMiddleware from './middlewares/OAuth2CallbackMiddleware.js'
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 const port = 8085
 const app: Application = express()
@@ -151,8 +167,15 @@ let instance: any
 
   const server = useExpressServer(app, {
     routePrefix: routePrefix,
-    controllers: [path.join(__dirname + '/controllers/*.*s')],
-    middlewares: [path.join(__dirname + '/middlewares/*.*s')]
+    controllers: [
+      OpeyController,
+      OBPController,
+      StatusController,
+      UserController,
+      OAuth2CallbackController,
+      OAuth2ConnectController
+    ],
+    middlewares: [OAuth2AuthorizationMiddleware, OAuth2CallbackMiddleware]
   })
 
   instance = server.listen(port)

@@ -26,8 +26,8 @@
  */
 
 import { Controller, Session, Req, Res, Get, Delete, Post, Put } from 'routing-controllers'
-import { Request, Response } from 'express'
-import OBPClientService from '../services/OBPClientService'
+import type { Request, Response } from 'express'
+import OBPClientService from '../services/OBPClientService.js'
 import { Service, Container } from 'typedi'
 
 @Service()

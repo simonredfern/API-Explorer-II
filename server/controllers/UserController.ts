@@ -26,11 +26,11 @@
  */
 
 import { Controller, Session, Req, Res, Get } from 'routing-controllers'
-import { Request, Response } from 'express'
-import OBPClientService from '../services/OBPClientService'
+import type { Request, Response } from 'express'
+import OBPClientService from '../services/OBPClientService.js'
 import { Service, Container } from 'typedi'
-import { OAuth2Service } from '../services/OAuth2Service'
-import { DEFAULT_OBP_API_VERSION } from '../../src/shared-constants'
+import { OAuth2Service } from '../services/OAuth2Service.js'
+import { DEFAULT_OBP_API_VERSION } from '../../src/shared-constants.js'
 
 @Service()
 @Controller('/user')
