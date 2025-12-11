@@ -228,6 +228,11 @@ const parseDoubleEncodedJson = (obj: any): any => {
 }
 
 const highlightCode = (json) => {
+  if (!json) {
+    successResponseBody.value = ''
+    return
+  }
+
   if (json.error) {
     // Parse double-encoded JSON error messages to display them cleanly
     const errorObj = parseDoubleEncodedJson(json.error)
@@ -236,14 +241,12 @@ const highlightCode = (json) => {
     successResponseBody.value = hljs.lineNumbersValue(
       hljs.highlightAuto(JSON.stringify(errorObj, null, 4), ['JSON']).value
     )
-  } else if (json) {
+  } else {
     // Parse double-encoded JSON in successful responses too
     const parsedJson = parseDoubleEncodedJson(json)
     successResponseBody.value = hljs.lineNumbersValue(
       hljs.highlightAuto(JSON.stringify(parsedJson, null, 4), ['JSON']).value
     )
-  } else {
-    successResponseBody.value = ''
   }
 }
 const submitEntitlement = async () => {
