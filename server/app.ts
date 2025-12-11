@@ -34,13 +34,11 @@ import express, { Application } from 'express'
 import { useExpressServer, useContainer } from 'routing-controllers'
 import { Container } from 'typedi'
 import path from 'path'
-import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
 import { OAuth2Service } from './services/OAuth2Service'
 
-// Fix __dirname for ESM/tsx compatibility
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+// __dirname is available in CommonJS
+// const __dirname is automatically available
 
 const port = 8085
 const app: Application = express()
