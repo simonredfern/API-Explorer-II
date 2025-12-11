@@ -26,7 +26,7 @@
  */
 
 import superagent from 'superagent'
-import { DEFAULT_OBP_API_VERSION } from '../../shared-constants'
+import { DEFAULT_OBP_API_VERSION } from '../shared-constants'
 
 // Always use v5.1.0 for application infrastructure - stable and debuggable
 export const OBP_API_VERSION = DEFAULT_OBP_API_VERSION

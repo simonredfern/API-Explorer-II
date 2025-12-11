@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ElNotification, NotificationHandle } from 'element-plus';
 import { ref, computed, h, onMounted, onBeforeUnmount } from 'vue';
-import { DEFAULT_OBP_API_VERSION } from '../../shared-constants';
+import { DEFAULT_OBP_API_VERSION } from '../shared-constants';
 
 // Props can be defined with defineProps
 const props = defineProps({

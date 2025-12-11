@@ -27,7 +27,7 @@
 
 import { get } from '../obp'
 import { updateLoadingInfoMessage } from './common-functions'
-import { GLOSSARY_API_VERSION } from '../../shared-constants'
+import { GLOSSARY_API_VERSION } from '../shared-constants'
 
 // Get Glossary
 export async function getOBPGlossary(): Promise<any> {

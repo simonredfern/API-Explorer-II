@@ -26,7 +26,7 @@
  */
 
 import { get } from '../obp'
-import { API_VERSIONS_LIST_API_VERSION } from '../../shared-constants'
+import { API_VERSIONS_LIST_API_VERSION } from '../shared-constants'
 
 // Get API Versions
 export async function getOBPAPIVersions(): Promise<any> {

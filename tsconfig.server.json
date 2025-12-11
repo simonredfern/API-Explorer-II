@@ -11,6 +11,6 @@
     "experimentalDecorators": true,
     "allowJs": true
   },
-  "exclude": ["src", "server/test", "node_modules"],
-  "include": ["server", "shared-constants.ts"]
+  "exclude": ["server/test", "node_modules"],
+  "include": ["server", "src/shared-constants.ts"]
 }

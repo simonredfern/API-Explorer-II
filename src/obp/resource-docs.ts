@@ -28,7 +28,7 @@
 import { get, isServerUp, OBP_API_DEFAULT_RESOURCE_DOC_VERSION } from '../obp'
 import { getOBPAPIVersions } from '../obp/api-version'
 import { updateLoadingInfoMessage } from './common-functions'
-import { RESOURCE_DOCS_API_VERSION } from '../../shared-constants'
+import { RESOURCE_DOCS_API_VERSION } from '../shared-constants'
 
 // Get Resource Docs
 export async function getOBPResourceDocs(apiStandardAndVersion: string): Promise<any> {

@@ -36,7 +36,7 @@ import {
   RESOURCE_DOCS_API_VERSION,
   MESSAGE_DOCS_API_VERSION,
   API_VERSIONS_LIST_API_VERSION
-} from '../../shared-constants'
+} from '../../src/shared-constants'
 
 @Service()
 @Controller('/status')

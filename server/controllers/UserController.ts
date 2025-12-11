@@ -30,7 +30,7 @@ import { Request, Response } from 'express'
 import OBPClientService from '../services/OBPClientService'
 import { Service, Container } from 'typedi'
 import { OAuth2Service } from '../services/OAuth2Service'
-import { DEFAULT_OBP_API_VERSION } from '../../shared-constants'
+import { DEFAULT_OBP_API_VERSION } from '../../src/shared-constants'
 
 @Service()
 @Controller('/user')
