@@ -59,6 +59,9 @@ const __dirname = dirname(__filename)
 const port = 8085
 const app: Application = express()
 
+// Commit ID variable (declared here to avoid TDZ issues)
+let commitId = ''
+
 // Initialize Redis client.
 console.log(`--- Redis setup -------------------------------------------------`)
 process.env.VITE_OBP_REDIS_URL
@@ -189,7 +192,7 @@ let instance: any
     // Try to get the commit ID
     commitId = execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim()
     console.log('Current Commit ID:', commitId)
-  } catch (error) {
+  } catch (error: any) {
     // Log the error but do not terminate the process
     console.error('Warning: Failed to retrieve the commit ID. Proceeding without it.')
     console.error('Error details:', error.message)
@@ -212,9 +215,6 @@ let instance: any
 })()
 
 // Export instance for use in other modules
-export { instance }
-
-// Commit ID variable
-export let commitId = ''
+export { instance, commitId }
 
 export default app
