@@ -162,6 +162,10 @@ let instance: any
       console.log('  Client ID:', process.env.VITE_OBP_OAUTH2_CLIENT_ID || 'NOT SET')
       console.log('  Redirect URI:', process.env.VITE_OBP_OAUTH2_REDIRECT_URL || 'NOT SET')
       console.log('OAuth2/OIDC ready for authentication')
+
+      // Start continuous monitoring even when initially connected
+      oauth2Service.startHealthCheck(1000, 240000) // Monitor every 4 minutes
+      console.log('OAuth2Service: Starting continuous monitoring (every 4 minutes)')
     } else {
       console.error('OAuth2Service: Initialization failed after all retries')
 
@@ -176,7 +180,7 @@ let instance: any
       console.warn('  3. Network connectivity to OIDC provider')
 
       // Start periodic health check to reconnect when OIDC becomes available
-      oauth2Service.startHealthCheck(1000) // Start with 1 second, then exponential backoff
+      oauth2Service.startHealthCheck(1000, 240000) // Start with 1 second, monitor every 4 minutes when connected
     }
   }
   console.log(`-----------------------------------------------------------------`)

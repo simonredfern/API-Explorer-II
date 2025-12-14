@@ -87,14 +87,15 @@ async function checkOAuth2Availability() {
   try {
     const response = await fetch('/api/status/oauth2')
     const data = await response.json()
+    const wasAvailable = oauth2Available.value
     oauth2Available.value = data.available
     oauth2StatusMessage.value = data.message || ''
 
-    if (data.available && oauth2CheckInterval) {
-      // Stop polling once OAuth2 is available
-      clearInterval(oauth2CheckInterval)
-      oauth2CheckInterval = null
-      console.log('OAuth2 is now available, stopped polling')
+    // Log state changes
+    if (!wasAvailable && data.available) {
+      console.log('OAuth2 is now available')
+    } else if (wasAvailable && !data.available) {
+      console.warn('OAuth2 is no longer available!')
     }
   } catch (error) {
     oauth2Available.value = false
@@ -153,18 +154,16 @@ onMounted(async () => {
   // Initial OAuth2 availability check
   await checkOAuth2Availability()
 
-  // If OAuth2 is not available, poll every 30 seconds
-  if (!oauth2Available.value) {
-    console.log('OAuth2 not available, starting periodic check...')
-    oauth2CheckInterval = window.setInterval(checkOAuth2Availability, 30000)
-  }
+  // Start continuous polling every 4 minutes to detect OIDC outages
+  console.log('OAuth2: Starting continuous monitoring (every 4 minutes)...')
+  oauth2CheckInterval = window.setInterval(checkOAuth2Availability, 240000) // 4 minutes
 
   const currentUser = await getCurrentUser()
   const currentResponseKeys = Object.keys(currentUser)
   if (currentResponseKeys.includes('username')) {
+    loginUsername.value = currentUser.username
     isShowLoginButton.value = false
     isShowLogOffButton.value = !isShowLoginButton.value
-    loginUsername.value = currentUser.username
   } else {
     isShowLoginButton.value = true
     isShowLogOffButton.value = !isShowLoginButton.value

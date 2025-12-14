@@ -211,15 +211,17 @@ export class OAuth2Service {
   }
 
   /**
-   * Start periodic health check to reconnect if OIDC server becomes available
-   * Uses exponential backoff: 1min, 2min, 4min, capped at 4min
+   * Start periodic health check to monitor OIDC availability
+   * Uses exponential backoff when reconnecting: 1s, 2s, 4s, up to 4min
+   * Switches to regular monitoring (every 4 minutes) once connected
    *
    * @param {number} initialIntervalMs - Initial interval in milliseconds (default: 1000 = 1 second)
+   * @param {number} monitoringIntervalMs - Interval for continuous monitoring when connected (default: 240000 = 4 minutes)
    *
    * @example
-   * oauth2Service.startHealthCheck(1000) // Start checking at 1 second, then exponential backoff
+   * oauth2Service.startHealthCheck(1000, 240000) // Start checking at 1 second, monitor every 4 minutes when connected
    */
-  startHealthCheck(initialIntervalMs: number = 1000): void {
+  startHealthCheck(initialIntervalMs: number = 1000, monitoringIntervalMs: number = 240000): void {
     if (this.healthCheckInterval) {
       console.log('OAuth2Service: Health check already running')
       return
@@ -235,32 +237,70 @@ export class OAuth2Service {
     console.log('OAuth2Service: Starting health check with exponential backoff')
 
     const scheduleNextCheck = () => {
-      if (!this.initialized && this.wellKnownUrl) {
-        // Calculate delay with exponential backoff, capped at 4 minutes
-        const delay = Math.min(initialIntervalMs * Math.pow(2, this.healthCheckAttempts), 240000)
-        const delayDisplay =
-          delay < 60000
-            ? `${(delay / 1000).toFixed(0)} second(s)`
-            : `${(delay / 60000).toFixed(1)} minute(s)`
+      if (!this.wellKnownUrl) {
+        return
+      }
 
+      let delay: number
+
+      if (this.initialized) {
+        // When connected, monitor every 4 minutes
+        delay = monitoringIntervalMs
+      } else {
+        // When disconnected, use exponential backoff
+        delay = Math.min(initialIntervalMs * Math.pow(2, this.healthCheckAttempts), 240000)
+      }
+
+      const delayDisplay =
+        delay < 60000
+          ? `${(delay / 1000).toFixed(0)} second(s)`
+          : `${(delay / 60000).toFixed(1)} minute(s)`
+
+      if (this.initialized) {
+        console.log(`OAuth2Service: Monitoring scheduled in ${delayDisplay}`)
+      } else {
         console.log(
           `OAuth2Service: Health check scheduled in ${delayDisplay} (attempt ${this.healthCheckAttempts + 1})`
         )
+      }
 
-        this.healthCheckInterval = setTimeout(async () => {
+      this.healthCheckInterval = setTimeout(async () => {
+        if (this.initialized) {
+          // When connected, verify OIDC is still available
+          console.log('OAuth2Service: Verifying OIDC availability...')
+          try {
+            const response = await fetch(this.wellKnownUrl)
+            if (!response.ok) {
+              throw new Error(`OIDC server returned ${response.status}`)
+            }
+            console.log('OAuth2Service: OIDC is available')
+            // Continue monitoring
+            scheduleNextCheck()
+          } catch (error) {
+            console.error('OAuth2Service: OIDC server is no longer available!')
+            this.initialized = false
+            this.oidcConfig = null
+            this.healthCheckAttempts = 0
+            console.log('OAuth2Service: Attempting to reconnect...')
+            // Schedule reconnection with exponential backoff
+            scheduleNextCheck()
+          }
+        } else {
+          // When disconnected, attempt to reconnect
           console.log('OAuth2Service: Health check - attempting to reconnect to OIDC server...')
           try {
             await this.initializeFromWellKnown(this.wellKnownUrl)
             console.log('OAuth2Service: Successfully reconnected to OIDC server!')
-            // Stop health check once reconnected
-            this.stopHealthCheck()
+            this.healthCheckAttempts = 0
+            // Switch to continuous monitoring
+            scheduleNextCheck()
           } catch (error) {
             this.healthCheckAttempts++
-            // Schedule next check with longer interval
+            // Schedule next reconnection attempt
             scheduleNextCheck()
           }
-        }, delay)
-      }
+        }
+      }, delay)
     }
 
     // Start the first check
