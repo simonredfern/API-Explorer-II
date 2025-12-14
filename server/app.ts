@@ -147,21 +147,36 @@ let instance: any
     // Get OAuth2Service from container
     const oauth2Service = Container.get(OAuth2Service)
 
-    // Initialize OAuth2 service from OIDC discovery document (await it!)
-    try {
-      await oauth2Service.initializeFromWellKnown(wellKnownUrl)
+    // Initialize OAuth2 service with retry logic
+    const isProduction = process.env.NODE_ENV === 'production'
+    const maxRetries = Infinity // Retry indefinitely
+    const initialDelay = 1000 // 1 second, then exponential backoff
+
+    console.log(
+      'Attempting OAuth2 initialization (will retry indefinitely with exponential backoff)...'
+    )
+    const success = await oauth2Service.initializeWithRetry(wellKnownUrl, maxRetries, initialDelay)
+
+    if (success) {
       console.log('OAuth2Service: Initialization successful')
       console.log('  Client ID:', process.env.VITE_OBP_OAUTH2_CLIENT_ID || 'NOT SET')
       console.log('  Redirect URI:', process.env.VITE_OBP_OAUTH2_REDIRECT_URL || 'NOT SET')
       console.log('OAuth2/OIDC ready for authentication')
-    } catch (error: any) {
-      console.error('OAuth2Service: Initialization failed:', error.message)
-      console.error('OAuth2/OIDC authentication will not be available')
-      console.error('Please check:')
-      console.error('  1. OBP-OIDC server is running')
-      console.error('  2. VITE_OBP_OAUTH2_WELL_KNOWN_URL is correct')
-      console.error('  3. Network connectivity to OIDC provider')
-      console.warn('Server will start but OAuth2 authentication will fail.')
+    } else {
+      console.error('OAuth2Service: Initialization failed after all retries')
+
+      // Use graceful degradation for both development and production
+      const envMode = isProduction ? 'Production' : 'Development'
+      console.warn(`WARNING: ${envMode} mode: Server will start without OAuth2`)
+      console.warn('WARNING: Login will be unavailable until OIDC server is reachable')
+      console.warn('WARNING: Starting health check to reconnect automatically...')
+      console.warn('Please check:')
+      console.warn('  1. OBP-OIDC server is running')
+      console.warn('  2. VITE_OBP_OAUTH2_WELL_KNOWN_URL is correct')
+      console.warn('  3. Network connectivity to OIDC provider')
+
+      // Start periodic health check to reconnect when OIDC becomes available
+      oauth2Service.startHealthCheck(1000) // Start with 1 second, then exponential backoff
     }
   }
   console.log(`-----------------------------------------------------------------`)

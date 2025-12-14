@@ -26,7 +26,7 @@
   -->
 
 <script setup lang="ts">
-import { ref, inject, watchEffect, onMounted, computed } from 'vue'
+import { ref, inject, watchEffect, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { OBP_API_DEFAULT_RESOURCE_DOC_VERSION, getCurrentUser } from '../obp'
 import { getOBPAPIVersions } from '../obp/api-version'
@@ -74,9 +74,34 @@ const sortedVersions = computed(() => {
 
 const isShowLoginButton = ref(true)
 const isShowLogOffButton = ref(false)
+const oauth2Available = ref(true) // Assume available initially
+const oauth2StatusMessage = ref('')
 const logo = ref(logoSource)
 const headerLinksHoverColor = ref(headerLinksHoverColorSetting)
 const headerLinksBackgroundColor = ref(headerLinksBackgroundColorSetting)
+
+// Check OAuth2 availability
+let oauth2CheckInterval: number | null = null
+
+async function checkOAuth2Availability() {
+  try {
+    const response = await fetch('/api/status/oauth2')
+    const data = await response.json()
+    oauth2Available.value = data.available
+    oauth2StatusMessage.value = data.message || ''
+
+    if (data.available && oauth2CheckInterval) {
+      // Stop polling once OAuth2 is available
+      clearInterval(oauth2CheckInterval)
+      oauth2CheckInterval = null
+      console.log('OAuth2 is now available, stopped polling')
+    }
+  } catch (error) {
+    oauth2Available.value = false
+    oauth2StatusMessage.value = 'Failed to check OAuth2 status'
+    console.error('Error checking OAuth2 status:', error)
+  }
+}
 
 const clearActiveTab = () => {
   const activeLinks = document.querySelectorAll<HTMLElement>('.router-link')
@@ -125,6 +150,15 @@ const handleMore = (command: string) => {
 }
 
 onMounted(async () => {
+  // Initial OAuth2 availability check
+  await checkOAuth2Availability()
+
+  // If OAuth2 is not available, poll every 30 seconds
+  if (!oauth2Available.value) {
+    console.log('OAuth2 not available, starting periodic check...')
+    oauth2CheckInterval = window.setInterval(checkOAuth2Availability, 30000)
+  }
+
   const currentUser = await getCurrentUser()
   const currentResponseKeys = Object.keys(currentUser)
   if (currentResponseKeys.includes('username')) {
@@ -134,6 +168,14 @@ onMounted(async () => {
   } else {
     isShowLoginButton.value = true
     isShowLogOffButton.value = !isShowLoginButton.value
+  }
+})
+
+onUnmounted(() => {
+  // Clean up polling interval
+  if (oauth2CheckInterval) {
+    clearInterval(oauth2CheckInterval)
+    oauth2CheckInterval = null
   }
 })
 
@@ -202,7 +244,12 @@ const getCurrentPath = () => {
           <arrow-down />
         </el-icon>
       </span>-->
-      <a v-bind:href="'/api/oauth2/connect?redirect='+ encodeURIComponent(getCurrentPath())" v-show="isShowLoginButton" class="login-button router-link" id="login">
+      <el-tooltip v-if="isShowLoginButton && !oauth2Available" :content="oauth2StatusMessage || 'OAuth2 server not available'" placement="bottom">
+        <button disabled class="login-button-disabled router-link" id="login">
+          {{ $t('header.login') }}
+        </button>
+      </el-tooltip>
+      <a v-else-if="isShowLoginButton && oauth2Available" v-bind:href="'/api/oauth2/connect?redirect='+ encodeURIComponent(getCurrentPath())" class="login-button router-link" id="login">
         {{ $t('header.login') }}
       </a>
       <span v-show="isShowLogOffButton" class="login-user">{{ loginUsername }}</span>
@@ -278,6 +325,19 @@ a.logoff-button {
   color: #ffffff;
   background-color: #32b9ce;
   cursor: pointer;
+}
+
+button.login-button-disabled {
+  margin: 5px;
+  padding: 9px;
+  color: #999999;
+  background-color: #e0e0e0;
+  border: 1px solid #cccccc;
+  border-radius: 8px;
+  cursor: not-allowed;
+  font-family: 'Roboto';
+  font-size: 14px;
+  opacity: 0.6;
 }
 
 .login-button:hover,

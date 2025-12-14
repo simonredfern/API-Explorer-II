@@ -122,6 +122,10 @@ export class OAuth2Service {
   private readonly clientSecret: string
   private readonly redirectUri: string
   private initialized: boolean = false
+  private wellKnownUrl: string = ''
+  private healthCheckInterval: NodeJS.Timeout | null = null
+  private healthCheckAttempts: number = 0
+  private healthCheckActive: boolean = false
 
   constructor() {
     // Load OAuth2 configuration from environment
@@ -160,6 +164,9 @@ export class OAuth2Service {
    */
   async initializeFromWellKnown(wellKnownUrl: string): Promise<void> {
     console.log('OAuth2Service: Fetching OIDC configuration from:', wellKnownUrl)
+
+    // Store the well-known URL for potential retries
+    this.wellKnownUrl = wellKnownUrl
 
     try {
       const response = await fetch(wellKnownUrl)
@@ -201,6 +208,151 @@ export class OAuth2Service {
       console.error('OAuth2Service: Failed to initialize from well-known URL:', error)
       throw error
     }
+  }
+
+  /**
+   * Start periodic health check to reconnect if OIDC server becomes available
+   * Uses exponential backoff: 1min, 2min, 4min, capped at 4min
+   *
+   * @param {number} initialIntervalMs - Initial interval in milliseconds (default: 1000 = 1 second)
+   *
+   * @example
+   * oauth2Service.startHealthCheck(1000) // Start checking at 1 second, then exponential backoff
+   */
+  startHealthCheck(initialIntervalMs: number = 1000): void {
+    if (this.healthCheckInterval) {
+      console.log('OAuth2Service: Health check already running')
+      return
+    }
+
+    if (!this.wellKnownUrl) {
+      console.warn('OAuth2Service: Cannot start health check - no well-known URL configured')
+      return
+    }
+
+    this.healthCheckAttempts = 0
+    this.healthCheckActive = true
+    console.log('OAuth2Service: Starting health check with exponential backoff')
+
+    const scheduleNextCheck = () => {
+      if (!this.initialized && this.wellKnownUrl) {
+        // Calculate delay with exponential backoff, capped at 4 minutes
+        const delay = Math.min(initialIntervalMs * Math.pow(2, this.healthCheckAttempts), 240000)
+        const delayDisplay =
+          delay < 60000
+            ? `${(delay / 1000).toFixed(0)} second(s)`
+            : `${(delay / 60000).toFixed(1)} minute(s)`
+
+        console.log(
+          `OAuth2Service: Health check scheduled in ${delayDisplay} (attempt ${this.healthCheckAttempts + 1})`
+        )
+
+        this.healthCheckInterval = setTimeout(async () => {
+          console.log('OAuth2Service: Health check - attempting to reconnect to OIDC server...')
+          try {
+            await this.initializeFromWellKnown(this.wellKnownUrl)
+            console.log('OAuth2Service: Successfully reconnected to OIDC server!')
+            // Stop health check once reconnected
+            this.stopHealthCheck()
+          } catch (error) {
+            this.healthCheckAttempts++
+            // Schedule next check with longer interval
+            scheduleNextCheck()
+          }
+        }, delay)
+      }
+    }
+
+    // Start the first check
+    scheduleNextCheck()
+  }
+
+  /**
+   * Stop the periodic health check
+   */
+  stopHealthCheck(): void {
+    if (this.healthCheckInterval) {
+      clearTimeout(this.healthCheckInterval)
+      this.healthCheckInterval = null
+      this.healthCheckAttempts = 0
+      this.healthCheckActive = false
+      console.log('OAuth2Service: Health check stopped')
+    }
+  }
+
+  /**
+   * Check if health check is currently active
+   *
+   * @returns {boolean} True if health check is running
+   */
+  isHealthCheckActive(): boolean {
+    return this.healthCheckActive
+  }
+
+  /**
+   * Get the number of health check attempts so far
+   *
+   * @returns {number} Number of health check attempts
+   */
+  getHealthCheckAttempts(): number {
+    return this.healthCheckAttempts
+  }
+
+  /**
+   * Attempt to initialize with exponential backoff retry (continues indefinitely)
+   *
+   * @param {number} maxRetries - Maximum number of retry attempts (default: Infinity for continuous retries)
+   * @param {string} wellKnownUrl - The .well-known/openid-configuration URL
+   * @param {number} maxRetries - Maximum number of retry attempts (default: Infinity for continuous retries)
+   * @param {number} initialDelayMs - Initial delay in milliseconds (default: 1000 = 1 second)
+   * @returns {Promise<boolean>} True if initialization succeeded, false if maxRetries reached
+   *
+   * @example
+   * const success = await oauth2Service.initializeWithRetry('http://localhost:9000/.well-known/openid-configuration', Infinity, 1000)
+   */
+  async initializeWithRetry(
+    wellKnownUrl: string,
+    maxRetries: number = Infinity,
+    initialDelayMs: number = 1000
+  ): Promise<boolean> {
+    if (!wellKnownUrl) {
+      console.error('OAuth2Service: Cannot retry - no well-known URL configured')
+      return false
+    }
+
+    // Store the well-known URL for retries and health checks
+    this.wellKnownUrl = wellKnownUrl
+
+    let attempt = 0
+    while (attempt < maxRetries) {
+      try {
+        await this.initializeFromWellKnown(wellKnownUrl)
+        console.log(`OAuth2Service: Initialized successfully on attempt ${attempt + 1}`)
+        return true
+      } catch (error: any) {
+        const delay = Math.min(initialDelayMs * Math.pow(2, attempt), 240000) // Cap at 4 minutes
+        const delayDisplay =
+          delay < 60000
+            ? `${(delay / 1000).toFixed(0)} second(s)`
+            : `${(delay / 60000).toFixed(1)} minute(s)`
+
+        if (maxRetries === Infinity || attempt < maxRetries - 1) {
+          console.log(
+            `OAuth2Service: Attempt ${attempt + 1} failed. Retrying in ${delayDisplay}...`
+          )
+          await new Promise((resolve) => setTimeout(resolve, delay))
+          attempt++
+        } else {
+          console.error(
+            `OAuth2Service: Failed to initialize after ${maxRetries} attempts:`,
+            error.message
+          )
+          return false
+        }
+      }
+    }
+
+    return false
   }
 
   /**
