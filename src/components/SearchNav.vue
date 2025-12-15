@@ -281,7 +281,11 @@ const filterKeys = (keys, key) => {
 
 const searchEvent = (value) => {
   if (value) {
-    sortedKeys.value = filterKeys(activeKeys.value, value)
+    if (activeKeys.value && Array.isArray(activeKeys.value)) {
+      sortedKeys.value = filterKeys(activeKeys.value, value)
+    } else {
+      sortedKeys.value = []
+    }
   } else {
     groups.value = JSON.parse(JSON.stringify(docs.value))
     sortedKeys.value = Object.keys(groups.value).sort()
