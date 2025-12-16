@@ -135,4 +135,22 @@ a {
 .content :deep(a):hover {
   background-color: #a4b2ce;
 }
+
+/* Make Scala code blocks readable */
+.content :deep(pre.language-scala) {
+  background-color: #f5f5f5 !important;
+  color: #333 !important;
+  font-family: 'Courier New', Courier, monospace !important;
+  padding: 1em !important;
+}
+
+.content :deep(pre.language-scala code) {
+  background-color: transparent !important;
+  color: #333 !important;
+  font-family: 'Courier New', Courier, monospace !important;
+}
+
+.content :deep(pre.language-scala .token) {
+  color: #333 !important;
+}
 </style>
