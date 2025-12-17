@@ -590,7 +590,15 @@ const onError = (error) => {
             :name="role.role"
 
           >
-            <p>{{ role.role }}</p>
+            <div class="role-header">
+              <p>{{ role.role }}</p>
+              <span
+                v-if="hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)"
+                class="entitlement-owned-text"
+              >
+                You have this Entitlement
+              </span>
+            </div>
             <div class="flex-role-preview-panel" id="request-role-button-panel">
               <el-form-item
                 v-show="role.requires_bank_id && !hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)"
@@ -602,12 +610,6 @@ const onError = (error) => {
                   placeholder="Bank ID"
                 />
               </el-form-item>
-              <span
-                v-if="hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)"
-                class="entitlement-owned-text"
-              >
-                You have this Entitlement
-              </span>
             </div>
           </li>
         </ul>
@@ -801,11 +803,18 @@ li {
   width: 95%;
   margin: 0 0 -30px 0;
 }
+.role-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.role-header p {
+  margin: 0;
+}
 .entitlement-owned-text {
   color: #67c23a;
   font-weight: 500;
   font-size: 14px;
-  margin-left: 10px;
 }
 
 #conector-method-link {
