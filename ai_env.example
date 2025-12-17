@@ -26,6 +26,13 @@ VITE_OBP_OAUTH2_TOKEN_REFRESH_THRESHOLD=300                                     
 
 ### Session Configuration (Optional) ###
 # VITE_SESSION_MAX_AGE=3600                                                      # Session timeout in seconds (default: 3600 = 1 hour)
+                                                                                 # Common values:
+                                                                                 #   1800  = 30 minutes
+                                                                                 #   3600  = 1 hour (default)
+                                                                                 #   7200  = 2 hours
+                                                                                 #   14400 = 4 hours
+                                                                                 #   28800 = 8 hours (full work day)
+                                                                                 #   86400 = 24 hours
 
 ### Styling Configuration (Optional) ###
 # VITE_OBP_LOGO_URL=https://example.com/logo.png                                # Custom logo image URL (uses default OBP logo if not set)
