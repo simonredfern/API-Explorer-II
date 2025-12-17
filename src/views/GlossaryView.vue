@@ -121,9 +121,15 @@ div {
 .content :deep(strong) {
   font-family: 'Roboto';
 }
-a {
+span > a {
   text-decoration: none;
   color: #39455f;
+  display: block;
+  margin-top: 30px;
+  padding-top: 10px;
+}
+span:first-child > a {
+  margin-top: 0;
 }
 .content :deep(a) {
   text-decoration: underline;
