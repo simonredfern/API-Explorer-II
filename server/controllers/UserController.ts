@@ -118,6 +118,13 @@ export class UserController {
             session['oauth2_token_timestamp'] = Date.now()
             session['oauth2_expires_in'] = newTokens.expiresIn
 
+            // CRITICAL: Update clientConfig with new access token
+            // This ensures subsequent API calls use the refreshed token
+            if (session['clientConfig'] && session['clientConfig'].oauth2) {
+              session['clientConfig'].oauth2.accessToken = newTokens.accessToken
+              console.log('UserController: Updated clientConfig with new access token')
+            }
+
             console.log('UserController: Token refresh successful')
           } catch (error) {
             console.error('UserController: Token refresh failed:', error)
