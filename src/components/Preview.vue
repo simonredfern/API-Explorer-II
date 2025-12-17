@@ -615,7 +615,7 @@ const onError = (error) => {
         </ul>
         <el-button
           id="request-role-button"
-          v-show="isUserLogon && requiredRoles.some((role, idx) => !hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id))"
+          v-show="isUserLogon && requiredRoles.length > 0 && (requiredRoles.some((role) => role.requires_bank_id) || requiredRoles.some((role, idx) => !hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)))"
           @click="submit(roleFormRef, submitEntitlement)"
           >Request</el-button
         >
