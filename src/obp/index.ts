@@ -141,6 +141,23 @@ export async function getCurrentUser(): Promise<any> {
   }
 }
 
+export async function getUserEntitlements(): Promise<any> {
+  try {
+    const userId = (await getCurrentUser()).user_id
+    if (!userId) {
+      return { error: 'User not logged in' }
+    }
+    const url = `/obp/${OBP_API_VERSION}/users/${userId}/entitlements`
+    return await get(url)
+  } catch (error: any) {
+    console.log(error)
+    if (error.response && error.response.body) {
+      return { error: error.response.body }
+    }
+    return { error }
+  }
+}
+
 export async function createEntitlement(bankId: string, roleName: string): Promise<any> {
   const userId = (await getCurrentUser()).user_id
   const url = `/obp/${OBP_API_VERSION}/users/${userId}/entitlements`

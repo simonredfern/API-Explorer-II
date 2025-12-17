@@ -30,7 +30,7 @@ import { ref, reactive, inject, onBeforeMount } from 'vue'
 import { onBeforeRouteUpdate, useRoute } from 'vue-router'
 import { getOperationDetails } from '../obp/resource-docs'
 import { ElNotification, FormInstance } from 'element-plus'
-import { OBP_API_DEFAULT_RESOURCE_DOC_VERSION, get, create, update, discard, createEntitlement, getCurrentUser } from '../obp'
+import { OBP_API_DEFAULT_RESOURCE_DOC_VERSION, get, create, update, discard, createEntitlement, getCurrentUser, getUserEntitlements } from '../obp'
 import { obpResourceDocsKey } from '@/obp/keys'
 import JsonEditorVue from 'json-editor-vue'
 import { Mode } from 'vanilla-jsoneditor'
@@ -57,6 +57,7 @@ const showValidations = ref(true)
 const showPossibleErrors = ref(true)
 const showConnectorMethods = ref(true)
 const isUserLogon = ref(true)
+const userEntitlements = ref([])
 const type = ref('')
 const resourceDocs = inject(obpResourceDocsKey)
 const footNote = ref({
@@ -115,6 +116,34 @@ const setRoleForm = () => {
     requiredRoles.value.forEach((role, idx) => {
       roleForm[`role${role.role}${idx}`] = role.role
     })
+  }
+}
+
+const refreshEntitlements = async () => {
+  const currentUser = await getCurrentUser()
+  if (currentUser.username) {
+    const entitlements = await getUserEntitlements()
+    if (entitlements && entitlements.list) {
+      userEntitlements.value = entitlements.list
+    }
+  }
+}
+
+const hasEntitlement = (roleName: string, bankId: string = '', requiresBankId: boolean = false): boolean => {
+  if (!userEntitlements.value || userEntitlements.value.length === 0) {
+    return false
+  }
+
+  if (requiresBankId) {
+    // For bank-level roles, check if user has the role for the specific bank
+    // Only return true if bankId is provided and matches
+    if (!bankId) {
+      return false
+    }
+    return userEntitlements.value.some(e => e.role_name === roleName && e.bank_id === bankId)
+  } else {
+    // For system-wide roles, just check if user has the role
+    return userEntitlements.value.some(e => e.role_name === roleName)
   }
 }
 
@@ -316,6 +345,8 @@ const submitEntitlement = async () => {
             position: 'bottom-right',
             type: 'success'
           })
+          // Refresh entitlements after successful request
+          await refreshEntitlements()
         }
       } catch (error: any) {
         ElNotification({
@@ -388,6 +419,8 @@ const submitEntitlement = async () => {
             position: 'bottom-right',
             type: 'success'
           })
+          // Refresh entitlements after successful request
+          await refreshEntitlements()
         }
       } catch (error: any) {
         ElNotification({
@@ -412,9 +445,18 @@ onBeforeMount(async () => {
 
   const currentUser = await getCurrentUser()
   isUserLogon.value = currentUser.username
+
+  // Fetch user entitlements
+  if (currentUser.username) {
+    const entitlements = await getUserEntitlements()
+    if (entitlements && entitlements.list) {
+      userEntitlements.value = entitlements.list
+    }
+  }
+
   setRoleForm()
 })
-onBeforeRouteUpdate((to) => {
+onBeforeRouteUpdate(async (to) => {
   const version = to.params.version ? to.params.version : configVersion
 
   // Only set operation details if operationid exists
@@ -422,6 +464,9 @@ onBeforeRouteUpdate((to) => {
     setOperationDetails(to.query.operationid, version)
     responseHeaderTitle.value = 'TYPICAL SUCCESSFUL RESPONSE'
   }
+
+  // Refresh entitlements on route change
+  await refreshEntitlements()
 
   setRoleForm()
 })
@@ -547,19 +592,28 @@ const onError = (error) => {
           >
             <p>{{ role.role }}</p>
             <div class="flex-role-preview-panel" id="request-role-button-panel">
-              <el-form-item v-show="role.requires_bank_id" :prop=" `bankId${role.role}${idx}`">
+              <el-form-item
+                v-show="role.requires_bank_id && !hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)"
+                :prop="`bankId${role.role}${idx}`"
+              >
                 <input
                   type="text"
                   v-model="roleForm[`bankId${role.role}${idx}`]"
                   placeholder="Bank ID"
                 />
               </el-form-item>
+              <span
+                v-if="hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)"
+                class="entitlement-owned-text"
+              >
+                You have this Entitlement
+              </span>
             </div>
           </li>
         </ul>
         <el-button
           id="request-role-button"
-          v-show="isUserLogon"
+          v-show="isUserLogon && requiredRoles.some((role, idx) => !hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id))"
           @click="submit(roleFormRef, submitEntitlement)"
           >Request</el-button
         >
@@ -746,6 +800,12 @@ li {
 #request-role-button-panel {
   width: 95%;
   margin: 0 0 -30px 0;
+}
+.entitlement-owned-text {
+  color: #67c23a;
+  font-weight: 500;
+  font-size: 14px;
+  margin-left: 10px;
 }
 
 #conector-method-link {
