@@ -554,8 +554,8 @@ const onError = (error) => {
         placeholder="Request Header (Header1:Value1::Header2:Value2)"
       />
     </div>
-    <div class="json-editor-container" v-show="exampleRequestBody">
-      <p v-show="exampleRequestBody" class="header-container request-body-header">{{ exampleBodyTitle }}:</p>
+    <div class="json-editor-container" v-show="method === 'POST' || method === 'PUT' || method === 'DELETE'">
+      <p class="header-container request-body-header">{{ exampleBodyTitle }}:</p>
       <div class="json-editor jse-theme-dark">
         <JsonEditorVue
           v-model="exampleRequestBody"

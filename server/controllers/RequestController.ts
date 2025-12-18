@@ -28,21 +28,85 @@
 import { Controller, Session, Req, Res, Get, Delete, Post, Put } from 'routing-controllers'
 import type { Request, Response } from 'express'
 import OBPClientService from '../services/OBPClientService.js'
+import { OAuth2Service } from '../services/OAuth2Service.js'
 import { Service, Container } from 'typedi'
 
 @Service()
 @Controller()
 export class OBPController {
   private obpClientService: OBPClientService
+  private oauth2Service: OAuth2Service
 
   constructor() {
-    // Explicitly get OBPClientService from the container to avoid injection issues
+    // Explicitly get services from the container to avoid injection issues
     this.obpClientService = Container.get(OBPClientService)
+    this.oauth2Service = Container.get(OAuth2Service)
+  }
+
+  /**
+   * Check if access token is expired and refresh it if needed
+   * This ensures API calls always use a valid token
+   */
+  private async ensureValidToken(session: any): Promise<boolean> {
+    const accessToken = session['oauth2_access_token']
+    const refreshToken = session['oauth2_refresh_token']
+
+    // If no access token, user is not authenticated
+    if (!accessToken) {
+      return false
+    }
+
+    // Check if token is expired
+    if (this.oauth2Service.isTokenExpired(accessToken)) {
+      console.log('RequestController: Access token expired, attempting refresh')
+
+      if (!refreshToken) {
+        console.log('RequestController: No refresh token available')
+        return false
+      }
+
+      try {
+        const newTokens = await this.oauth2Service.refreshAccessToken(refreshToken)
+
+        // Update session with new tokens
+        session['oauth2_access_token'] = newTokens.accessToken
+        session['oauth2_refresh_token'] = newTokens.refreshToken || refreshToken
+        session['oauth2_id_token'] = newTokens.idToken
+        session['oauth2_token_timestamp'] = Date.now()
+        session['oauth2_expires_in'] = newTokens.expiresIn
+
+        // CRITICAL: Update clientConfig with new access token
+        if (session['clientConfig'] && session['clientConfig'].oauth2) {
+          session['clientConfig'].oauth2.accessToken = newTokens.accessToken
+          console.log('RequestController: Updated clientConfig with refreshed token')
+        }
+
+        console.log('RequestController: Token refresh successful')
+        return true
+      } catch (error) {
+        console.error('RequestController: Token refresh failed:', error)
+        return false
+      }
+    }
+
+    // Token is still valid
+    return true
   }
 
   @Get('/get')
   async get(@Session() session: any, @Req() request: Request, @Res() response: Response): Response {
     const path = request.query.path
+
+    // Ensure token is valid before making the request
+    const tokenValid = await this.ensureValidToken(session)
+    if (!tokenValid && session['oauth2_user']) {
+      console.log('RequestController: Token expired and refresh failed')
+      return response.status(401).json({
+        code: 401,
+        message: 'Session expired. Please log in again.'
+      })
+    }
+
     const oauthConfig = session['clientConfig']
 
     try {
@@ -72,6 +136,17 @@ export class OBPController {
   ): Response {
     const path = request.query.path
     const data = request.body
+
+    // Ensure token is valid before making the request
+    const tokenValid = await this.ensureValidToken(session)
+    if (!tokenValid && session['oauth2_user']) {
+      console.log('RequestController: Token expired and refresh failed')
+      return response.status(401).json({
+        code: 401,
+        message: 'Session expired. Please log in again.'
+      })
+    }
+
     const oauthConfig = session['clientConfig']
 
     // Debug logging to diagnose authentication issues
@@ -104,6 +179,17 @@ export class OBPController {
   ): Response {
     const path = request.query.path
     const data = request.body
+
+    // Ensure token is valid before making the request
+    const tokenValid = await this.ensureValidToken(session)
+    if (!tokenValid && session['oauth2_user']) {
+      console.log('RequestController: Token expired and refresh failed')
+      return response.status(401).json({
+        code: 401,
+        message: 'Session expired. Please log in again.'
+      })
+    }
+
     const oauthConfig = session['clientConfig']
 
     try {
@@ -119,12 +205,23 @@ export class OBPController {
   }
 
   @Delete('/delete')
-  async delete(
+  async discard(
     @Session() session: any,
     @Req() request: Request,
     @Res() response: Response
   ): Response {
     const path = request.query.path
+
+    // Ensure token is valid before making the request
+    const tokenValid = await this.ensureValidToken(session)
+    if (!tokenValid && session['oauth2_user']) {
+      console.log('RequestController: Token expired and refresh failed')
+      return response.status(401).json({
+        code: 401,
+        message: 'Session expired. Please log in again.'
+      })
+    }
+
     const oauthConfig = session['clientConfig']
 
     try {
