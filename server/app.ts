@@ -104,12 +104,23 @@ redisClient.on('error', (err) => {
 })
 
 // Initialize store.
+// Calculate session max age in seconds (for Redis TTL)
+const sessionMaxAgeSeconds = process.env.VITE_SESSION_MAX_AGE
+  ? parseInt(process.env.VITE_SESSION_MAX_AGE)
+  : 60 * 60 // Default: 1 hour in seconds
+
+// CRITICAL: Set Redis TTL to match session maxAge
+// Without this, Redis uses its own default TTL which may expire sessions prematurely
 let redisStore = new RedisStore({
   client: redisClient,
-  prefix: 'api-explorer-ii:'
+  prefix: 'api-explorer-ii:',
+  ttl: sessionMaxAgeSeconds // TTL in seconds - MUST match cookie maxAge
 })
 
 console.info(`Environment: ${app.get('env')}`)
+console.info(
+  `Session maxAge configured: ${sessionMaxAgeSeconds} seconds (${sessionMaxAgeSeconds / 60} minutes)`
+)
 app.use(express.json())
 let sessionObject = {
   store: redisStore,
@@ -119,9 +130,7 @@ let sessionObject = {
   cookie: {
     httpOnly: true,
     secure: false,
-    maxAge: process.env.VITE_SESSION_MAX_AGE
-      ? parseInt(process.env.VITE_SESSION_MAX_AGE) * 1000
-      : 60 * 60 * 1000 // Default: 1 hour in milliseconds (value in env should be in seconds)
+    maxAge: sessionMaxAgeSeconds * 1000 // maxAge in milliseconds
   }
 }
 if (app.get('env') === 'production') {
