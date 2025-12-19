@@ -31,7 +31,7 @@
   import axios from 'axios';
   import 'prismjs/themes/prism.css'; // Choose a theme you like
   import { v4 as uuidv4 } from 'uuid';
-  import { inject } from 'vue';
+  import { inject, computed } from 'vue';
   import { obpApiHostKey } from '@/obp/keys';
   import { getCurrentUser } from '../obp';
   import { getOpeyJWT, getobpConsent, answerobpConsentChallenge } from '@/obp/common-functions'
@@ -40,6 +40,7 @@
   import { useConnectionStore } from '@/stores/connection';
   import { useChatStore } from '@/stores/chat';
   import { ElMessage } from 'element-plus';
+  import { useRoute } from 'vue-router';
 
   import 'prismjs/components/prism-markup';
   import 'prismjs/components/prism-javascript';
@@ -73,7 +74,15 @@
 
       const { isConnected } = storeToRefs(connectionStore);
 
-      return {isStreaming, chatMessages, lastError, currentMessageSnapshot, chatStore, connectionStore}
+      const route = useRoute();
+      const loginUrl = computed(() => {
+        const currentPath = route.path;
+        const queryString = new URLSearchParams(route.query as Record<string, string>).toString();
+        const fullPath = queryString ? `${currentPath}?${queryString}` : currentPath;
+        return `/api/oauth2/connect?redirect=${encodeURIComponent(fullPath)}`;
+      });
+
+      return {isStreaming, chatMessages, lastError, currentMessageSnapshot, chatStore, connectionStore, loginUrl}
     },
     data() {
       return {
@@ -378,7 +387,7 @@
 
         </div>
         <div v-else class="chat-messages">
-          <p>Opey is only availabled when logged in. <a v-bind:href="'/api/oauth2/connect'">Log In</a> </p>
+          <p>Opey is only availabled when logged in. <a v-bind:href="loginUrl">Log In</a> </p>
         </div>
         <el-alert
           v-if="this.errorState"

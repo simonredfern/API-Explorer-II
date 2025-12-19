@@ -193,7 +193,8 @@ watchEffect(() => {
 
 const getCurrentPath = () => {
   const currentPath = route.path
-  return currentPath
+  const queryString = new URLSearchParams(route.query as Record<string, string>).toString()
+  return queryString ? `${currentPath}?${queryString}` : currentPath
 }
 
 </script>
