@@ -601,7 +601,7 @@ const onError = (error) => {
             </div>
             <div class="flex-role-preview-panel" id="request-role-button-panel">
               <el-form-item
-                v-show="role.requires_bank_id && !hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)"
+                v-show="isUserLogon && role.requires_bank_id && !hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)"
                 :prop="`bankId${role.role}${idx}`"
               >
                 <input
