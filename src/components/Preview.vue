@@ -278,6 +278,135 @@ const highlightCode = (json) => {
     )
   }
 }
+const submitSingleEntitlement = async (formRole: any, idx: number) => {
+  const role = roleForm[`role${formRole.role}${idx}`]
+
+  if (formRole.requires_bank_id) {
+    // Bank-level entitlement
+    const bankId = roleForm[`bankId${formRole.role}${idx}`]
+
+    if (!role || !bankId) {
+      ElNotification({
+        duration: elMessageDuration,
+        title: 'Validation Error',
+        message: 'Please fill in both Role and Bank ID fields',
+        position: 'bottom-right',
+        type: 'warning'
+      })
+      return
+    }
+
+    try {
+      const response = await createEntitlement(bankId, role)
+
+      // Check if response is an error object (from superagent)
+      const isError = response && typeof response === 'object' && 'error' in response
+      const errorBody = isError ? response.error : null
+
+      if (isError && errorBody && errorBody.code >= 400) {
+        // Parse error message from body
+        let errorMessage = 'Failed to create entitlement'
+        if (errorBody.message) {
+          // Message might be double-encoded JSON string
+          try {
+            const parsed = JSON.parse(errorBody.message)
+            errorMessage = parsed.message || parsed.error || errorBody.message
+          } catch {
+            errorMessage = errorBody.message
+          }
+        }
+
+        ElNotification({
+          duration: elMessageDuration,
+          title: 'Request Failed',
+          message: errorMessage,
+          position: 'bottom-right',
+          type: 'error'
+        })
+      } else {
+        ElNotification({
+          duration: elMessageDuration,
+          title: 'Success',
+          message: `Entitlement "${role}" requested successfully for bank "${bankId}"`,
+          position: 'bottom-right',
+          type: 'success'
+        })
+        // Refresh entitlements after successful request
+        await refreshEntitlements()
+      }
+    } catch (error: any) {
+      ElNotification({
+        duration: elMessageDuration,
+        title: 'Request Failed',
+        message: error.message || 'An error occurred while requesting the entitlement',
+        position: 'bottom-right',
+        type: 'error'
+      })
+    }
+  } else {
+    // System-wide entitlement (no bank_id required)
+    if (!role) {
+      ElNotification({
+        duration: elMessageDuration,
+        title: 'Validation Error',
+        message: 'Please select a role',
+        position: 'bottom-right',
+        type: 'warning'
+      })
+      return
+    }
+
+    try {
+      // System-wide entitlement uses empty string for bank_id
+      const response = await createEntitlement('', role)
+
+      // Check if response is an error object (from superagent)
+      const isError = response && typeof response === 'object' && 'error' in response
+      const errorBody = isError ? response.error : null
+
+      if (isError && errorBody && errorBody.code >= 400) {
+        // Parse error message from body
+        let errorMessage = 'Failed to create entitlement'
+        if (errorBody.message) {
+          // Message might be double-encoded JSON string
+          try {
+            const parsed = JSON.parse(errorBody.message)
+            errorMessage = parsed.message || parsed.error || errorBody.message
+          } catch {
+            errorMessage = errorBody.message
+          }
+        }
+
+        ElNotification({
+          duration: elMessageDuration,
+          title: 'Request Failed',
+          message: errorMessage,
+          position: 'bottom-right',
+          type: 'error'
+        })
+      } else {
+        ElNotification({
+          duration: elMessageDuration,
+          title: 'Success',
+          message: `System-wide entitlement "${role}" requested successfully`,
+          position: 'bottom-right',
+          type: 'success'
+        })
+        // Refresh entitlements after successful request
+        await refreshEntitlements()
+      }
+    } catch (error: any) {
+      ElNotification({
+        duration: elMessageDuration,
+        title: 'Request Failed',
+        message: error.message || 'An error occurred while requesting the entitlement',
+        position: 'bottom-right',
+        type: 'error'
+      })
+    }
+  }
+}
+
 const submitEntitlement = async () => {
   for (const [idx, formRole] of requiredRoles.value.entries()) {
     const role = roleForm[`role${formRole.role}${idx}`]
@@ -581,7 +710,7 @@ const onError = (error) => {
       <div v-show="showRequiredRoles">
         <p>{{ $t('preview.required_roles') }}:</p>
         <el-alert v-show="!isUserLogon" type="info" show-icon :closable="false">
-          <p>Please login to request this Role.</p>
+          <p>Please login to request Roles.</p>
         </el-alert>
         <ul>
           <li
@@ -591,34 +720,36 @@ const onError = (error) => {
 
           >
             <div class="role-header">
-              <p>{{ role.role }}</p>
+              <div class="role-name-section">
+                <p>{{ role.role }}</p>
+                <el-form-item
+                  v-show="isUserLogon && role.requires_bank_id && !hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)"
+                  :prop="`bankId${role.role}${idx}`"
+                  class="role-bank-id-input"
+                >
+                  <input
+                    type="text"
+                    v-model="roleForm[`bankId${role.role}${idx}`]"
+                    placeholder="Bank ID"
+                  />
+                </el-form-item>
+              </div>
               <span
                 v-if="hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)"
                 class="entitlement-owned-text"
               >
                 You have this Entitlement
               </span>
-            </div>
-            <div class="flex-role-preview-panel" id="request-role-button-panel">
-              <el-form-item
-                v-show="isUserLogon && role.requires_bank_id && !hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)"
-                :prop="`bankId${role.role}${idx}`"
+              <el-button
+                class="role-request-button"
+                v-show="isUserLogon && !hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)"
+                @click="submit(roleFormRef, () => submitSingleEntitlement(role, idx))"
+                size="small"
+                >Request</el-button
               >
-                <input
-                  type="text"
-                  v-model="roleForm[`bankId${role.role}${idx}`]"
-                  placeholder="Bank ID"
-                />
-              </el-form-item>
             </div>
           </li>
         </ul>
-        <el-button
-          id="request-role-button"
-          v-show="isUserLogon && requiredRoles.length > 0 && (requiredRoles.some((role) => role.requires_bank_id) || requiredRoles.some((role, idx) => !hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)))"
-          @click="submit(roleFormRef, submitEntitlement)"
-          >Request</el-button
-        >
       </div>
     </el-form>
     <!--<div v-show="showValidations">-->
@@ -708,9 +839,18 @@ input[type='text']:focus {
 }
 ul {
   margin-left: -10px;
+  list-style: none;
+  padding: 0;
 }
 li {
-  padding: 5px 0 5px 0;
+  padding: 15px;
+  margin-bottom: 15px;
+  border: 1px solid #414d63;
+  border-radius: 6px;
+  background-color: rgba(65, 77, 99, 0.2);
+}
+li:last-child {
+  margin-bottom: 0;
 }
 .content p a::after {
   content: '';
@@ -807,9 +947,26 @@ li {
   display: flex;
   align-items: center;
   gap: 15px;
+  justify-content: space-between;
+}
+.role-name-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
+}
+.role-bank-id-input {
+  margin-bottom: 0;
+}
+.role-bank-id-input input {
+  width: 200px;
+}
+.role-request-button {
+  margin-left: auto;
 }
 .role-header p {
   margin: 0;
+  white-space: nowrap;
 }
 .entitlement-owned-text {
   color: #67c23a;
