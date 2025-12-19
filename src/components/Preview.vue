@@ -147,6 +147,15 @@ const hasEntitlement = (roleName: string, bankId: string = '', requiresBankId: b
   }
 }
 
+const getEntitlementBankIds = (roleName: string): string[] => {
+  if (!userEntitlements.value || userEntitlements.value.length === 0) {
+    return []
+  }
+  return userEntitlements.value
+    .filter(e => e.role_name === roleName && e.bank_id)
+    .map(e => e.bank_id)
+}
+
 const setType = (method) => {
   switch (method) {
     case 'POST': {
@@ -722,8 +731,20 @@ const onError = (error) => {
             <div class="role-header">
               <div class="role-name-section">
                 <p>{{ role.role }}</p>
+                <!-- Show existing bank IDs for bank-level roles -->
+                <div v-if="role.requires_bank_id && getEntitlementBankIds(role.role).length > 0" class="existing-entitlements">
+                  <span class="entitlement-label">You have this at:</span>
+                  <span
+                    v-for="bankId in getEntitlementBankIds(role.role)"
+                    :key="bankId"
+                    class="bank-id-badge"
+                  >
+                    {{ bankId }}
+                  </span>
+                </div>
+                <!-- Always show input for bank-level roles when logged in -->
                 <el-form-item
-                  v-show="isUserLogon && role.requires_bank_id && !hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)"
+                  v-show="isUserLogon && role.requires_bank_id"
                   :prop="`bankId${role.role}${idx}`"
                   class="role-bank-id-input"
                 >
@@ -734,15 +755,18 @@ const onError = (error) => {
                   />
                 </el-form-item>
               </div>
+              <!-- Show "You have this Entitlement" only for system-wide roles -->
               <span
-                v-if="hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)"
+                v-if="!role.requires_bank_id && hasEntitlement(role.role, '', role.requires_bank_id)"
                 class="entitlement-owned-text"
               >
                 You have this Entitlement
               </span>
+              <!-- For bank-level roles, always show Request button when logged in -->
+              <!-- For system-wide roles, only show if they don't have it -->
               <el-button
                 class="role-request-button"
-                v-show="isUserLogon && !hasEntitlement(role.role, roleForm[`bankId${role.role}${idx}`], role.requires_bank_id)"
+                v-show="isUserLogon && (role.requires_bank_id || !hasEntitlement(role.role, '', role.requires_bank_id))"
                 @click="submit(roleFormRef, () => submitSingleEntitlement(role, idx))"
                 size="small"
                 >Request</el-button
@@ -972,6 +996,26 @@ li:last-child {
   color: #67c23a;
   font-weight: 500;
   font-size: 14px;
+}
+.existing-entitlements {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.entitlement-label {
+  color: #67c23a;
+  font-weight: 500;
+  font-size: 13px;
+}
+.bank-id-badge {
+  background-color: rgba(103, 194, 58, 0.2);
+  color: #67c23a;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid rgba(103, 194, 58, 0.3);
 }
 
 #conector-method-link {
