@@ -3,7 +3,7 @@ placeholder for Opey II Chat widget
 -->
 <script lang="ts">
 
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { Close, Top as ElTop, WarnTriangleFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import ChatMessage from './ChatMessage.vue';
@@ -11,13 +11,23 @@ import { v4 as uuidv4 } from 'uuid';
 import { OpeyMessage, UserMessage } from '@/models/MessageModel';
 import { getCurrentUser } from '@/obp';
 import { useChat } from '@/stores/chat';
+import { useRoute } from 'vue-router'
 
 export default {
     setup () {
+        const route = useRoute()
+        const getLoginUrl = computed(() => {
+            const currentPath = route.path
+            const queryString = new URLSearchParams(route.query as Record<string, string>).toString()
+            const fullPath = queryString ? `${currentPath}?${queryString}` : currentPath
+            return `/api/oauth2/connect?redirect=${encodeURIComponent(fullPath)}`
+        })
+
         return {
             Close,
             ElTop,
             WarnTriangleFilled,
+            getLoginUrl,
         }
     },
     data() {
@@ -125,7 +135,7 @@ export default {
                     </div>
                     <div v-else-if="!chat.userIsAuthenticated" class="login-container">
                         <p class="login-message" size="large">Opey is only available once logged on.</p>
-                        <a href="/api/oauth2/connect" class="login-button router-link">Log on</a>
+                        <a :href="getLoginUrl" class="login-button router-link">Log on</a>
                     </div>
                     <div v-else class="messages-container" v-bind:class="{ disabled: !chat.userIsAuthenticated }">
                         <el-scrollbar>
