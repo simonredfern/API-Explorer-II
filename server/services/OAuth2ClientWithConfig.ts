@@ -25,7 +25,7 @@
  *
  */
 
-import { OAuth2Client } from 'arctic'
+import { OAuth2Client, OAuth2Tokens } from 'arctic'
 import type { OIDCConfiguration, TokenResponse } from '../types/oauth2.js'
 
 /**
@@ -48,10 +48,14 @@ import type { OIDCConfiguration, TokenResponse } from '../types/oauth2.js'
 export class OAuth2ClientWithConfig extends OAuth2Client {
   public OIDCConfig?: OIDCConfiguration
   public provider: string
+  private _clientSecret: string
+  private _redirectUri: string
 
   constructor(clientId: string, clientSecret: string, redirectUri: string, provider: string) {
     super(clientId, clientSecret, redirectUri)
     this.provider = provider
+    this._clientSecret = clientSecret
+    this._redirectUri = redirectUri
   }
 
   /**
@@ -158,16 +162,15 @@ export class OAuth2ClientWithConfig extends OAuth2Client {
   }
 
   /**
-   * Validate authorization code and exchange for tokens
+   * Exchange authorization code for tokens
    *
-   * This method extends the base OAuth2Client functionality to support
-   * provider-specific token exchange requirements (e.g., Basic Auth vs form-based credentials)
+   * This method provides a simpler interface for token exchange
    *
    * @param code - Authorization code from OIDC provider
    * @param codeVerifier - PKCE code verifier
    * @returns Token response with access token, refresh token, and ID token
    */
-  async validateAuthorizationCode(code: string, codeVerifier: string): Promise<TokenResponse> {
+  async exchangeAuthorizationCode(code: string, codeVerifier: string): Promise<TokenResponse> {
     const tokenEndpoint = this.getTokenEndpoint()
 
     console.log(`OAuth2ClientWithConfig: Exchanging authorization code for ${this.provider}`)
@@ -176,19 +179,19 @@ export class OAuth2ClientWithConfig extends OAuth2Client {
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
       code: code,
-      redirect_uri: this.redirectURI,
+      redirect_uri: this._redirectUri,
       code_verifier: codeVerifier,
       client_id: this.clientId
     })
 
     // Add client_secret to body (some providers prefer this over Basic Auth)
-    if (this.clientSecret) {
-      body.append('client_secret', this.clientSecret)
+    if (this._clientSecret) {
+      body.append('client_secret', this._clientSecret)
     }
 
     try {
       // Try with Basic Authentication first (RFC 6749 standard)
-      const authHeader = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')
+      const authHeader = Buffer.from(`${this.clientId}:${this._clientSecret}`).toString('base64')
 
       const response = await fetch(tokenEndpoint, {
         method: 'POST',
@@ -229,7 +232,7 @@ export class OAuth2ClientWithConfig extends OAuth2Client {
    * @param refreshToken - Refresh token from previous authentication
    * @returns New token response
    */
-  async refreshAccessToken(refreshToken: string): Promise<TokenResponse> {
+  async refreshTokens(refreshToken: string): Promise<TokenResponse> {
     const tokenEndpoint = this.getTokenEndpoint()
 
     console.log(`OAuth2ClientWithConfig: Refreshing access token for ${this.provider}`)
@@ -240,12 +243,12 @@ export class OAuth2ClientWithConfig extends OAuth2Client {
       client_id: this.clientId
     })
 
-    if (this.clientSecret) {
-      body.append('client_secret', this.clientSecret)
+    if (this._clientSecret) {
+      body.append('client_secret', this._clientSecret)
     }
 
     try {
-      const authHeader = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')
+      const authHeader = Buffer.from(`${this.clientId}:${this._clientSecret}`).toString('base64')
 
       const response = await fetch(tokenEndpoint, {
         method: 'POST',
@@ -278,5 +281,19 @@ export class OAuth2ClientWithConfig extends OAuth2Client {
       console.error(`OAuth2ClientWithConfig: Token refresh error for ${this.provider}:`, error)
       throw error
     }
+  }
+
+  /**
+   * Get the redirect URI
+   */
+  getRedirectUri(): string {
+    return this._redirectUri
+  }
+
+  /**
+   * Get the client secret
+   */
+  getClientSecret(): string {
+    return this._clientSecret
   }
 }
