@@ -169,14 +169,14 @@ export class OAuth2ConnectController {
     session.oauth2_state = state
 
     // Use legacy service to create authorization URL
-    const authUrl = this.legacyOAuth2Service.createAuthorizationURL(state, codeVerifier, [
+    const authUrl = this.legacyOAuth2Service.createAuthorizationURL(state, [
       'openid',
       'profile',
       'email'
     ])
 
     console.log('OAuth2ConnectController: Redirecting to legacy OIDC provider')
-    return response.redirect(authUrl)
+    return response.redirect(authUrl.toString())
   }
 
   /**
@@ -186,7 +186,7 @@ export class OAuth2ConnectController {
     const authEndpoint = client.getAuthorizationEndpoint()
     const params = new URLSearchParams({
       client_id: client.clientId,
-      redirect_uri: client.redirectURI,
+      redirect_uri: client.getRedirectUri(),
       response_type: 'code',
       scope: 'openid profile email',
       state: state,

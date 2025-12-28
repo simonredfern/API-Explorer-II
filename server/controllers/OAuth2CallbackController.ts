@@ -205,7 +205,7 @@ export class OAuth2CallbackController {
 
     // Exchange code for tokens
     console.log(`OAuth2CallbackController: Exchanging authorization code for tokens`)
-    const tokens = await client.validateAuthorizationCode(code, codeVerifier)
+    const tokens = await client.exchangeAuthorizationCode(code, codeVerifier)
 
     // Store tokens in session
     session.oauth2_access_token = tokens.accessToken

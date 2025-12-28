@@ -77,12 +77,7 @@ export class OAuth2ProviderManager {
 
     try {
       // Use OBPClientService to call the API
-      const response = await this.obpClientService.call<WellKnownResponse>(
-        'GET',
-        '/obp/v5.1.0/well-known',
-        null,
-        null
-      )
+      const response = await this.obpClientService.get('/obp/v5.1.0/well-known', null)
 
       if (!response.well_known_uris || response.well_known_uris.length === 0) {
         console.warn('OAuth2ProviderManager: No well-known URIs found in OBP API response')
@@ -90,7 +85,7 @@ export class OAuth2ProviderManager {
       }
 
       console.log(`OAuth2ProviderManager: Found ${response.well_known_uris.length} providers:`)
-      response.well_known_uris.forEach((uri) => {
+      response.well_known_uris.forEach((uri: WellKnownUri) => {
         console.log(`  - ${uri.provider}: ${uri.url}`)
       })
 
@@ -219,9 +214,9 @@ export class OAuth2ProviderManager {
 
     const checkPromises: Promise<void>[] = []
 
-    for (const [providerName, client] of this.providers.entries()) {
+    this.providers.forEach((client, providerName) => {
       checkPromises.push(this.checkProviderHealth(providerName, client))
-    }
+    })
 
     await Promise.allSettled(checkPromises)
   }
@@ -288,11 +283,11 @@ export class OAuth2ProviderManager {
   getAvailableProviders(): string[] {
     const available: string[] = []
 
-    for (const [name, status] of this.providerStatus.entries()) {
+    this.providerStatus.forEach((status, name) => {
       if (status.available && this.providers.has(name)) {
         available.push(name)
       }
-    }
+    })
 
     return available
   }
