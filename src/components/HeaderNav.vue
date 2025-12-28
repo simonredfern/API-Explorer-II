@@ -80,6 +80,11 @@ const logo = ref(logoSource)
 const headerLinksHoverColor = ref(headerLinksHoverColorSetting)
 const headerLinksBackgroundColor = ref(headerLinksBackgroundColorSetting)
 
+// Multi-provider support
+const availableProviders = ref<Array<{ name: string; available: boolean; lastChecked?: Date; error?: string }>>([])
+const showProviderSelector = ref(false)
+const isLoadingProviders = ref(false)
+
 // Check OAuth2 availability
 let oauth2CheckInterval: number | null = null
 
@@ -102,6 +107,74 @@ async function checkOAuth2Availability() {
     oauth2StatusMessage.value = 'Failed to check OAuth2 status'
     console.error('Error checking OAuth2 status:', error)
   }
+}
+
+// Fetch available OIDC providers
+async function fetchAvailableProviders() {
+  isLoadingProviders.value = true
+  try {
+    const response = await fetch('/api/oauth2/providers')
+    const data = await response.json()
+
+    if (data.providers && Array.isArray(data.providers)) {
+      availableProviders.value = data.providers
+      console.log('Available OAuth2 providers:', availableProviders.value)
+      console.log(`Total: ${data.count}, Available: ${data.availableCount}`)
+    } else {
+      console.warn('No providers returned from /api/oauth2/providers')
+      availableProviders.value = []
+    }
+  } catch (error) {
+    console.error('Failed to fetch OAuth2 providers:', error)
+    availableProviders.value = []
+  } finally {
+    isLoadingProviders.value = false
+  }
+}
+
+// Handle login button click
+function handleLoginClick() {
+  const available = availableProviders.value.filter(p => p.available)
+
+  if (available.length > 1) {
+    // Show provider selection dialog
+    showProviderSelector.value = true
+  } else if (available.length === 1) {
+    // Direct login with single provider
+    loginWithProvider(available[0].name)
+  } else {
+    // Fallback to legacy login (no provider parameter)
+    window.location.href = '/api/oauth2/connect?redirect=' + encodeURIComponent(getCurrentPath())
+  }
+}
+
+// Login with selected provider
+function loginWithProvider(provider: string) {
+  const redirectUrl = '/api/oauth2/connect?provider=' +
+    encodeURIComponent(provider) +
+    '&redirect=' +
+    encodeURIComponent(getCurrentPath())
+  console.log(`Logging in with provider: ${provider}`)
+  window.location.href = redirectUrl
+}
+
+// Format provider name for display
+function formatProviderName(name: string): string {
+  // Convert "obp-oidc" to "OBP OIDC", "keycloak" to "Keycloak", etc.
+  return name.split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+// Get provider icon
+function getProviderIcon(name: string): string {
+  const icons: Record<string, string> = {
+    'obp-oidc': '🏦',
+    'keycloak': '🔐',
+    'google': '🔵',
+    'github': '🐙'
+  }
+  return icons[name] || '🔑'
 }
 
 const clearActiveTab = () => {
@@ -153,6 +226,9 @@ const handleMore = (command: string) => {
 onMounted(async () => {
   // Initial OAuth2 availability check
   await checkOAuth2Availability()
+
+  // Fetch available providers
+  await fetchAvailableProviders()
 
   // Start continuous polling every 4 minutes to detect OIDC outages
   console.log('OAuth2: Starting continuous monitoring (every 4 minutes)...')
@@ -249,15 +325,50 @@ const getCurrentPath = () => {
           {{ $t('header.login') }}
         </button>
       </el-tooltip>
-      <a v-else-if="isShowLoginButton && oauth2Available" v-bind:href="'/api/oauth2/connect?redirect='+ encodeURIComponent(getCurrentPath())" class="login-button router-link" id="login">
+      <button
+        v-else-if="isShowLoginButton && oauth2Available"
+        @click="handleLoginClick"
+        class="login-button router-link"
+        id="login"
+      >
         {{ $t('header.login') }}
-      </a>
+        <span v-if="availableProviders.filter(p => p.available).length > 1" style="margin-left: 4px;">▼</span>
+      </button>
       <span v-show="isShowLogOffButton" class="login-user">{{ loginUsername }}</span>
       <a v-bind:href="'/api/user/logoff?redirect=' + encodeURIComponent(getCurrentPath())" v-show="isShowLogOffButton" class="logoff-button router-link" id="logoff">
         {{ $t('header.logoff') }}
       </a>
     </RouterView>
   </nav>
+
+  <!-- Provider Selection Dialog -->
+  <el-dialog
+    v-model="showProviderSelector"
+    title="Select Identity Provider"
+    width="450px"
+    :close-on-click-modal="true"
+  >
+    <div class="provider-list">
+      <div
+        v-for="provider in availableProviders.filter(p => p.available)"
+        :key="provider.name"
+        class="provider-item"
+        @click="loginWithProvider(provider.name); showProviderSelector = false"
+      >
+        <div class="provider-icon">{{ getProviderIcon(provider.name) }}</div>
+        <div class="provider-info">
+          <h4>{{ formatProviderName(provider.name) }}</h4>
+          <span class="provider-status">Available</span>
+        </div>
+        <div class="provider-arrow">→</div>
+      </div>
+
+      <div v-if="availableProviders.filter(p => p.available).length === 0" class="no-providers">
+        <p>No identity providers available</p>
+        <p class="error-hint">Please contact your administrator</p>
+      </div>
+    </div>
+  </el-dialog>
 </template>
 
 <style>
@@ -320,11 +431,13 @@ nav {
 }
 
 a.login-button,
-a.logoff-button {
+a.logoff-button,
+button.login-button {
   margin: 5px;
   color: #ffffff;
   background-color: #32b9ce;
   cursor: pointer;
+  border: none;
 }
 
 button.login-button-disabled {
@@ -350,5 +463,74 @@ button.login-button-disabled {
 #header-nav-message-docs {
   display: inline-block;
   vertical-align: middle;
+}
+
+/* Provider Selection Dialog */
+.provider-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.provider-item {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: #ffffff;
+}
+
+.provider-item:hover {
+  border-color: #32b9ce;
+  background-color: #f0f9fa;
+  transform: translateX(4px);
+}
+
+.provider-icon {
+  font-size: 32px;
+  margin-right: 16px;
+  min-width: 40px;
+  text-align: center;
+}
+
+.provider-info {
+  flex: 1;
+}
+
+.provider-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  color: #39455f;
+  font-weight: 500;
+}
+
+.provider-status {
+  font-size: 12px;
+  color: #10b981;
+  font-weight: 500;
+}
+
+.provider-arrow {
+  font-size: 20px;
+  color: #32b9ce;
+  margin-left: 12px;
+}
+
+.no-providers {
+  text-align: center;
+  padding: 32px;
+  color: #999;
+}
+
+.no-providers p {
+  margin: 8px 0;
+}
+
+.error-hint {
+  font-size: 12px;
+  color: #999;
 }
 </style>
