@@ -37,6 +37,7 @@ import { Container } from 'typedi'
 import path from 'path'
 import { execSync } from 'child_process'
 import { OAuth2Service } from './services/OAuth2Service.js'
+import { OAuth2ProviderManager } from './services/OAuth2ProviderManager.js'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 
@@ -47,6 +48,7 @@ import { StatusController } from './controllers/StatusController.js'
 import { UserController } from './controllers/UserController.js'
 import { OAuth2CallbackController } from './controllers/OAuth2CallbackController.js'
 import { OAuth2ConnectController } from './controllers/OAuth2ConnectController.js'
+import { OAuth2ProvidersController } from './controllers/OAuth2ProvidersController.js'
 
 // Import middlewares
 import OAuth2AuthorizationMiddleware from './middlewares/OAuth2AuthorizationMiddleware.js'
@@ -148,11 +150,38 @@ const wellKnownUrl = process.env.VITE_OBP_OAUTH2_WELL_KNOWN_URL
 // Async IIFE to initialize OAuth2 and start server
 let instance: any
 ;(async function initializeAndStartServer() {
+  // Initialize Multi-Provider OAuth2 Manager
+  console.log('--- OAuth2 Multi-Provider Setup ---------------------------------')
+  const providerManager = Container.get(OAuth2ProviderManager)
+
+  try {
+    const success = await providerManager.initializeProviders()
+
+    if (success) {
+      const availableProviders = providerManager.getAvailableProviders()
+      console.log(`✓ Initialized ${availableProviders.length} OAuth2 providers:`)
+      availableProviders.forEach((name) => console.log(`  - ${name}`))
+
+      // Start health monitoring
+      providerManager.startHealthCheck(60000) // Check every 60 seconds
+      console.log('✓ Provider health monitoring started (every 60s)')
+    } else {
+      console.warn('⚠ No OAuth2 providers initialized from OBP API')
+      console.warn('⚠ Falling back to legacy single-provider mode...')
+    }
+  } catch (error) {
+    console.error('✗ Failed to initialize OAuth2 multi-provider:', error)
+    console.warn('⚠ Falling back to legacy single-provider mode...')
+  }
+  console.log(`-----------------------------------------------------------------`)
+
+  // Initialize Legacy OAuth2 Service (for backward compatibility)
+  console.log(`--- OAuth2/OIDC Legacy Setup (Backward Compatibility) -----------`)
   if (!wellKnownUrl) {
-    console.warn('VITE_OBP_OAUTH2_WELL_KNOWN_URL not set. OAuth2 will not function.')
-    console.warn('Server will start but OAuth2 authentication will be unavailable.')
+    console.warn('VITE_OBP_OAUTH2_WELL_KNOWN_URL not set. Legacy OAuth2 will not function.')
+    console.warn('Server will rely on multi-provider mode from OBP API.')
   } else {
-    console.log(`OIDC Well-Known URL: ${wellKnownUrl}`)
+    console.log(`OIDC Well-Known URL (legacy): ${wellKnownUrl}`)
 
     // Get OAuth2Service from container
     const oauth2Service = Container.get(OAuth2Service)
@@ -163,27 +192,27 @@ let instance: any
     const initialDelay = 1000 // 1 second, then exponential backoff
 
     console.log(
-      'Attempting OAuth2 initialization (will retry indefinitely with exponential backoff)...'
+      'Attempting legacy OAuth2 initialization (will retry indefinitely with exponential backoff)...'
     )
     const success = await oauth2Service.initializeWithRetry(wellKnownUrl, maxRetries, initialDelay)
 
     if (success) {
-      console.log('OAuth2Service: Initialization successful')
+      console.log('OAuth2Service (legacy): Initialization successful')
       console.log('  Client ID:', process.env.VITE_OBP_OAUTH2_CLIENT_ID || 'NOT SET')
       console.log('  Redirect URI:', process.env.VITE_OBP_OAUTH2_REDIRECT_URL || 'NOT SET')
-      console.log('OAuth2/OIDC ready for authentication')
+      console.log('Legacy OAuth2/OIDC ready for authentication')
 
       // Start continuous monitoring even when initially connected
       oauth2Service.startHealthCheck(1000, 240000) // Monitor every 4 minutes
-      console.log('OAuth2Service: Starting continuous monitoring (every 4 minutes)')
+      console.log('OAuth2Service (legacy): Starting continuous monitoring (every 4 minutes)')
     } else {
-      console.error('OAuth2Service: Initialization failed after all retries')
+      console.error('OAuth2Service (legacy): Initialization failed after all retries')
 
       // Use graceful degradation for both development and production
       const envMode = isProduction ? 'Production' : 'Development'
-      console.warn(`WARNING: ${envMode} mode: Server will start without OAuth2`)
-      console.warn('WARNING: Login will be unavailable until OIDC server is reachable')
-      console.warn('WARNING: Starting health check to reconnect automatically...')
+      console.warn(`WARNING: ${envMode} mode: Server will start without legacy OAuth2`)
+      console.warn('WARNING: Legacy login will be unavailable until OIDC server is reachable')
+      console.warn('WARNING: Multi-provider mode will be used if available')
       console.warn('Please check:')
       console.warn('  1. OBP-OIDC server is running')
       console.warn('  2. VITE_OBP_OAUTH2_WELL_KNOWN_URL is correct')
@@ -205,7 +234,8 @@ let instance: any
       StatusController,
       UserController,
       OAuth2CallbackController,
-      OAuth2ConnectController
+      OAuth2ConnectController,
+      OAuth2ProvidersController
     ],
     middlewares: [OAuth2AuthorizationMiddleware, OAuth2CallbackMiddleware]
   })
