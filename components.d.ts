@@ -51,4 +51,7 @@ declare module 'vue' {
     SvelteDropdown: typeof import('./src/components/SvelteDropdown.vue')['default']
     ToolCall: typeof import('./src/components/ToolCall.vue')['default']
   }
+  export interface ComponentCustomProperties {
+    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
+  }
 }
