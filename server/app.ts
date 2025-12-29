@@ -32,7 +32,6 @@ import RedisStore from 'connect-redis'
 import { createClient } from 'redis'
 import express from 'express'
 import type { Application } from 'express'
-import { useExpressServer, useContainer } from 'routing-controllers'
 import { Container } from 'typedi'
 import path from 'path'
 import { execSync } from 'child_process'
@@ -41,20 +40,14 @@ import { OAuth2ProviderManager } from './services/OAuth2ProviderManager.js'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 
-// Import controllers
-import { OpeyController } from './controllers/OpeyIIController.js'
-import { OBPController } from './controllers/RequestController.js'
-import { StatusController } from './controllers/StatusController.js'
-import { UserController } from './controllers/UserController.js'
-import { OAuth2CallbackController } from './controllers/OAuth2CallbackController.js'
-import { OAuth2ConnectController } from './controllers/OAuth2ConnectController.js'
-import { OAuth2ProvidersController } from './controllers/OAuth2ProvidersController.js'
+// Controllers removed - all routes migrated to plain Express
 
 // Import routes (plain Express, not routing-controllers)
 import oauth2Routes from './routes/oauth2.js'
 import userRoutes from './routes/user.js'
 import statusRoutes from './routes/status.js'
 import obpRoutes from './routes/obp.js'
+import opeyRoutes from './routes/opey.js'
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url)
@@ -143,7 +136,6 @@ if (app.get('env') === 'production') {
   sessionObject.cookie.secure = true // serve secure cookies
 }
 app.use(session(sessionObject))
-useContainer(Container)
 
 // Initialize OAuth2 Service
 console.log(`--- OAuth2/OIDC setup -------------------------------------------`)
@@ -228,23 +220,20 @@ let instance: any
 
   const routePrefix = '/api'
 
-  // Register routes BEFORE routing-controllers (plain Express)
+  // Register all routes (plain Express)
   app.use(routePrefix, oauth2Routes)
   app.use(routePrefix, userRoutes)
   app.use(routePrefix, statusRoutes)
   app.use(routePrefix, obpRoutes)
+  app.use(routePrefix, opeyRoutes)
   console.log('OAuth2 routes registered (plain Express)')
   console.log('User routes registered (plain Express)')
   console.log('Status routes registered (plain Express)')
   console.log('OBP routes registered (plain Express)')
+  console.log('Opey routes registered (plain Express)')
+  console.log('All routes migrated to plain Express - routing-controllers removed')
 
-  const server = useExpressServer(app, {
-    routePrefix: routePrefix,
-    controllers: [OpeyController],
-    middlewares: []
-  })
-
-  instance = server.listen(port)
+  instance = app.listen(port)
 
   console.log(
     `Backend is running. You can check a status at http://localhost:${port}${routePrefix}/status`
