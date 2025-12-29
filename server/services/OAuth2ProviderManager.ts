@@ -232,14 +232,16 @@ export class OAuth2ProviderManager {
     client: OAuth2ClientWithConfig
   ): Promise<void> {
     try {
-      // Try to fetch OIDC issuer endpoint to verify provider is reachable
-      const endpoint = client.OIDCConfig?.issuer
-      if (!endpoint) {
-        throw new Error('No issuer endpoint configured')
+      // Try to fetch OIDC well-known endpoint to verify provider is reachable
+      const wellKnownUrl = client.wellKnownUri
+      if (!wellKnownUrl) {
+        throw new Error('No well-known URL configured')
       }
 
-      // Use HEAD request for efficiency
-      const response = await fetch(endpoint, {
+      console.log(`  Checking ${providerName} at: ${wellKnownUrl}`)
+
+      // Use HEAD request as per HTTP standards - all endpoints supporting GET should support HEAD
+      const response = await fetch(wellKnownUrl, {
         method: 'HEAD',
         signal: AbortSignal.timeout(5000) // 5 second timeout
       })
@@ -252,7 +254,7 @@ export class OAuth2ProviderManager {
         error: isAvailable ? undefined : `HTTP ${response.status}`
       })
 
-      console.log(`  ${providerName}: ${isAvailable ? '✓ healthy' : '✗ unhealthy'}`)
+      console.log(`  ${providerName}: ${isAvailable ? 'healthy' : 'unhealthy'}`)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       this.providerStatus.set(providerName, {
@@ -261,7 +263,7 @@ export class OAuth2ProviderManager {
         lastChecked: new Date(),
         error: errorMessage
       })
-      console.log(`  ${providerName}: ✗ unhealthy (${errorMessage})`)
+      console.log(`  ${providerName}: unhealthy (${errorMessage})`)
     }
   }
 
