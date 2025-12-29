@@ -54,6 +54,7 @@ import { OAuth2ProvidersController } from './controllers/OAuth2ProvidersControll
 import oauth2Routes from './routes/oauth2.js'
 import userRoutes from './routes/user.js'
 import statusRoutes from './routes/status.js'
+import obpRoutes from './routes/obp.js'
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url)
@@ -231,13 +232,15 @@ let instance: any
   app.use(routePrefix, oauth2Routes)
   app.use(routePrefix, userRoutes)
   app.use(routePrefix, statusRoutes)
+  app.use(routePrefix, obpRoutes)
   console.log('OAuth2 routes registered (plain Express)')
   console.log('User routes registered (plain Express)')
   console.log('Status routes registered (plain Express)')
+  console.log('OBP routes registered (plain Express)')
 
   const server = useExpressServer(app, {
     routePrefix: routePrefix,
-    controllers: [OpeyController, OBPController],
+    controllers: [OpeyController],
     middlewares: []
   })
 
