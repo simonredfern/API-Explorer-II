@@ -153,19 +153,19 @@ let instance: any
 
     if (success) {
       const availableProviders = providerManager.getAvailableProviders()
-      console.log(`✓ Initialized ${availableProviders.length} OAuth2 providers:`)
+      console.log(`OK Initialized ${availableProviders.length} OAuth2 providers:`)
       availableProviders.forEach((name) => console.log(`  - ${name}`))
 
       // Start health monitoring
       providerManager.startHealthCheck(60000) // Check every 60 seconds
-      console.log('✓ Provider health monitoring started (every 60s)')
+      console.log('OK Provider health monitoring started (every 60s)')
     } else {
-      console.warn('⚠ No OAuth2 providers initialized from OBP API')
-      console.warn('⚠ Falling back to legacy single-provider mode...')
+      console.warn('WARNING No OAuth2 providers initialized from OBP API')
+      console.warn('WARNING Falling back to legacy single-provider mode...')
     }
   } catch (error) {
-    console.error('✗ Failed to initialize OAuth2 multi-provider:', error)
-    console.warn('⚠ Falling back to legacy single-provider mode...')
+    console.error('ERROR Failed to initialize OAuth2 multi-provider:', error)
+    console.warn('WARNING Falling back to legacy single-provider mode...')
   }
   console.log(`-----------------------------------------------------------------`)
 

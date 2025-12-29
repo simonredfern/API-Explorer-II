@@ -76,7 +76,7 @@ export class OAuth2ProviderFactory {
           process.env.VITE_OBP_OAUTH2_REDIRECT_URL || 'http://localhost:5173/api/oauth2/callback',
         scopes: ['openid', 'profile', 'email']
       })
-      console.log('  ✓ OBP-OIDC strategy loaded')
+      console.log('  OK OBP-OIDC strategy loaded')
     }
 
     // Keycloak Strategy
@@ -88,7 +88,7 @@ export class OAuth2ProviderFactory {
           process.env.VITE_KEYCLOAK_REDIRECT_URL || 'http://localhost:5173/api/oauth2/callback',
         scopes: ['openid', 'profile', 'email']
       })
-      console.log('  ✓ Keycloak strategy loaded')
+      console.log('  OK Keycloak strategy loaded')
     }
 
     // Google Strategy
@@ -100,7 +100,7 @@ export class OAuth2ProviderFactory {
           process.env.VITE_GOOGLE_REDIRECT_URL || 'http://localhost:5173/api/oauth2/callback',
         scopes: ['openid', 'profile', 'email']
       })
-      console.log('  ✓ Google strategy loaded')
+      console.log('  OK Google strategy loaded')
     }
 
     // GitHub Strategy
@@ -112,7 +112,7 @@ export class OAuth2ProviderFactory {
           process.env.VITE_GITHUB_REDIRECT_URL || 'http://localhost:5173/api/oauth2/callback',
         scopes: ['read:user', 'user:email']
       })
-      console.log('  ✓ GitHub strategy loaded')
+      console.log('  OK GitHub strategy loaded')
     }
 
     // Generic OIDC Strategy (for custom providers)
@@ -126,7 +126,7 @@ export class OAuth2ProviderFactory {
           'http://localhost:5173/api/oauth2/callback',
         scopes: ['openid', 'profile', 'email']
       })
-      console.log(`  ✓ Custom OIDC strategy loaded: ${providerName}`)
+      console.log(`  OK Custom OIDC strategy loaded: ${providerName}`)
     }
 
     console.log(`OAuth2ProviderFactory: Loaded ${this.strategies.size} provider strategies`)
