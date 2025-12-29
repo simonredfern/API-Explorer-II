@@ -239,12 +239,12 @@ router.get('/status/oauth2/reconnect', async (req: Request, res: Response) => {
  */
 router.get('/status/providers', (req: Request, res: Response) => {
   try {
-    // Helper function to mask sensitive data (show first 3 and last 3 chars)
+    // Helper function to mask sensitive data (show first 2 and last 2 chars)
     const maskCredential = (value: string | undefined): string => {
-      if (!value || value.length < 8) {
+      if (!value || value.length < 6) {
         return value ? '***masked***' : 'not configured'
       }
-      return `${value.substring(0, 3)}...${value.substring(value.length - 3)}`
+      return `${value.substring(0, 2)}...${value.substring(value.length - 2)}`
     }
 
     // Get providers from manager
@@ -254,6 +254,7 @@ router.get('/status/providers', (req: Request, res: Response) => {
     // Get env configuration (masked)
     const envConfig = {
       obpOidc: {
+        consumerId: process.env.VITE_OBP_CONSUMER_KEY || 'not configured',
         clientId: maskCredential(process.env.VITE_OBP_OAUTH2_CLIENT_ID),
         wellKnownUrl: process.env.VITE_OBP_OAUTH2_WELL_KNOWN_URL || 'not configured',
         redirectUrl: process.env.VITE_OBP_OAUTH2_REDIRECT_URL || 'not configured'
@@ -285,7 +286,7 @@ router.get('/status/providers', (req: Request, res: Response) => {
       },
       providerStatus: allProviderStatus,
       environmentConfig: envConfig,
-      note: 'Credentials are masked for security. Format: first3...last3'
+      note: 'Credentials are masked for security. Format: first2...last2'
     })
   } catch (error) {
     console.error('Status: Error getting provider status:', error)
