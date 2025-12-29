@@ -47,11 +47,11 @@ router.get('/oauth2/providers', async (req: Request, res: Response) => {
   try {
     const availableProviders = providerManager.getAvailableProviders()
     const providerList = availableProviders.map((name) => {
-      const status = providerManager.getProviderStatus(name)
+      const providerStatus = providerManager.getProviderStatus(name)
       return {
         name,
-        status: status?.status || 'unknown',
-        available: status?.available || false
+        status: providerStatus?.available ? 'healthy' : 'unhealthy',
+        available: providerStatus?.available || false
       }
     })
 
