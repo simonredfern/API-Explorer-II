@@ -29,7 +29,6 @@ import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { Container } from 'typedi'
 import OBPClientService from '../services/OBPClientService.js'
-import { OAuth2Service } from '../services/OAuth2Service.js'
 import { OAuth2ProviderManager } from '../services/OAuth2ProviderManager.js'
 import { commitId } from '../app.js'
 import {
@@ -42,7 +41,6 @@ const router = Router()
 
 // Get services from container
 const obpClientService = Container.get(OBPClientService)
-const oauth2Service = Container.get(OAuth2Service)
 const providerManager = Container.get(OAuth2ProviderManager)
 
 const connectors = [
@@ -159,80 +157,6 @@ router.get('/status', async (req: Request, res: Response) => {
 })
 
 /**
- * GET /status/oauth2
- * Get OAuth2/OIDC status
- */
-router.get('/status/oauth2', (req: Request, res: Response) => {
-  try {
-    const isInitialized = oauth2Service.isInitialized()
-    const oidcConfig = oauth2Service.getOIDCConfiguration()
-    const healthCheckActive = oauth2Service.isHealthCheckActive()
-    const healthCheckAttempts = oauth2Service.getHealthCheckAttempts()
-
-    res.json({
-      available: isInitialized,
-      message: isInitialized
-        ? 'OAuth2/OIDC is ready for authentication'
-        : 'OAuth2/OIDC is not available',
-      issuer: oidcConfig?.issuer || null,
-      authorizationEndpoint: oidcConfig?.authorization_endpoint || null,
-      wellKnownUrl: process.env.VITE_OBP_OAUTH2_WELL_KNOWN_URL || null,
-      healthCheck: {
-        active: healthCheckActive,
-        attempts: healthCheckAttempts
-      }
-    })
-  } catch (error) {
-    res.status(500).json({
-      available: false,
-      message: 'Error checking OAuth2 status',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
-  }
-})
-
-/**
- * GET /status/oauth2/reconnect
- * Attempt to reconnect OAuth2/OIDC
- */
-router.get('/status/oauth2/reconnect', async (req: Request, res: Response) => {
-  try {
-    if (oauth2Service.isInitialized()) {
-      return res.json({
-        success: true,
-        message: 'OAuth2 is already connected',
-        alreadyConnected: true
-      })
-    }
-
-    const wellKnownUrl = process.env.VITE_OBP_OAUTH2_WELL_KNOWN_URL
-    if (!wellKnownUrl) {
-      return res.status(400).json({
-        success: false,
-        message: 'VITE_OBP_OAUTH2_WELL_KNOWN_URL not configured'
-      })
-    }
-
-    console.log('Manual OAuth2 reconnection attempt triggered...')
-    await oauth2Service.initializeFromWellKnown(wellKnownUrl)
-
-    console.log('Manual OAuth2 reconnection successful!')
-    res.json({
-      success: true,
-      message: 'OAuth2 reconnection successful',
-      issuer: oauth2Service.getOIDCConfiguration()?.issuer || null
-    })
-  } catch (error) {
-    console.error('Manual OAuth2 reconnection failed:', error)
-    res.status(500).json({
-      success: false,
-      message: 'OAuth2 reconnection failed',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
-  }
-})
-
-/**
  * GET /status/providers
  * Get configured OAuth2 providers (for debugging)
  * Shows provider configuration with masked credentials
@@ -251,30 +175,27 @@ router.get('/status/providers', (req: Request, res: Response) => {
     const availableProviders = providerManager.getAvailableProviders()
     const allProviderStatus = providerManager.getAllProviderStatus()
 
+    // Shared redirect URL
+    const sharedRedirectUrl = process.env.VITE_OAUTH2_REDIRECT_URL || 'not configured'
+
     // Get env configuration (masked)
     const envConfig = {
       obpOidc: {
         consumerId: process.env.VITE_OBP_CONSUMER_KEY || 'not configured',
-        clientId: maskCredential(process.env.VITE_OBP_OAUTH2_CLIENT_ID),
-        wellKnownUrl: process.env.VITE_OBP_OAUTH2_WELL_KNOWN_URL || 'not configured',
-        redirectUrl: process.env.VITE_OBP_OAUTH2_REDIRECT_URL || 'not configured'
+        clientId: maskCredential(process.env.VITE_OBP_OIDC_CLIENT_ID)
       },
       keycloak: {
-        clientId: maskCredential(process.env.VITE_KEYCLOAK_CLIENT_ID),
-        redirectUrl: process.env.VITE_KEYCLOAK_REDIRECT_URL || 'not configured'
+        clientId: maskCredential(process.env.VITE_KEYCLOAK_CLIENT_ID)
       },
       google: {
-        clientId: maskCredential(process.env.VITE_GOOGLE_CLIENT_ID),
-        redirectUrl: process.env.VITE_GOOGLE_REDIRECT_URL || 'not configured'
+        clientId: maskCredential(process.env.VITE_GOOGLE_CLIENT_ID)
       },
       github: {
-        clientId: maskCredential(process.env.VITE_GITHUB_CLIENT_ID),
-        redirectUrl: process.env.VITE_GITHUB_REDIRECT_URL || 'not configured'
+        clientId: maskCredential(process.env.VITE_GITHUB_CLIENT_ID)
       },
       custom: {
         providerName: process.env.VITE_CUSTOM_OIDC_PROVIDER_NAME || 'not configured',
-        clientId: maskCredential(process.env.VITE_CUSTOM_OIDC_CLIENT_ID),
-        redirectUrl: process.env.VITE_CUSTOM_OIDC_REDIRECT_URL || 'not configured'
+        clientId: maskCredential(process.env.VITE_CUSTOM_OIDC_CLIENT_ID)
       }
     }
 
@@ -282,7 +203,8 @@ router.get('/status/providers', (req: Request, res: Response) => {
       summary: {
         totalConfigured: availableProviders.length,
         availableProviders: availableProviders,
-        obpApiHost: process.env.VITE_OBP_API_HOST || 'not configured'
+        obpApiHost: process.env.VITE_OBP_API_HOST || 'not configured',
+        sharedRedirectUrl: sharedRedirectUrl
       },
       providerStatus: allProviderStatus,
       environmentConfig: envConfig,

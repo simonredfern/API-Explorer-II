@@ -187,7 +187,7 @@ interface StatusResponse {
 const loading = ref(true)
 const error = ref<string | null>(null)
 const status = ref<StatusResponse | null>(null)
-const activeCollapse = ref<string[]>([])
+const activeCollapse = ref<string[]>(['obpOidc', 'keycloak', 'google', 'github', 'custom'])
 
 const fetchStatus = async () => {
   loading.value = true

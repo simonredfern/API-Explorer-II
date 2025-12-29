@@ -35,7 +35,6 @@ import type { Application } from 'express'
 import { Container } from 'typedi'
 import path from 'path'
 import { execSync } from 'child_process'
-import { OAuth2Service } from './services/OAuth2Service.js'
 import { OAuth2ProviderManager } from './services/OAuth2ProviderManager.js'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
@@ -137,9 +136,7 @@ if (app.get('env') === 'production') {
 }
 app.use(session(sessionObject))
 
-// Initialize OAuth2 Service
-console.log(`--- OAuth2/OIDC setup -------------------------------------------`)
-const wellKnownUrl = process.env.VITE_OBP_OAUTH2_WELL_KNOWN_URL
+// OAuth2 Multi-Provider Setup only - no legacy fallback
 
 // Async IIFE to initialize OAuth2 and start server
 let instance: any
@@ -160,61 +157,15 @@ let instance: any
       providerManager.startHealthCheck(60000) // Check every 60 seconds
       console.log('OK Provider health monitoring started (every 60s)')
     } else {
-      console.warn('WARNING No OAuth2 providers initialized from OBP API')
-      console.warn('WARNING Falling back to legacy single-provider mode...')
+      console.error('ERROR: No OAuth2 providers initialized from OBP API')
+      console.error(
+        'ERROR: Check that OBP API is running and returns providers from /obp/v5.1.0/well-known'
+      )
+      console.error('ERROR: Server will start but login will not work')
     }
   } catch (error) {
     console.error('ERROR Failed to initialize OAuth2 multi-provider:', error)
-    console.warn('WARNING Falling back to legacy single-provider mode...')
-  }
-  console.log(`-----------------------------------------------------------------`)
-
-  // Initialize Legacy OAuth2 Service (for backward compatibility)
-  console.log(`--- OAuth2/OIDC Legacy Setup (Backward Compatibility) -----------`)
-  if (!wellKnownUrl) {
-    console.warn('VITE_OBP_OAUTH2_WELL_KNOWN_URL not set. Legacy OAuth2 will not function.')
-    console.warn('Server will rely on multi-provider mode from OBP API.')
-  } else {
-    console.log(`OIDC Well-Known URL (legacy): ${wellKnownUrl}`)
-
-    // Get OAuth2Service from container
-    const oauth2Service = Container.get(OAuth2Service)
-
-    // Initialize OAuth2 service with retry logic
-    const isProduction = process.env.NODE_ENV === 'production'
-    const maxRetries = Infinity // Retry indefinitely
-    const initialDelay = 1000 // 1 second, then exponential backoff
-
-    console.log(
-      'Attempting legacy OAuth2 initialization (will retry indefinitely with exponential backoff)...'
-    )
-    const success = await oauth2Service.initializeWithRetry(wellKnownUrl, maxRetries, initialDelay)
-
-    if (success) {
-      console.log('OAuth2Service (legacy): Initialization successful')
-      console.log('  Client ID:', process.env.VITE_OBP_OAUTH2_CLIENT_ID || 'NOT SET')
-      console.log('  Redirect URI:', process.env.VITE_OBP_OAUTH2_REDIRECT_URL || 'NOT SET')
-      console.log('Legacy OAuth2/OIDC ready for authentication')
-
-      // Start continuous monitoring even when initially connected
-      oauth2Service.startHealthCheck(1000, 240000) // Monitor every 4 minutes
-      console.log('OAuth2Service (legacy): Starting continuous monitoring (every 4 minutes)')
-    } else {
-      console.error('OAuth2Service (legacy): Initialization failed after all retries')
-
-      // Use graceful degradation for both development and production
-      const envMode = isProduction ? 'Production' : 'Development'
-      console.warn(`WARNING: ${envMode} mode: Server will start without legacy OAuth2`)
-      console.warn('WARNING: Legacy login will be unavailable until OIDC server is reachable')
-      console.warn('WARNING: Multi-provider mode will be used if available')
-      console.warn('Please check:')
-      console.warn('  1. OBP-OIDC server is running')
-      console.warn('  2. VITE_OBP_OAUTH2_WELL_KNOWN_URL is correct')
-      console.warn('  3. Network connectivity to OIDC provider')
-
-      // Start periodic health check to reconnect when OIDC becomes available
-      oauth2Service.startHealthCheck(1000, 240000) // Start with 1 second, monitor every 4 minutes when connected
-    }
+    console.error('ERROR: Server will start but login will not work')
   }
   console.log(`-----------------------------------------------------------------`)
 
