@@ -30,6 +30,7 @@ import type { Request, Response } from 'express'
 import { Container } from 'typedi'
 import OBPClientService from '../services/OBPClientService.js'
 import { OAuth2Service } from '../services/OAuth2Service.js'
+import { OAuth2ProviderManager } from '../services/OAuth2ProviderManager.js'
 import { commitId } from '../app.js'
 import {
   RESOURCE_DOCS_API_VERSION,
@@ -42,8 +43,14 @@ const router = Router()
 // Get services from container
 const obpClientService = Container.get(OBPClientService)
 const oauth2Service = Container.get(OAuth2Service)
+const providerManager = Container.get(OAuth2ProviderManager)
 
-const connectors = ['akka_vDec2018', 'rest_vMar2019', 'stored_procedure_vDec2019', 'rabbitmq_vOct2024']
+const connectors = [
+  'akka_vDec2018',
+  'rest_vMar2019',
+  'stored_procedure_vDec2019',
+  'rabbitmq_vOct2024'
+]
 
 /**
  * Helper function to check if response contains an error
@@ -220,6 +227,69 @@ router.get('/status/oauth2/reconnect', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: 'OAuth2 reconnection failed',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+/**
+ * GET /status/providers
+ * Get configured OAuth2 providers (for debugging)
+ * Shows provider configuration with masked credentials
+ */
+router.get('/status/providers', (req: Request, res: Response) => {
+  try {
+    // Helper function to mask sensitive data (show first 3 and last 3 chars)
+    const maskCredential = (value: string | undefined): string => {
+      if (!value || value.length < 8) {
+        return value ? '***masked***' : 'not configured'
+      }
+      return `${value.substring(0, 3)}...${value.substring(value.length - 3)}`
+    }
+
+    // Get providers from manager
+    const availableProviders = providerManager.getAvailableProviders()
+    const allProviderStatus = providerManager.getAllProviderStatus()
+
+    // Get env configuration (masked)
+    const envConfig = {
+      obpOidc: {
+        clientId: maskCredential(process.env.VITE_OBP_OAUTH2_CLIENT_ID),
+        wellKnownUrl: process.env.VITE_OBP_OAUTH2_WELL_KNOWN_URL || 'not configured',
+        redirectUrl: process.env.VITE_OBP_OAUTH2_REDIRECT_URL || 'not configured'
+      },
+      keycloak: {
+        clientId: maskCredential(process.env.VITE_KEYCLOAK_CLIENT_ID),
+        redirectUrl: process.env.VITE_KEYCLOAK_REDIRECT_URL || 'not configured'
+      },
+      google: {
+        clientId: maskCredential(process.env.VITE_GOOGLE_CLIENT_ID),
+        redirectUrl: process.env.VITE_GOOGLE_REDIRECT_URL || 'not configured'
+      },
+      github: {
+        clientId: maskCredential(process.env.VITE_GITHUB_CLIENT_ID),
+        redirectUrl: process.env.VITE_GITHUB_REDIRECT_URL || 'not configured'
+      },
+      custom: {
+        providerName: process.env.VITE_CUSTOM_OIDC_PROVIDER_NAME || 'not configured',
+        clientId: maskCredential(process.env.VITE_CUSTOM_OIDC_CLIENT_ID),
+        redirectUrl: process.env.VITE_CUSTOM_OIDC_REDIRECT_URL || 'not configured'
+      }
+    }
+
+    res.json({
+      summary: {
+        totalConfigured: availableProviders.length,
+        availableProviders: availableProviders,
+        obpApiHost: process.env.VITE_OBP_API_HOST || 'not configured'
+      },
+      providerStatus: allProviderStatus,
+      environmentConfig: envConfig,
+      note: 'Credentials are masked for security. Format: first3...last3'
+    })
+  } catch (error) {
+    console.error('Status: Error getting provider status:', error)
+    res.status(500).json({
       error: error instanceof Error ? error.message : 'Unknown error'
     })
   }
