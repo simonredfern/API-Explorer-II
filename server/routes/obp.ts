@@ -29,62 +29,18 @@ import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { Container } from 'typedi'
 import OBPClientService from '../services/OBPClientService.js'
-import { OAuth2Service } from '../services/OAuth2Service.js'
 
 const router = Router()
 
 // Get services from container
 const obpClientService = Container.get(OBPClientService)
-const oauth2Service = Container.get(OAuth2Service)
 
 /**
- * Check if access token is expired and refresh it if needed
- * This ensures API calls always use a valid token
+ * Check if user is authenticated
+ * TODO: Implement token refresh in multi-provider system
  */
-async function ensureValidToken(session: any): Promise<boolean> {
-  const accessToken = session.oauth2_access_token
-  const refreshToken = session.oauth2_refresh_token
-
-  // If no access token, user is not authenticated
-  if (!accessToken) {
-    return false
-  }
-
-  // Check if token is expired
-  if (oauth2Service.isTokenExpired(accessToken)) {
-    console.log('OBP: Access token expired, attempting refresh')
-
-    if (!refreshToken) {
-      console.log('OBP: No refresh token available')
-      return false
-    }
-
-    try {
-      const newTokens = await oauth2Service.refreshAccessToken(refreshToken)
-
-      // Update session with new tokens
-      session.oauth2_access_token = newTokens.accessToken
-      session.oauth2_refresh_token = newTokens.refreshToken || refreshToken
-      session.oauth2_id_token = newTokens.idToken
-      session.oauth2_token_timestamp = Date.now()
-      session.oauth2_expires_in = newTokens.expiresIn
-
-      // Update clientConfig with new access token
-      if (session.clientConfig && session.clientConfig.oauth2) {
-        session.clientConfig.oauth2.accessToken = newTokens.accessToken
-        console.log('OBP: Updated clientConfig with refreshed token')
-      }
-
-      console.log('OBP: Token refresh successful')
-      return true
-    } catch (error) {
-      console.error('OBP: Token refresh failed:', error)
-      return false
-    }
-  }
-
-  // Token is still valid
-  return true
+function isAuthenticated(session: any): boolean {
+  return !!session.oauth2_access_token && !!session.oauth2_user
 }
 
 /**
@@ -97,16 +53,6 @@ router.get('/get', async (req: Request, res: Response) => {
   try {
     const path = req.query.path as string
     const session = req.session as any
-
-    // Ensure token is valid before making the request
-    const tokenValid = await ensureValidToken(session)
-    if (!tokenValid && session.oauth2_user) {
-      console.log('OBP: Token expired and refresh failed')
-      return res.status(401).json({
-        code: 401,
-        message: 'Session expired. Please log in again.'
-      })
-    }
 
     const oauthConfig = session.clientConfig
 
@@ -138,16 +84,6 @@ router.post('/create', async (req: Request, res: Response) => {
     const path = req.query.path as string
     const data = req.body
     const session = req.session as any
-
-    // Ensure token is valid before making the request
-    const tokenValid = await ensureValidToken(session)
-    if (!tokenValid && session.oauth2_user) {
-      console.log('OBP: Token expired and refresh failed')
-      return res.status(401).json({
-        code: 401,
-        message: 'Session expired. Please log in again.'
-      })
-    }
 
     const oauthConfig = session.clientConfig
 
@@ -184,16 +120,6 @@ router.put('/update', async (req: Request, res: Response) => {
     const data = req.body
     const session = req.session as any
 
-    // Ensure token is valid before making the request
-    const tokenValid = await ensureValidToken(session)
-    if (!tokenValid && session.oauth2_user) {
-      console.log('OBP: Token expired and refresh failed')
-      return res.status(401).json({
-        code: 401,
-        message: 'Session expired. Please log in again.'
-      })
-    }
-
     const oauthConfig = session.clientConfig
 
     const result = await obpClientService.update(path, data, oauthConfig)
@@ -217,16 +143,6 @@ router.delete('/delete', async (req: Request, res: Response) => {
   try {
     const path = req.query.path as string
     const session = req.session as any
-
-    // Ensure token is valid before making the request
-    const tokenValid = await ensureValidToken(session)
-    if (!tokenValid && session.oauth2_user) {
-      console.log('OBP: Token expired and refresh failed')
-      return res.status(401).json({
-        code: 401,
-        message: 'Session expired. Please log in again.'
-      })
-    }
 
     const oauthConfig = session.clientConfig
 

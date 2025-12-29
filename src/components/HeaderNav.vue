@@ -85,29 +85,8 @@ const availableProviders = ref<Array<{ name: string; available: boolean; lastChe
 const showProviderSelector = ref(false)
 const isLoadingProviders = ref(false)
 
-// Check OAuth2 availability
-let oauth2CheckInterval: number | null = null
-
-async function checkOAuth2Availability() {
-  try {
-    const response = await fetch('/api/status/oauth2')
-    const data = await response.json()
-    const wasAvailable = oauth2Available.value
-    oauth2Available.value = data.available
-    oauth2StatusMessage.value = data.message || ''
-
-    // Log state changes
-    if (!wasAvailable && data.available) {
-      console.log('OAuth2 is now available')
-    } else if (wasAvailable && !data.available) {
-      console.warn('OAuth2 is no longer available!')
-    }
-  } catch (error) {
-    oauth2Available.value = false
-    oauth2StatusMessage.value = 'Failed to check OAuth2 status'
-    console.error('Error checking OAuth2 status:', error)
-  }
-}
+// OAuth2 availability is determined by provider availability
+// No separate status check needed
 
 // Fetch available OIDC providers
 async function fetchAvailableProviders() {
@@ -143,8 +122,9 @@ function handleLoginClick() {
     // Direct login with single provider
     loginWithProvider(available[0].name)
   } else {
-    // Fallback to legacy login (no provider parameter)
-    window.location.href = '/api/oauth2/connect?redirect=' + encodeURIComponent(getCurrentPath())
+    // No providers available
+    console.error('No OAuth2 providers available. Check backend configuration.')
+    alert('Login is not available. Please check that OAuth2 providers are configured.')
   }
 }
 
@@ -224,15 +204,8 @@ const handleMore = (command: string) => {
 }
 
 onMounted(async () => {
-  // Initial OAuth2 availability check
-  await checkOAuth2Availability()
-
   // Fetch available providers
   await fetchAvailableProviders()
-
-  // Start continuous polling every 4 minutes to detect OIDC outages
-  console.log('OAuth2: Starting continuous monitoring (every 4 minutes)...')
-  oauth2CheckInterval = window.setInterval(checkOAuth2Availability, 240000) // 4 minutes
 
   const currentUser = await getCurrentUser()
   const currentResponseKeys = Object.keys(currentUser)
@@ -247,11 +220,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  // Clean up polling interval
-  if (oauth2CheckInterval) {
-    clearInterval(oauth2CheckInterval)
-    oauth2CheckInterval = null
-  }
+  // Cleanup hook
 })
 
 watchEffect(() => {

@@ -28,7 +28,6 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { Container } from 'typedi'
-import { OAuth2Service } from '../services/OAuth2Service.js'
 import { OAuth2ProviderManager } from '../services/OAuth2ProviderManager.js'
 import { PKCEUtils } from '../utils/pkce.js'
 import type { UserInfo } from '../types/oauth2.js'
@@ -37,7 +36,6 @@ const router = Router()
 
 // Get services from container
 const providerManager = Container.get(OAuth2ProviderManager)
-const legacyOAuth2Service = Container.get(OAuth2Service)
 
 /**
  * GET /oauth2/providers
@@ -66,7 +64,7 @@ router.get('/oauth2/providers', async (req: Request, res: Response) => {
  * GET /oauth2/connect
  * Initiate OAuth2 authentication flow
  * Query params:
- *   - provider: Provider name (optional, uses legacy if not specified)
+ *   - provider: Provider name (required)
  *   - redirect: URL to redirect after auth (optional)
  */
 router.get('/oauth2/connect', async (req: Request, res: Response) => {
@@ -76,8 +74,17 @@ router.get('/oauth2/connect', async (req: Request, res: Response) => {
     const session = req.session as any
 
     console.log('OAuth2 Connect: Starting authentication flow')
-    console.log(`  Provider: ${provider || '(legacy mode)'}`)
+    console.log(`  Provider: ${provider || 'NOT SPECIFIED'}`)
     console.log(`  Redirect: ${redirect}`)
+
+    // Provider is required
+    if (!provider) {
+      console.error('OAuth2 Connect: No provider specified')
+      return res.status(400).json({
+        error: 'missing_provider',
+        message: 'Provider parameter is required'
+      })
+    }
 
     // Store redirect URL in session
     session.oauth2_redirect_page = redirect
@@ -91,55 +98,35 @@ router.get('/oauth2/connect', async (req: Request, res: Response) => {
     session.oauth2_code_verifier = codeVerifier
     session.oauth2_state = state
 
-    let authUrl: string
+    console.log(`OAuth2 Connect: Using provider - ${provider}`)
 
-    if (provider) {
-      // Multi-provider mode
-      console.log(`OAuth2 Connect: Using multi-provider mode - ${provider}`)
-
-      const client = providerManager.getProvider(provider)
-      if (!client) {
-        const availableProviders = providerManager.getAvailableProviders()
-        console.error(`OAuth2 Connect: Provider not found: ${provider}`)
-        return res.status(400).json({
-          error: 'invalid_provider',
-          message: `Provider "${provider}" is not available`,
-          availableProviders
-        })
-      }
-
-      // Store provider name for callback
-      session.oauth2_provider = provider
-
-      // Build authorization URL
-      const authEndpoint = client.getAuthorizationEndpoint()
-      const params = new URLSearchParams({
-        client_id: client.clientId,
-        redirect_uri: client.getRedirectUri(),
-        response_type: 'code',
-        scope: 'openid profile email',
-        state: state,
-        code_challenge: codeChallenge,
-        code_challenge_method: 'S256'
+    const client = providerManager.getProvider(provider)
+    if (!client) {
+      const availableProviders = providerManager.getAvailableProviders()
+      console.error(`OAuth2 Connect: Provider not found: ${provider}`)
+      return res.status(400).json({
+        error: 'invalid_provider',
+        message: `Provider "${provider}" is not available`,
+        availableProviders
       })
-
-      authUrl = `${authEndpoint}?${params.toString()}`
-    } else {
-      // Legacy single-provider mode
-      console.log('OAuth2 Connect: Using legacy single-provider mode')
-
-      if (!legacyOAuth2Service.isInitialized()) {
-        console.error('OAuth2 Connect: OAuth2 service not initialized')
-        return res.status(503).json({
-          error: 'oauth2_unavailable',
-          message: 'OAuth2 authentication is not available'
-        })
-      }
-
-      authUrl = legacyOAuth2Service
-        .createAuthorizationURL(state, ['openid', 'profile', 'email'])
-        .toString()
     }
+
+    // Store provider name for callback
+    session.oauth2_provider = provider
+
+    // Build authorization URL
+    const authEndpoint = client.getAuthorizationEndpoint()
+    const params = new URLSearchParams({
+      client_id: client.clientId,
+      redirect_uri: client.getRedirectUri(),
+      response_type: 'code',
+      scope: 'openid profile email',
+      state: state,
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256'
+    })
+
+    const authUrl = `${authEndpoint}?${params.toString()}`
 
     // Save session before redirect
     session.save((err: any) => {
@@ -211,54 +198,41 @@ router.get('/oauth2/callback', async (req: Request, res: Response) => {
       return res.redirect('/?oauth2_error=missing_verifier')
     }
 
-    // Check if multi-provider mode
+    // Get provider from session
     const provider = session.oauth2_provider
 
-    let tokens: any
-    let userInfo: UserInfo
-
-    if (provider) {
-      // Multi-provider mode
-      console.log(`OAuth2 Callback: Multi-provider mode - ${provider}`)
-
-      const client = providerManager.getProvider(provider)
-      if (!client) {
-        console.error(`OAuth2 Callback: Provider not found: ${provider}`)
-        return res.redirect('/?oauth2_error=provider_not_found')
-      }
-
-      // Exchange code for tokens
-      console.log('OAuth2 Callback: Exchanging authorization code for tokens')
-      tokens = await client.exchangeAuthorizationCode(code, codeVerifier)
-
-      // Fetch user info
-      console.log('OAuth2 Callback: Fetching user info')
-      const userInfoEndpoint = client.getUserInfoEndpoint()
-      const userInfoResponse = await fetch(userInfoEndpoint, {
-        headers: {
-          Authorization: `Bearer ${tokens.accessToken}`,
-          Accept: 'application/json'
-        }
-      })
-
-      if (!userInfoResponse.ok) {
-        throw new Error(`UserInfo request failed: ${userInfoResponse.status}`)
-      }
-
-      userInfo = (await userInfoResponse.json()) as UserInfo
-
-      // Store provider in session
-      session.oauth2_provider = provider
-    } else {
-      // Legacy single-provider mode
-      console.log('OAuth2 Callback: Legacy single-provider mode')
-
-      // Exchange code for tokens
-      tokens = await legacyOAuth2Service.exchangeCodeForTokens(code, codeVerifier)
-
-      // Fetch user info
-      userInfo = await legacyOAuth2Service.getUserInfo(tokens.accessToken)
+    if (!provider) {
+      console.error('OAuth2 Callback: Provider not found in session')
+      return res.redirect('/?oauth2_error=missing_provider')
     }
+
+    console.log(`OAuth2 Callback: Processing callback for ${provider}`)
+
+    const client = providerManager.getProvider(provider)
+    if (!client) {
+      console.error(`OAuth2 Callback: Provider not found: ${provider}`)
+      return res.redirect('/?oauth2_error=provider_not_found')
+    }
+
+    // Exchange code for tokens
+    console.log('OAuth2 Callback: Exchanging authorization code for tokens')
+    const tokens = await client.exchangeAuthorizationCode(code, codeVerifier)
+
+    // Fetch user info
+    console.log('OAuth2 Callback: Fetching user info')
+    const userInfoEndpoint = client.getUserInfoEndpoint()
+    const userInfoResponse = await fetch(userInfoEndpoint, {
+      headers: {
+        Authorization: `Bearer ${tokens.accessToken}`,
+        Accept: 'application/json'
+      }
+    })
+
+    if (!userInfoResponse.ok) {
+      throw new Error(`UserInfo request failed: ${userInfoResponse.status}`)
+    }
+
+    const userInfo = (await userInfoResponse.json()) as UserInfo
 
     // Store tokens in session
     session.oauth2_access_token = tokens.accessToken

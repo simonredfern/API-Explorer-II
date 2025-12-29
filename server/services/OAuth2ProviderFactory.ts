@@ -62,18 +62,21 @@ export class OAuth2ProviderFactory {
    * Each provider requires:
    * - VITE_[PROVIDER]_CLIENT_ID
    * - VITE_[PROVIDER]_CLIENT_SECRET
-   * - VITE_[PROVIDER]_REDIRECT_URL (optional, defaults to /api/oauth2/callback)
+   * - VITE_OAUTH2_REDIRECT_URL (shared by all providers, defaults to /api/oauth2/callback)
    */
   private loadStrategies(): void {
     console.log('OAuth2ProviderFactory: Loading provider strategies...')
 
+    // Shared redirect URL for all providers
+    const sharedRedirectUri =
+      process.env.VITE_OAUTH2_REDIRECT_URL || 'http://localhost:5173/api/oauth2/callback'
+
     // OBP-OIDC Strategy
-    if (process.env.VITE_OBP_OAUTH2_CLIENT_ID) {
+    if (process.env.VITE_OBP_OIDC_CLIENT_ID) {
       this.strategies.set('obp-oidc', {
-        clientId: process.env.VITE_OBP_OAUTH2_CLIENT_ID,
-        clientSecret: process.env.VITE_OBP_OAUTH2_CLIENT_SECRET || '',
-        redirectUri:
-          process.env.VITE_OBP_OAUTH2_REDIRECT_URL || 'http://localhost:5173/api/oauth2/callback',
+        clientId: process.env.VITE_OBP_OIDC_CLIENT_ID,
+        clientSecret: process.env.VITE_OBP_OIDC_CLIENT_SECRET || '',
+        redirectUri: sharedRedirectUri,
         scopes: ['openid', 'profile', 'email']
       })
       console.log('  OK OBP-OIDC strategy loaded')
@@ -84,8 +87,7 @@ export class OAuth2ProviderFactory {
       this.strategies.set('keycloak', {
         clientId: process.env.VITE_KEYCLOAK_CLIENT_ID,
         clientSecret: process.env.VITE_KEYCLOAK_CLIENT_SECRET || '',
-        redirectUri:
-          process.env.VITE_KEYCLOAK_REDIRECT_URL || 'http://localhost:5173/api/oauth2/callback',
+        redirectUri: sharedRedirectUri,
         scopes: ['openid', 'profile', 'email']
       })
       console.log('  OK Keycloak strategy loaded')
@@ -96,8 +98,7 @@ export class OAuth2ProviderFactory {
       this.strategies.set('google', {
         clientId: process.env.VITE_GOOGLE_CLIENT_ID,
         clientSecret: process.env.VITE_GOOGLE_CLIENT_SECRET || '',
-        redirectUri:
-          process.env.VITE_GOOGLE_REDIRECT_URL || 'http://localhost:5173/api/oauth2/callback',
+        redirectUri: sharedRedirectUri,
         scopes: ['openid', 'profile', 'email']
       })
       console.log('  OK Google strategy loaded')
@@ -108,8 +109,7 @@ export class OAuth2ProviderFactory {
       this.strategies.set('github', {
         clientId: process.env.VITE_GITHUB_CLIENT_ID,
         clientSecret: process.env.VITE_GITHUB_CLIENT_SECRET || '',
-        redirectUri:
-          process.env.VITE_GITHUB_REDIRECT_URL || 'http://localhost:5173/api/oauth2/callback',
+        redirectUri: sharedRedirectUri,
         scopes: ['read:user', 'user:email']
       })
       console.log('  OK GitHub strategy loaded')
@@ -121,9 +121,7 @@ export class OAuth2ProviderFactory {
       this.strategies.set(providerName, {
         clientId: process.env.VITE_CUSTOM_OIDC_CLIENT_ID,
         clientSecret: process.env.VITE_CUSTOM_OIDC_CLIENT_SECRET || '',
-        redirectUri:
-          process.env.VITE_CUSTOM_OIDC_REDIRECT_URL ||
-          'http://localhost:5173/api/oauth2/callback',
+        redirectUri: sharedRedirectUri,
         scopes: ['openid', 'profile', 'email']
       })
       console.log(`  OK Custom OIDC strategy loaded: ${providerName}`)
@@ -134,7 +132,9 @@ export class OAuth2ProviderFactory {
     if (this.strategies.size === 0) {
       console.warn('OAuth2ProviderFactory: WARNING - No provider strategies configured!')
       console.warn('OAuth2ProviderFactory: Set environment variables for at least one provider')
-      console.warn('OAuth2ProviderFactory: Example: VITE_OBP_OAUTH2_CLIENT_ID, VITE_OBP_OAUTH2_CLIENT_SECRET')
+      console.warn(
+        'OAuth2ProviderFactory: Example: VITE_OBP_OIDC_CLIENT_ID, VITE_OBP_OIDC_CLIENT_SECRET'
+      )
     }
   }
 
@@ -193,10 +193,7 @@ export class OAuth2ProviderFactory {
       console.log(`OAuth2ProviderFactory: Successfully initialized ${wellKnownUri.provider}`)
       return client
     } catch (error) {
-      console.error(
-        `OAuth2ProviderFactory: Failed to initialize ${wellKnownUri.provider}:`,
-        error
-      )
+      console.error(`OAuth2ProviderFactory: Failed to initialize ${wellKnownUri.provider}:`, error)
       return null
     }
   }

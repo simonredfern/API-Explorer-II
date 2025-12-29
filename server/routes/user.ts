@@ -29,14 +29,12 @@ import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { Container } from 'typedi'
 import OBPClientService from '../services/OBPClientService.js'
-import { OAuth2Service } from '../services/OAuth2Service.js'
 import { DEFAULT_OBP_API_VERSION } from '../../src/shared-constants.js'
 
 const router = Router()
 
 // Get services from container
 const obpClientService = Container.get(OBPClientService)
-const oauth2Service = Container.get(OAuth2Service)
 
 const obpExplorerHome = process.env.VITE_OBP_API_EXPLORER_HOST
 
@@ -57,41 +55,9 @@ router.get('/user/current', async (req: Request, res: Response) => {
 
     console.log('User: Returning OAuth2 user info')
     const oauth2User = session.oauth2_user
-    const accessToken = session.oauth2_access_token
-    const refreshToken = session.oauth2_refresh_token
 
-    // Check if access token is expired and needs refresh
-    if (accessToken && oauth2Service.isTokenExpired(accessToken)) {
-      console.log('User: Access token expired')
-
-      if (refreshToken) {
-        console.log('User: Attempting token refresh')
-        try {
-          const newTokens = await oauth2Service.refreshAccessToken(refreshToken)
-
-          // Update session with new tokens
-          session.oauth2_access_token = newTokens.accessToken
-          session.oauth2_refresh_token = newTokens.refreshToken || refreshToken
-          session.oauth2_id_token = newTokens.idToken
-          session.oauth2_token_timestamp = Date.now()
-          session.oauth2_expires_in = newTokens.expiresIn
-
-          // Update clientConfig with new access token
-          if (session.clientConfig && session.clientConfig.oauth2) {
-            session.clientConfig.oauth2.accessToken = newTokens.accessToken
-            console.log('User: Updated clientConfig with new access token')
-          }
-
-          console.log('User: Token refresh successful')
-        } catch (error) {
-          console.error('User: Token refresh failed:', error)
-          return res.json({})
-        }
-      } else {
-        console.log('User: No refresh token available, user needs to re-authenticate')
-        return res.json({})
-      }
-    }
+    // TODO: Implement token refresh in multi-provider system
+    // For now, if token expires, user must re-login
 
     // Get actual user ID from OBP-API
     let obpUserId = oauth2User.sub // Default to sub if OBP call fails
