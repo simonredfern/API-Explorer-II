@@ -50,9 +50,8 @@ import { OAuth2CallbackController } from './controllers/OAuth2CallbackController
 import { OAuth2ConnectController } from './controllers/OAuth2ConnectController.js'
 import { OAuth2ProvidersController } from './controllers/OAuth2ProvidersController.js'
 
-// Import middlewares
-import OAuth2AuthorizationMiddleware from './middlewares/OAuth2AuthorizationMiddleware.js'
-import OAuth2CallbackMiddleware from './middlewares/OAuth2CallbackMiddleware.js'
+// Import OAuth2 routes (plain Express, not routing-controllers)
+import oauth2Routes from './routes/oauth2.js'
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url)
@@ -226,18 +225,14 @@ let instance: any
 
   const routePrefix = '/api'
 
+  // Register OAuth2 routes BEFORE routing-controllers (plain Express)
+  app.use(routePrefix, oauth2Routes)
+  console.log('OAuth2 routes registered (plain Express)')
+
   const server = useExpressServer(app, {
     routePrefix: routePrefix,
-    controllers: [
-      OpeyController,
-      OBPController,
-      StatusController,
-      UserController,
-      OAuth2CallbackController,
-      OAuth2ConnectController,
-      OAuth2ProvidersController
-    ],
-    middlewares: [OAuth2AuthorizationMiddleware, OAuth2CallbackMiddleware]
+    controllers: [OpeyController, OBPController, StatusController, UserController],
+    middlewares: []
   })
 
   instance = server.listen(port)
