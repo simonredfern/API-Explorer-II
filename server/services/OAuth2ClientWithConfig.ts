@@ -48,6 +48,7 @@ import type { OIDCConfiguration, TokenResponse } from '../types/oauth2.js'
 export class OAuth2ClientWithConfig extends OAuth2Client {
   public OIDCConfig?: OIDCConfiguration
   public provider: string
+  public wellKnownUri?: string
   private _clientSecret: string
   private _redirectUri: string
 
@@ -67,14 +68,16 @@ export class OAuth2ClientWithConfig extends OAuth2Client {
    * @example
    * await client.initOIDCConfig('http://localhost:9000/obp-oidc/.well-known/openid-configuration')
    */
-  async initOIDCConfig(oidcConfigUrl: string): Promise<void> {
+  async initOIDCConfig(wellKnownUrl: string): Promise<void> {
     console.log(
-      `OAuth2ClientWithConfig: Fetching OIDC config for ${this.provider} from:`,
-      oidcConfigUrl
+      `OAuth2ClientWithConfig: Fetching OIDC config for ${this.provider} from: ${wellKnownUrl}`
     )
 
+    // Store the well-known URL for health checks
+    this.wellKnownUri = wellKnownUrl
+
     try {
-      const response = await fetch(oidcConfigUrl)
+      const response = await fetch(wellKnownUrl)
 
       if (!response.ok) {
         throw new Error(
