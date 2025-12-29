@@ -135,7 +135,7 @@ export class OAuth2ProviderManager {
             lastChecked: new Date()
           })
           successCount++
-          console.log(`OAuth2ProviderManager: ✓ ${providerUri.provider} initialized`)
+          console.log(`OAuth2ProviderManager: OK ${providerUri.provider} initialized`)
         } else {
           this.providerStatus.set(providerUri.provider, {
             name: providerUri.provider,
@@ -143,7 +143,7 @@ export class OAuth2ProviderManager {
             lastChecked: new Date(),
             error: 'Failed to initialize client'
           })
-          console.warn(`OAuth2ProviderManager: ✗ ${providerUri.provider} failed to initialize`)
+          console.warn(`OAuth2ProviderManager: ERROR ${providerUri.provider} failed to initialize`)
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -153,7 +153,7 @@ export class OAuth2ProviderManager {
           lastChecked: new Date(),
           error: errorMessage
         })
-        console.error(`OAuth2ProviderManager: ✗ ${providerUri.provider} error:`, error)
+        console.error(`OAuth2ProviderManager: ERROR ${providerUri.provider} error:`, error)
       }
     }
 
@@ -368,10 +368,10 @@ export class OAuth2ProviderManager {
           available: true,
           lastChecked: new Date()
         })
-        console.log(`OAuth2ProviderManager: ✓ ${providerName} retry successful`)
+        console.log(`OAuth2ProviderManager: OK ${providerName} retry successful`)
         return true
       } else {
-        console.error(`OAuth2ProviderManager: ✗ ${providerName} retry failed`)
+        console.error(`OAuth2ProviderManager: ERROR ${providerName} retry failed`)
         return false
       }
     } catch (error) {
