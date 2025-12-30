@@ -121,7 +121,7 @@ app.use(express.json())
 let sessionObject = {
   store: redisStore,
   name: 'obp-api-explorer-ii.sid', // CRITICAL: Unique cookie name to prevent conflicts with other apps on localhost
-  secret: process.env.VITE_OPB_SERVER_SESSION_PASSWORD,
+  secret: process.env.VITE_OBP_SERVER_SESSION_PASSWORD,
   resave: false,
   saveUninitialized: false, // Don't save empty sessions (better for authenticated apps)
   cookie: {
