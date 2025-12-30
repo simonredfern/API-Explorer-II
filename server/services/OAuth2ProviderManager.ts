@@ -66,13 +66,32 @@ export class OAuth2ProviderManager {
   }
 
   /**
-   * Fetch well-known URIs from OBP API
+   * Fetch well-known URIs from OBP API or legacy env variable
    *
-   * Calls: GET /obp/v5.1.0/well-known
+   * Priority:
+   * 1. VITE_OBP_OAUTH2_WELL_KNOWN_URL (legacy single-provider mode)
+   * 2. VITE_OBP_API_HOST/obp/v5.1.0/well-known (multi-provider mode)
    *
    * @returns Array of well-known URIs with provider names
    */
   async fetchWellKnownUris(): Promise<WellKnownUri[]> {
+    // Check for legacy single-provider configuration
+    const legacyWellKnownUrl = process.env.VITE_OBP_OAUTH2_WELL_KNOWN_URL
+
+    if (legacyWellKnownUrl) {
+      console.log('OAuth2ProviderManager: Using legacy VITE_OBP_OAUTH2_WELL_KNOWN_URL...')
+      console.log(`OAuth2ProviderManager: Well-known URL: ${legacyWellKnownUrl}`)
+
+      // Return single provider configuration
+      return [
+        {
+          provider: 'obp-oidc',
+          url: legacyWellKnownUrl
+        }
+      ]
+    }
+
+    // Multi-provider mode: fetch from OBP API
     console.log('OAuth2ProviderManager: Fetching well-known URIs from OBP API...')
 
     try {
