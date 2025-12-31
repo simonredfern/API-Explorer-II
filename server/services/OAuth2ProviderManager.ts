@@ -56,6 +56,7 @@ export class OAuth2ProviderManager {
   private providers: Map<string, OAuth2ClientWithConfig> = new Map()
   private providerStatus: Map<string, ProviderStatus> = new Map()
   private healthCheckInterval: NodeJS.Timeout | null = null
+  private retryInterval: NodeJS.Timeout | null = null
   private factory: OAuth2ProviderFactory
   private obpClientService: OBPClientService
   private initialized: boolean = false
@@ -187,6 +188,12 @@ export class OAuth2ProviderManager {
       console.error(
         'OAuth2ProviderManager: Users will not be able to log in until at least one provider is available'
       )
+      console.log('OAuth2ProviderManager: Will retry initialization every 30 seconds...')
+    }
+
+    // Start retry interval for failed providers
+    if (successCount < wellKnownUris.length) {
+      this.startRetryInterval()
     }
 
     return this.initialized
@@ -220,6 +227,87 @@ export class OAuth2ProviderManager {
       clearInterval(this.healthCheckInterval)
       this.healthCheckInterval = null
       console.log('OAuth2ProviderManager: Health check stopped')
+    }
+  }
+
+  /**
+   * Start periodic retry for failed providers
+   *
+   * @param intervalMs - Retry interval in milliseconds (default: 30000 = 30 seconds)
+   */
+  startRetryInterval(intervalMs: number = 30000): void {
+    if (this.retryInterval) {
+      console.log('OAuth2ProviderManager: Retry interval already running')
+      return
+    }
+
+    console.log(`OAuth2ProviderManager: Starting retry interval (every ${intervalMs / 1000}s)`)
+
+    this.retryInterval = setInterval(async () => {
+      await this.retryFailedProviders()
+    }, intervalMs)
+  }
+
+  /**
+   * Stop periodic retry interval
+   */
+  stopRetryInterval(): void {
+    if (this.retryInterval) {
+      clearInterval(this.retryInterval)
+      this.retryInterval = null
+      console.log('OAuth2ProviderManager: Retry interval stopped')
+    }
+  }
+
+  /**
+   * Retry all failed providers
+   */
+  private async retryFailedProviders(): Promise<void> {
+    const failedProviders: string[] = []
+
+    this.providerStatus.forEach((status, name) => {
+      if (!status.available) {
+        failedProviders.push(name)
+      }
+    })
+
+    // Also check if we have no providers at all (initial fetch may have failed)
+    if (this.providerStatus.size === 0) {
+      console.log(
+        'OAuth2ProviderManager: No providers initialized yet, attempting full initialization...'
+      )
+
+      // Temporarily stop retry to prevent duplicate calls
+      this.stopRetryInterval()
+
+      const success = await this.initializeProviders()
+      if (!success) {
+        // Restart retry if initialization failed
+        this.startRetryInterval()
+      }
+      return
+    }
+
+    if (failedProviders.length === 0) {
+      console.log('OAuth2ProviderManager: All providers healthy, stopping retry interval')
+      this.stopRetryInterval()
+      return
+    }
+
+    console.log(`OAuth2ProviderManager: Retrying ${failedProviders.length} failed provider(s)...`)
+
+    for (const providerName of failedProviders) {
+      const success = await this.retryProvider(providerName)
+      if (success) {
+        console.log(`OAuth2ProviderManager: Successfully recovered provider: ${providerName}`)
+      }
+    }
+
+    // Check if all providers are now healthy
+    const stillFailed = Array.from(this.providerStatus.values()).filter((s) => !s.available)
+    if (stillFailed.length === 0) {
+      console.log('OAuth2ProviderManager: All providers recovered, stopping retry interval')
+      this.stopRetryInterval()
     }
   }
 
