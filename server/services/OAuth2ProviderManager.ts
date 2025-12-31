@@ -138,6 +138,8 @@ export class OAuth2ProviderManager {
       console.warn(
         'OAuth2ProviderManager: Check that OBP API is running and /obp/v5.1.0/well-known endpoint is available'
       )
+      console.log('OAuth2ProviderManager: Will retry fetching providers every 30 seconds...')
+      this.startRetryInterval()
       return false
     }
 
@@ -189,10 +191,12 @@ export class OAuth2ProviderManager {
         'OAuth2ProviderManager: Users will not be able to log in until at least one provider is available'
       )
       console.log('OAuth2ProviderManager: Will retry initialization every 30 seconds...')
-    }
-
-    // Start retry interval for failed providers
-    if (successCount < wellKnownUris.length) {
+      this.startRetryInterval()
+    } else if (successCount < wellKnownUris.length) {
+      // Some providers failed - retry only the failed ones
+      console.log(
+        `OAuth2ProviderManager: ${wellKnownUris.length - successCount} provider(s) failed, will retry every 30 seconds...`
+      )
       this.startRetryInterval()
     }
 
