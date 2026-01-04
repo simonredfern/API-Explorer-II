@@ -32,25 +32,21 @@ import RedisStore from 'connect-redis'
 import { createClient } from 'redis'
 import express from 'express'
 import type { Application } from 'express'
-import { useExpressServer, useContainer } from 'routing-controllers'
 import { Container } from 'typedi'
 import path from 'path'
 import { execSync } from 'child_process'
-import { OAuth2Service } from './services/OAuth2Service.js'
+import { OAuth2ProviderManager } from './services/OAuth2ProviderManager.js'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 
-// Import controllers
-import { OpeyController } from './controllers/OpeyIIController.js'
-import { OBPController } from './controllers/RequestController.js'
-import { StatusController } from './controllers/StatusController.js'
-import { UserController } from './controllers/UserController.js'
-import { OAuth2CallbackController } from './controllers/OAuth2CallbackController.js'
-import { OAuth2ConnectController } from './controllers/OAuth2ConnectController.js'
+// Controllers removed - all routes migrated to plain Express
 
-// Import middlewares
-import OAuth2AuthorizationMiddleware from './middlewares/OAuth2AuthorizationMiddleware.js'
-import OAuth2CallbackMiddleware from './middlewares/OAuth2CallbackMiddleware.js'
+// Import routes (plain Express, not routing-controllers)
+import oauth2Routes from './routes/oauth2.js'
+import userRoutes from './routes/user.js'
+import statusRoutes from './routes/status.js'
+import obpRoutes from './routes/obp.js'
+import opeyRoutes from './routes/opey.js'
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url)
@@ -125,7 +121,7 @@ app.use(express.json())
 let sessionObject = {
   store: redisStore,
   name: 'obp-api-explorer-ii.sid', // CRITICAL: Unique cookie name to prevent conflicts with other apps on localhost
-  secret: process.env.VITE_OPB_SERVER_SESSION_PASSWORD,
+  secret: process.env.VITE_OBP_SERVER_SESSION_PASSWORD,
   resave: false,
   saveUninitialized: false, // Don't save empty sessions (better for authenticated apps)
   cookie: {
@@ -139,78 +135,56 @@ if (app.get('env') === 'production') {
   sessionObject.cookie.secure = true // serve secure cookies
 }
 app.use(session(sessionObject))
-useContainer(Container)
 
-// Initialize OAuth2 Service
-console.log(`--- OAuth2/OIDC setup -------------------------------------------`)
-const wellKnownUrl = process.env.VITE_OBP_OAUTH2_WELL_KNOWN_URL
+// OAuth2 Multi-Provider Setup only - no legacy fallback
 
 // Async IIFE to initialize OAuth2 and start server
 let instance: any
 ;(async function initializeAndStartServer() {
-  if (!wellKnownUrl) {
-    console.warn('VITE_OBP_OAUTH2_WELL_KNOWN_URL not set. OAuth2 will not function.')
-    console.warn('Server will start but OAuth2 authentication will be unavailable.')
-  } else {
-    console.log(`OIDC Well-Known URL: ${wellKnownUrl}`)
+  // Initialize Multi-Provider OAuth2 Manager
+  console.log('--- OAuth2 Multi-Provider Setup ---------------------------------')
+  const providerManager = Container.get(OAuth2ProviderManager)
 
-    // Get OAuth2Service from container
-    const oauth2Service = Container.get(OAuth2Service)
-
-    // Initialize OAuth2 service with retry logic
-    const isProduction = process.env.NODE_ENV === 'production'
-    const maxRetries = Infinity // Retry indefinitely
-    const initialDelay = 1000 // 1 second, then exponential backoff
-
-    console.log(
-      'Attempting OAuth2 initialization (will retry indefinitely with exponential backoff)...'
-    )
-    const success = await oauth2Service.initializeWithRetry(wellKnownUrl, maxRetries, initialDelay)
+  try {
+    const success = await providerManager.initializeProviders()
 
     if (success) {
-      console.log('OAuth2Service: Initialization successful')
-      console.log('  Client ID:', process.env.VITE_OBP_OAUTH2_CLIENT_ID || 'NOT SET')
-      console.log('  Redirect URI:', process.env.VITE_OBP_OAUTH2_REDIRECT_URL || 'NOT SET')
-      console.log('OAuth2/OIDC ready for authentication')
+      const availableProviders = providerManager.getAvailableProviders()
+      console.log(`OK Initialized ${availableProviders.length} OAuth2 providers:`)
+      availableProviders.forEach((name) => console.log(`  - ${name}`))
 
-      // Start continuous monitoring even when initially connected
-      oauth2Service.startHealthCheck(1000, 240000) // Monitor every 4 minutes
-      console.log('OAuth2Service: Starting continuous monitoring (every 4 minutes)')
+      // Start health monitoring
+      providerManager.startHealthCheck(60000) // Check every 60 seconds
+      console.log('OK Provider health monitoring started (every 60s)')
     } else {
-      console.error('OAuth2Service: Initialization failed after all retries')
-
-      // Use graceful degradation for both development and production
-      const envMode = isProduction ? 'Production' : 'Development'
-      console.warn(`WARNING: ${envMode} mode: Server will start without OAuth2`)
-      console.warn('WARNING: Login will be unavailable until OIDC server is reachable')
-      console.warn('WARNING: Starting health check to reconnect automatically...')
-      console.warn('Please check:')
-      console.warn('  1. OBP-OIDC server is running')
-      console.warn('  2. VITE_OBP_OAUTH2_WELL_KNOWN_URL is correct')
-      console.warn('  3. Network connectivity to OIDC provider')
-
-      // Start periodic health check to reconnect when OIDC becomes available
-      oauth2Service.startHealthCheck(1000, 240000) // Start with 1 second, monitor every 4 minutes when connected
+      console.error('ERROR: No OAuth2 providers initialized from OBP API')
+      console.error(
+        'ERROR: Check that OBP API is running and returns providers from /obp/v5.1.0/well-known'
+      )
+      console.error('ERROR: Server will start but login will not work')
     }
+  } catch (error) {
+    console.error('ERROR Failed to initialize OAuth2 multi-provider:', error)
+    console.error('ERROR: Server will start but login will not work')
   }
   console.log(`-----------------------------------------------------------------`)
 
   const routePrefix = '/api'
 
-  const server = useExpressServer(app, {
-    routePrefix: routePrefix,
-    controllers: [
-      OpeyController,
-      OBPController,
-      StatusController,
-      UserController,
-      OAuth2CallbackController,
-      OAuth2ConnectController
-    ],
-    middlewares: [OAuth2AuthorizationMiddleware, OAuth2CallbackMiddleware]
-  })
+  // Register all routes (plain Express)
+  app.use(routePrefix, oauth2Routes)
+  app.use(routePrefix, userRoutes)
+  app.use(routePrefix, statusRoutes)
+  app.use(routePrefix, obpRoutes)
+  app.use(routePrefix, opeyRoutes)
+  console.log('OAuth2 routes registered (plain Express)')
+  console.log('User routes registered (plain Express)')
+  console.log('Status routes registered (plain Express)')
+  console.log('OBP routes registered (plain Express)')
+  console.log('Opey routes registered (plain Express)')
+  console.log('All routes migrated to plain Express - routing-controllers removed')
 
-  instance = server.listen(port)
+  instance = app.listen(port)
 
   console.log(
     `Backend is running. You can check a status at http://localhost:${port}${routePrefix}/status`

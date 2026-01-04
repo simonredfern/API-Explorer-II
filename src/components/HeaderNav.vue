@@ -80,27 +80,90 @@ const logo = ref(logoSource)
 const headerLinksHoverColor = ref(headerLinksHoverColorSetting)
 const headerLinksBackgroundColor = ref(headerLinksBackgroundColorSetting)
 
-// Check OAuth2 availability
-let oauth2CheckInterval: number | null = null
+// Multi-provider support
+const availableProviders = ref<Array<{ name: string; available: boolean; lastChecked?: Date; error?: string }>>([])
+const showProviderSelector = ref(false)
+const isLoadingProviders = ref(false)
 
-async function checkOAuth2Availability() {
+// OAuth2 availability is determined by provider availability
+// No separate status check needed
+
+// Fetch available OIDC providers
+async function fetchAvailableProviders() {
+  isLoadingProviders.value = true
   try {
-    const response = await fetch('/api/status/oauth2')
+    const response = await fetch('/api/oauth2/providers')
     const data = await response.json()
-    const wasAvailable = oauth2Available.value
-    oauth2Available.value = data.available
-    oauth2StatusMessage.value = data.message || ''
 
-    // Log state changes
-    if (!wasAvailable && data.available) {
-      console.log('OAuth2 is now available')
-    } else if (wasAvailable && !data.available) {
-      console.warn('OAuth2 is no longer available!')
+    if (data.providers && Array.isArray(data.providers)) {
+      availableProviders.value = data.providers
+      console.log('Available OAuth2 providers:', availableProviders.value)
+      console.log(`Total: ${data.count}, Available: ${data.availableCount}`)
+    } else {
+      console.warn('No providers returned from /api/oauth2/providers')
+      availableProviders.value = []
     }
   } catch (error) {
-    oauth2Available.value = false
-    oauth2StatusMessage.value = 'Failed to check OAuth2 status'
-    console.error('Error checking OAuth2 status:', error)
+    console.error('Failed to fetch OAuth2 providers:', error)
+    availableProviders.value = []
+  } finally {
+    isLoadingProviders.value = false
+  }
+}
+
+// Handle login button click
+function handleLoginClick() {
+  const available = availableProviders.value.filter(p => p.available)
+
+  if (available.length > 1) {
+    // Show provider selection dialog
+    showProviderSelector.value = true
+  } else if (available.length === 1) {
+    // Direct login with single provider
+    loginWithProvider(available[0].name)
+  } else {
+    // No providers available
+    console.error('No OAuth2 providers available. Check backend configuration.')
+    alert('Login is not available. Please check that OAuth2 providers are configured.')
+  }
+}
+
+// Login with selected provider
+function loginWithProvider(provider: string) {
+  const redirectUrl = '/api/oauth2/connect?provider=' +
+    encodeURIComponent(provider) +
+    '&redirect=' +
+    encodeURIComponent(getCurrentPath())
+  console.log(`Logging in with provider: ${provider}`)
+  window.location.href = redirectUrl
+}
+
+// Format provider name for display
+function formatProviderName(name: string): string {
+  // Convert "obp-oidc" to "OBP OIDC", "keycloak" to "Keycloak", etc.
+  return name.split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+// Get provider icon
+function getProviderIcon(name: string): string {
+  const icons: Record<string, string> = {
+    'obp-oidc': '🏦',
+    'keycloak': '🔐',
+    'google': '🔵',
+    'github': '🐙'
+  }
+  return icons[name] || '🔑'
+}
+
+// Copy text to clipboard
+async function copyToClipboard(text: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+    console.log('Error message copied to clipboard')
+  } catch (err) {
+    console.error('Failed to copy text to clipboard:', err)
   }
 }
 
@@ -151,12 +214,8 @@ const handleMore = (command: string) => {
 }
 
 onMounted(async () => {
-  // Initial OAuth2 availability check
-  await checkOAuth2Availability()
-
-  // Start continuous polling every 4 minutes to detect OIDC outages
-  console.log('OAuth2: Starting continuous monitoring (every 4 minutes)...')
-  oauth2CheckInterval = window.setInterval(checkOAuth2Availability, 240000) // 4 minutes
+  // Fetch available providers
+  await fetchAvailableProviders()
 
   const currentUser = await getCurrentUser()
   const currentResponseKeys = Object.keys(currentUser)
@@ -171,11 +230,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  // Clean up polling interval
-  if (oauth2CheckInterval) {
-    clearInterval(oauth2CheckInterval)
-    oauth2CheckInterval = null
-  }
+  // Cleanup hook
 })
 
 watchEffect(() => {
@@ -249,15 +304,105 @@ const getCurrentPath = () => {
           {{ $t('header.login') }}
         </button>
       </el-tooltip>
-      <a v-else-if="isShowLoginButton && oauth2Available" v-bind:href="'/api/oauth2/connect?redirect='+ encodeURIComponent(getCurrentPath())" class="login-button router-link" id="login">
+      <button
+        v-else-if="isShowLoginButton && oauth2Available"
+        @click="handleLoginClick"
+        class="login-button router-link"
+        id="login"
+      >
         {{ $t('header.login') }}
-      </a>
+      </button>
       <span v-show="isShowLogOffButton" class="login-user">{{ loginUsername }}</span>
       <a v-bind:href="'/api/user/logoff?redirect=' + encodeURIComponent(getCurrentPath())" v-show="isShowLogOffButton" class="logoff-button router-link" id="logoff">
         {{ $t('header.logoff') }}
       </a>
     </RouterView>
   </nav>
+
+  <!-- Provider Selection Dialog -->
+  <el-dialog
+    v-model="showProviderSelector"
+    title="Login"
+    width="500px"
+    :close-on-click-modal="true"
+  >
+    <!-- No providers available -->
+    <div v-if="availableProviders.filter(p => p.available).length === 0" class="no-providers-error">
+      <p class="error-message">No authentication providers available.</p>
+      <p class="error-hint">Please contact your administrator.</p>
+
+      <!-- Show unavailable providers even when no available providers -->
+      <div v-if="availableProviders.filter(p => !p.available).length > 0" class="unavailable-section">
+        <p class="unavailable-header">Currently unavailable:</p>
+        <div
+          v-for="provider in availableProviders.filter(p => !p.available)"
+          :key="provider.name"
+          class="provider-unavailable"
+        >
+          <div class="provider-unavailable-header">
+            <span class="provider-status-indicator offline">●</span>
+            <span class="provider-name">{{ formatProviderName(provider.name) }}</span>
+            <span class="unavailable-label">Unavailable</span>
+          </div>
+          <div v-if="provider.error" class="provider-error">
+            <div class="provider-error-text">{{ provider.error }}</div>
+            <button
+              @click.stop="copyToClipboard(provider.error)"
+              class="copy-button"
+              title="Copy error message"
+            >
+              📋
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Available providers -->
+    <div v-else class="provider-selection">
+      <p class="selection-hint">Choose your authentication provider:</p>
+
+      <div class="available-providers">
+        <button
+          v-for="provider in availableProviders.filter(p => p.available)"
+          :key="provider.name"
+          class="provider-button"
+          @click="loginWithProvider(provider.name); showProviderSelector = false"
+        >
+          <span class="provider-button-content">
+            <span class="provider-status-indicator online">●</span>
+            <span class="provider-button-text">{{ formatProviderName(provider.name) }}</span>
+          </span>
+        </button>
+      </div>
+
+      <!-- Unavailable providers section -->
+      <div v-if="availableProviders.filter(p => !p.available).length > 0" class="unavailable-section">
+        <p class="unavailable-header">Currently unavailable:</p>
+        <div
+          v-for="provider in availableProviders.filter(p => !p.available)"
+          :key="provider.name"
+          class="provider-unavailable"
+        >
+          <div class="provider-unavailable-header">
+            <span class="provider-status-indicator offline">●</span>
+            <span class="provider-name">{{ formatProviderName(provider.name) }}</span>
+            <span class="unavailable-label">Unavailable</span>
+          </div>
+          <div v-if="provider.error" class="provider-error">
+            <div class="provider-error-text">{{ provider.error }}</div>
+            <button
+              @click.stop="copyToClipboard(provider.error)"
+              class="copy-button"
+              title="Copy error message"
+            >
+              📋
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </el-dialog>
 </template>
 
 <style>
@@ -320,11 +465,13 @@ nav {
 }
 
 a.login-button,
-a.logoff-button {
+a.logoff-button,
+button.login-button {
   margin: 5px;
   color: #ffffff;
   background-color: #32b9ce;
   cursor: pointer;
+  border: none;
 }
 
 button.login-button-disabled {
@@ -350,5 +497,168 @@ button.login-button-disabled {
 #header-nav-message-docs {
   display: inline-block;
   vertical-align: middle;
+}
+
+/* Provider Selection Dialog */
+.provider-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.selection-hint {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 8px 0;
+}
+
+.available-providers {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.provider-button {
+  width: 100%;
+  padding: 14px 20px;
+  background-color: #32b9ce;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: 'Roboto', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.provider-button:hover {
+  background-color: #2a9fb0;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(50, 185, 206, 0.3);
+}
+
+.provider-button-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.provider-button-text {
+  flex: 1;
+  text-align: left;
+  margin-left: 8px;
+}
+
+.provider-status-indicator {
+  font-size: 14px;
+  margin-right: 8px;
+}
+
+.provider-status-indicator.online {
+  color: #10b981;
+}
+
+.provider-status-indicator.offline {
+  color: #ef4444;
+}
+
+/* Unavailable providers section */
+.unavailable-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.unavailable-header {
+  text-align: center;
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 0 0 12px 0;
+}
+
+.provider-unavailable {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background-color: #f9fafb;
+  opacity: 0.7;
+  margin-bottom: 8px;
+}
+
+.provider-unavailable-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.provider-name {
+  flex: 1;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.unavailable-label {
+  font-size: 11px;
+  color: #ef4444;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.provider-error {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  margin-top: 8px;
+  margin-left: 22px;
+}
+
+.provider-error-text {
+  flex: 1;
+  font-size: 11px;
+  color: #6b7280;
+  max-height: 80px;
+  overflow-y: auto;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.copy-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.copy-button:hover {
+  opacity: 1;
+}
+
+/* No providers error state */
+.no-providers-error {
+  text-align: center;
+  padding: 24px;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 15px;
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+
+.error-hint {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
 }
 </style>
