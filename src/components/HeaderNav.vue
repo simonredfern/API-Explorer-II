@@ -157,6 +157,16 @@ function getProviderIcon(name: string): string {
   return icons[name] || '🔑'
 }
 
+// Copy text to clipboard
+async function copyToClipboard(text: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+    console.log('Error message copied to clipboard')
+  } catch (err) {
+    console.error('Failed to copy text to clipboard:', err)
+  }
+}
+
 const clearActiveTab = () => {
   const activeLinks = document.querySelectorAll<HTMLElement>('.router-link')
   for (const active of activeLinks) {
@@ -313,28 +323,84 @@ const getCurrentPath = () => {
   <!-- Provider Selection Dialog -->
   <el-dialog
     v-model="showProviderSelector"
-    title="Select Identity Provider"
-    width="450px"
+    title="Login"
+    width="500px"
     :close-on-click-modal="true"
   >
-    <div class="provider-list">
-      <div
-        v-for="provider in availableProviders.filter(p => p.available)"
-        :key="provider.name"
-        class="provider-item"
-        @click="loginWithProvider(provider.name); showProviderSelector = false"
-      >
-        <div class="provider-icon">{{ getProviderIcon(provider.name) }}</div>
-        <div class="provider-info">
-          <h4>{{ formatProviderName(provider.name) }}</h4>
-          <span class="provider-status">Available</span>
+    <!-- No providers available -->
+    <div v-if="availableProviders.filter(p => p.available).length === 0" class="no-providers-error">
+      <p class="error-message">No authentication providers available.</p>
+      <p class="error-hint">Please contact your administrator.</p>
+
+      <!-- Show unavailable providers even when no available providers -->
+      <div v-if="availableProviders.filter(p => !p.available).length > 0" class="unavailable-section">
+        <p class="unavailable-header">Currently unavailable:</p>
+        <div
+          v-for="provider in availableProviders.filter(p => !p.available)"
+          :key="provider.name"
+          class="provider-unavailable"
+        >
+          <div class="provider-unavailable-header">
+            <span class="provider-status-indicator offline">●</span>
+            <span class="provider-name">{{ formatProviderName(provider.name) }}</span>
+            <span class="unavailable-label">Unavailable</span>
+          </div>
+          <div v-if="provider.error" class="provider-error">
+            <div class="provider-error-text">{{ provider.error }}</div>
+            <button
+              @click.stop="copyToClipboard(provider.error)"
+              class="copy-button"
+              title="Copy error message"
+            >
+              📋
+            </button>
+          </div>
         </div>
-        <div class="provider-arrow">→</div>
+      </div>
+    </div>
+
+    <!-- Available providers -->
+    <div v-else class="provider-selection">
+      <p class="selection-hint">Choose your authentication provider:</p>
+
+      <div class="available-providers">
+        <button
+          v-for="provider in availableProviders.filter(p => p.available)"
+          :key="provider.name"
+          class="provider-button"
+          @click="loginWithProvider(provider.name); showProviderSelector = false"
+        >
+          <span class="provider-button-content">
+            <span class="provider-status-indicator online">●</span>
+            <span class="provider-button-text">{{ formatProviderName(provider.name) }}</span>
+          </span>
+        </button>
       </div>
 
-      <div v-if="availableProviders.filter(p => p.available).length === 0" class="no-providers">
-        <p>No identity providers available</p>
-        <p class="error-hint">Please contact your administrator</p>
+      <!-- Unavailable providers section -->
+      <div v-if="availableProviders.filter(p => !p.available).length > 0" class="unavailable-section">
+        <p class="unavailable-header">Currently unavailable:</p>
+        <div
+          v-for="provider in availableProviders.filter(p => !p.available)"
+          :key="provider.name"
+          class="provider-unavailable"
+        >
+          <div class="provider-unavailable-header">
+            <span class="provider-status-indicator offline">●</span>
+            <span class="provider-name">{{ formatProviderName(provider.name) }}</span>
+            <span class="unavailable-label">Unavailable</span>
+          </div>
+          <div v-if="provider.error" class="provider-error">
+            <div class="provider-error-text">{{ provider.error }}</div>
+            <button
+              @click.stop="copyToClipboard(provider.error)"
+              class="copy-button"
+              title="Copy error message"
+            >
+              📋
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </el-dialog>
@@ -435,71 +501,165 @@ button.login-button-disabled {
 }
 
 /* Provider Selection Dialog */
-.provider-list {
+.provider-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.selection-hint {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 8px 0;
+}
+
+.available-providers {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.provider-item {
+.provider-button {
+  width: 100%;
+  padding: 14px 20px;
+  background-color: #32b9ce;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: 'Roboto', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.provider-button:hover {
+  background-color: #2a9fb0;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(50, 185, 206, 0.3);
+}
+
+.provider-button-content {
   display: flex;
   align-items: center;
-  padding: 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  background-color: #ffffff;
+  justify-content: space-between;
+  width: 100%;
 }
 
-.provider-item:hover {
-  border-color: #32b9ce;
-  background-color: #f0f9fa;
-  transform: translateX(4px);
-}
-
-.provider-icon {
-  font-size: 32px;
-  margin-right: 16px;
-  min-width: 40px;
-  text-align: center;
-}
-
-.provider-info {
+.provider-button-text {
   flex: 1;
+  text-align: left;
+  margin-left: 8px;
 }
 
-.provider-info h4 {
-  margin: 0 0 4px 0;
-  font-size: 16px;
-  color: #39455f;
-  font-weight: 500;
+.provider-status-indicator {
+  font-size: 14px;
+  margin-right: 8px;
 }
 
-.provider-status {
-  font-size: 12px;
+.provider-status-indicator.online {
   color: #10b981;
-  font-weight: 500;
 }
 
-.provider-arrow {
-  font-size: 20px;
-  color: #32b9ce;
-  margin-left: 12px;
+.provider-status-indicator.offline {
+  color: #ef4444;
 }
 
-.no-providers {
+/* Unavailable providers section */
+.unavailable-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.unavailable-header {
   text-align: center;
-  padding: 32px;
-  color: #999;
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 0 0 12px 0;
 }
 
-.no-providers p {
-  margin: 8px 0;
+.provider-unavailable {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background-color: #f9fafb;
+  opacity: 0.7;
+  margin-bottom: 8px;
+}
+
+.provider-unavailable-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.provider-name {
+  flex: 1;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.unavailable-label {
+  font-size: 11px;
+  color: #ef4444;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.provider-error {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  margin-top: 8px;
+  margin-left: 22px;
+}
+
+.provider-error-text {
+  flex: 1;
+  font-size: 11px;
+  color: #6b7280;
+  max-height: 80px;
+  overflow-y: auto;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.copy-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.copy-button:hover {
+  opacity: 1;
+}
+
+/* No providers error state */
+.no-providers-error {
+  text-align: center;
+  padding: 24px;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 15px;
+  margin: 0 0 8px 0;
+  font-weight: 500;
 }
 
 .error-hint {
-  font-size: 12px;
-  color: #999;
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
 }
 </style>
