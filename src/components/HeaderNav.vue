@@ -311,7 +311,6 @@ const getCurrentPath = () => {
         id="login"
       >
         {{ $t('header.login') }}
-        <span v-if="availableProviders.filter(p => p.available).length > 1" style="margin-left: 4px;">▼</span>
       </button>
       <span v-show="isShowLogOffButton" class="login-user">{{ loginUsername }}</span>
       <a v-bind:href="'/api/user/logoff?redirect=' + encodeURIComponent(getCurrentPath())" v-show="isShowLogOffButton" class="logoff-button router-link" id="logoff">
