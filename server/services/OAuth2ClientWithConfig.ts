@@ -79,22 +79,57 @@ export class OAuth2ClientWithConfig extends OAuth2Client {
     try {
       const response = await fetch(wellKnownUrl)
 
+      console.log(
+        `OAuth2ClientWithConfig: Response status: ${response.status} ${response.statusText}`
+      )
+      console.log(
+        `OAuth2ClientWithConfig: Response headers:`,
+        Object.fromEntries(response.headers.entries())
+      )
+
       if (!response.ok) {
+        const errorBody = await response.text()
+        console.error(`OAuth2ClientWithConfig: Error response body:`, errorBody)
         throw new Error(
-          `Failed to fetch OIDC configuration for ${this.provider}: ${response.status} ${response.statusText}`
+          `Failed to fetch OIDC configuration for ${this.provider}: ${response.status} ${response.statusText} - ${errorBody}`
         )
       }
 
-      const config = (await response.json()) as OIDCConfiguration
+      const responseText = await response.text()
+      console.log(
+        `OAuth2ClientWithConfig: Raw response body (first 500 chars):`,
+        responseText.substring(0, 500)
+      )
 
-      // Validate required endpoints
+      let config: OIDCConfiguration
+      try {
+        config = JSON.parse(responseText) as OIDCConfiguration
+        console.log(`OAuth2ClientWithConfig: Parsed config keys:`, Object.keys(config))
+        console.log(`OAuth2ClientWithConfig: Full parsed config:`, JSON.stringify(config, null, 2))
+      } catch (parseError) {
+        console.error(`OAuth2ClientWithConfig: JSON parse error:`, parseError)
+        console.error(`OAuth2ClientWithConfig: Failed to parse response as JSON`)
+        throw new Error(`Invalid JSON response from ${this.provider}: ${parseError}`)
+      }
+
+      // Validate required endpoints with detailed logging
+      console.log(`OAuth2ClientWithConfig: Validating required endpoints...`)
+      console.log(`  - authorization_endpoint: ${config.authorization_endpoint || 'MISSING'}`)
+      console.log(`  - token_endpoint: ${config.token_endpoint || 'MISSING'}`)
+      console.log(`  - userinfo_endpoint: ${config.userinfo_endpoint || 'MISSING'}`)
+
       if (!config.authorization_endpoint) {
+        console.error(`OAuth2ClientWithConfig: authorization_endpoint is missing or undefined`)
+        console.error(`OAuth2ClientWithConfig: Config object type:`, typeof config)
+        console.error(`OAuth2ClientWithConfig: Config object:`, config)
         throw new Error(`OIDC configuration for ${this.provider} missing authorization_endpoint`)
       }
       if (!config.token_endpoint) {
+        console.error(`OAuth2ClientWithConfig: token_endpoint is missing or undefined`)
         throw new Error(`OIDC configuration for ${this.provider} missing token_endpoint`)
       }
       if (!config.userinfo_endpoint) {
+        console.error(`OAuth2ClientWithConfig: userinfo_endpoint is missing or undefined`)
         throw new Error(`OIDC configuration for ${this.provider} missing userinfo_endpoint`)
       }
 
@@ -112,6 +147,10 @@ export class OAuth2ClientWithConfig extends OAuth2Client {
       }
     } catch (error) {
       console.error(`OAuth2ClientWithConfig: Failed to initialize ${this.provider}:`, error)
+      console.error(
+        `OAuth2ClientWithConfig: Error stack:`,
+        error instanceof Error ? error.stack : 'N/A'
+      )
       throw error
     }
   }
