@@ -40,6 +40,7 @@ import APIServerStatusView from '../views/APIServerStatusView.vue'
 import { isServerUp, OBP_API_DEFAULT_RESOURCE_DOC_VERSION } from '../obp'
 import MessageDocsContent from '@/components/CodeBlock.vue'
 import ProvidersStatusView from '../views/ProvidersStatusView.vue'
+import OIDCDebugView from '../views/OIDCDebugView.vue'
 
 export default async function router(): Promise<any> {
   const isServerActive = await isServerUp()
@@ -59,6 +60,11 @@ export default async function router(): Promise<any> {
         path: '/debug/providers-status',
         name: 'providers-status',
         component: ProvidersStatusView
+      },
+      {
+        path: '/debug/oidc',
+        name: 'oidc-debug',
+        component: OIDCDebugView
       },
       {
         path: '/glossary',

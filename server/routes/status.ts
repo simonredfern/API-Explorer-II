@@ -218,4 +218,265 @@ router.get('/status/providers', (req: Request, res: Response) => {
   }
 })
 
+/**
+ * GET /status/oidc-debug
+ * Get detailed OIDC discovery information for debugging
+ * Shows the full discovery process and configuration for all providers
+ */
+router.get('/status/oidc-debug', async (req: Request, res: Response) => {
+  try {
+    console.log('OIDC Debug: Starting detailed discovery process...')
+
+    // Step 1: Get OBP API well-known endpoint info
+    const obpApiHost = obpClientService.getOBPClientConfig().baseUri
+    const wellKnownEndpoint = `${obpApiHost}/obp/v5.1.0/well-known`
+
+    const step1 = {
+      description: 'Discovery of OIDC providers from OBP API',
+      endpoint: wellKnownEndpoint,
+      success: false,
+      response: null as any,
+      error: null as string | null,
+      providers: [] as any[]
+    }
+
+    try {
+      console.log(`OIDC Debug: Fetching from ${wellKnownEndpoint}`)
+      const wellKnownResponse = await obpClientService.get('/obp/v5.1.0/well-known', null)
+      step1.response = wellKnownResponse
+      step1.success = !!(wellKnownResponse && wellKnownResponse.well_known_uris)
+      step1.providers = wellKnownResponse.well_known_uris || []
+      console.log(`OIDC Debug: Found ${step1.providers.length} providers`)
+    } catch (error) {
+      step1.error = error instanceof Error ? error.message : 'Unknown error'
+      console.error('OIDC Debug: Error fetching OBP well-known:', error)
+    }
+
+    // Step 2: For each provider, fetch their OIDC configuration
+    const providerDetails = []
+
+    for (const provider of step1.providers) {
+      console.log(`OIDC Debug: Fetching OIDC config for ${provider.provider}`)
+      const detail = {
+        providerName: provider.provider,
+        wellKnownUrl: provider.url,
+        success: false,
+        oidcConfiguration: null as any,
+        error: null as string | null,
+        endpoints: {
+          authorization: null as string | null,
+          token: null as string | null,
+          userinfo: null as string | null,
+          jwks: null as string | null
+        },
+        issuer: null as string | null,
+        supportedFeatures: {
+          pkce: false,
+          scopes: [] as string[],
+          responseTypes: [] as string[],
+          grantTypes: [] as string[]
+        }
+      }
+
+      try {
+        const response = await fetch(provider.url)
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+
+        const config = await response.json()
+        detail.oidcConfiguration = config
+        detail.success = true
+        detail.issuer = config.issuer
+
+        // Extract endpoints
+        detail.endpoints.authorization = config.authorization_endpoint
+        detail.endpoints.token = config.token_endpoint
+        detail.endpoints.userinfo = config.userinfo_endpoint
+        detail.endpoints.jwks = config.jwks_uri
+
+        // Extract supported features
+        detail.supportedFeatures.pkce =
+          config.code_challenge_methods_supported?.includes('S256') || false
+        detail.supportedFeatures.scopes = config.scopes_supported || []
+        detail.supportedFeatures.responseTypes = config.response_types_supported || []
+        detail.supportedFeatures.grantTypes = config.grant_types_supported || []
+
+        console.log(`OIDC Debug: Successfully fetched config for ${provider.provider}`)
+      } catch (error) {
+        detail.error = error instanceof Error ? error.message : 'Unknown error'
+        console.error(`OIDC Debug: Error fetching config for ${provider.provider}:`, error)
+      }
+
+      providerDetails.push(detail)
+    }
+
+    // Step 3: Get current provider status from manager
+    const currentStatus = providerManager.getAllProviderStatus()
+    const availableProviders = providerManager.getAvailableProviders()
+
+    // Step 4: Get environment configuration
+    const maskCredential = (value: string | undefined): string => {
+      if (!value || value.length < 6) {
+        return value ? '***masked***' : 'not configured'
+      }
+      return `${value.substring(0, 2)}...${value.substring(value.length - 2)}`
+    }
+
+    const envConfig = {
+      obpOidc: {
+        clientId: maskCredential(process.env.VITE_OBP_OIDC_CLIENT_ID),
+        clientSecret: process.env.VITE_OBP_OIDC_CLIENT_SECRET ? 'configured' : 'not configured',
+        configured: !!(
+          process.env.VITE_OBP_OIDC_CLIENT_ID && process.env.VITE_OBP_OIDC_CLIENT_SECRET
+        )
+      },
+      keycloak: {
+        clientId: maskCredential(process.env.VITE_KEYCLOAK_CLIENT_ID),
+        clientSecret: process.env.VITE_KEYCLOAK_CLIENT_SECRET ? 'configured' : 'not configured',
+        configured: !!(
+          process.env.VITE_KEYCLOAK_CLIENT_ID && process.env.VITE_KEYCLOAK_CLIENT_SECRET
+        )
+      },
+      google: {
+        clientId: maskCredential(process.env.VITE_GOOGLE_CLIENT_ID),
+        clientSecret: process.env.VITE_GOOGLE_CLIENT_SECRET ? 'configured' : 'not configured',
+        configured: !!(process.env.VITE_GOOGLE_CLIENT_ID && process.env.VITE_GOOGLE_CLIENT_SECRET)
+      },
+      github: {
+        clientId: maskCredential(process.env.VITE_GITHUB_CLIENT_ID),
+        clientSecret: process.env.VITE_GITHUB_CLIENT_SECRET ? 'configured' : 'not configured',
+        configured: !!(process.env.VITE_GITHUB_CLIENT_ID && process.env.VITE_GITHUB_CLIENT_SECRET)
+      },
+      custom: {
+        providerName: process.env.VITE_CUSTOM_OIDC_PROVIDER_NAME || 'not configured',
+        clientId: maskCredential(process.env.VITE_CUSTOM_OIDC_CLIENT_ID),
+        clientSecret: process.env.VITE_CUSTOM_OIDC_CLIENT_SECRET ? 'configured' : 'not configured',
+        configured: !!(
+          process.env.VITE_CUSTOM_OIDC_CLIENT_ID && process.env.VITE_CUSTOM_OIDC_CLIENT_SECRET
+        )
+      },
+      shared: {
+        redirectUrl: process.env.VITE_OAUTH2_REDIRECT_URL || 'not configured',
+        obpApiHost: process.env.VITE_OBP_API_HOST || 'not configured'
+      }
+    }
+
+    // Compile summary
+    const summary = {
+      timestamp: new Date().toISOString(),
+      obpApiReachable: step1.success,
+      totalProvidersDiscovered: step1.providers.length,
+      successfulConfigurations: providerDetails.filter((p) => p.success).length,
+      failedConfigurations: providerDetails.filter((p) => !p.success).length,
+      currentlyAvailable: availableProviders.length,
+      configuredInEnvironment: Object.values(envConfig).filter(
+        (c) => typeof c === 'object' && 'configured' in c && c.configured
+      ).length
+    }
+
+    res.json({
+      summary,
+      discoveryProcess: {
+        step1_obpApiDiscovery: step1,
+        step2_providerConfigurations: providerDetails,
+        step3_currentStatus: currentStatus
+      },
+      environment: envConfig,
+      recommendations: generateRecommendations(step1, providerDetails, envConfig, currentStatus),
+      note: 'This debug information shows the complete OIDC discovery process for troubleshooting'
+    })
+
+    console.log('OIDC Debug: Response sent successfully')
+  } catch (error) {
+    console.error('OIDC Debug: Error generating debug info:', error)
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    })
+  }
+})
+
+/**
+ * Generate troubleshooting recommendations based on the discovery results
+ */
+function generateRecommendations(
+  step1: any,
+  providerDetails: any[],
+  envConfig: any,
+  currentStatus: any[]
+): string[] {
+  const recommendations: string[] = []
+
+  // Check if OBP API is reachable
+  if (!step1.success) {
+    recommendations.push(
+      '❌ OBP API well-known endpoint is not reachable. Check that VITE_OBP_API_HOST is correct and the API server is running.'
+    )
+    recommendations.push(`   Current endpoint: ${step1.endpoint}`)
+    if (step1.error) {
+      recommendations.push(`   Error: ${step1.error}`)
+    }
+  } else {
+    recommendations.push('✅ OBP API well-known endpoint is reachable')
+  }
+
+  // Check if any providers were discovered
+  if (step1.providers.length === 0) {
+    recommendations.push(
+      '⚠️  No OIDC providers found in OBP API response. The OBP API may not have any providers configured.'
+    )
+  } else {
+    recommendations.push(`✅ Found ${step1.providers.length} provider(s) from OBP API`)
+  }
+
+  // Check each provider's configuration
+  providerDetails.forEach((provider) => {
+    if (!provider.success) {
+      recommendations.push(
+        `❌ Provider '${provider.providerName}' OIDC configuration failed to load`
+      )
+      recommendations.push(`   Well-known URL: ${provider.wellKnownUrl}`)
+      if (provider.error) {
+        recommendations.push(`   Error: ${provider.error}`)
+      }
+      recommendations.push(
+        `   Check that the provider's well-known endpoint is accessible and returning valid JSON`
+      )
+    } else {
+      recommendations.push(
+        `✅ Provider '${provider.providerName}' OIDC configuration loaded successfully`
+      )
+    }
+
+    // Check if provider has environment credentials
+    const envKey = provider.providerName.replace('-', '')
+    const providerEnv = envConfig[envKey] || envConfig[provider.providerName]
+    if (providerEnv && !providerEnv.configured) {
+      recommendations.push(
+        `⚠️  Provider '${provider.providerName}' is missing environment credentials`
+      )
+      const upperName = provider.providerName.toUpperCase().replace('-', '_')
+      recommendations.push(`   Set VITE_${upperName}_CLIENT_ID and VITE_${upperName}_CLIENT_SECRET`)
+    }
+  })
+
+  // Check current provider status
+  currentStatus.forEach((status) => {
+    if (!status.available) {
+      recommendations.push(`⚠️  Provider '${status.name}' is currently unavailable`)
+      if (status.error) {
+        recommendations.push(`   Error: ${status.error}`)
+      }
+    }
+  })
+
+  if (recommendations.length === 0) {
+    recommendations.push('✅ All checks passed! OIDC configuration looks good.')
+  }
+
+  return recommendations
+}
+
 export default router
