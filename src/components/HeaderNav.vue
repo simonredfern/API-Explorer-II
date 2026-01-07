@@ -52,6 +52,9 @@ const logoffurl = ref('')
 const obpApiVersions = ref(inject(obpApiActiveVersionsKey) || [])
 const obpMessageDocs = ref(Object.keys(inject(obpGroupedMessageDocsKey) || {}))
 
+// Debug menu items
+const debugMenuItems = ref(['/debug/providers-status', '/debug/oidc'])
+
 // Split versions into main and other
 const mainVersions = ['BGv1.3', 'OBPv5.1.0', 'OBPv6.0.0', 'UKv3.1', 'dynamic-endpoints', 'dynamic-entities', 'OBPdynamic-endpoint', 'OBPdynamic-entity']
 const sortedVersions = computed(() => {
@@ -205,6 +208,9 @@ const handleMore = (command: string) => {
   } else if (command.includes('_')) {
     console.log('Navigating to message docs:', command)
     router.push({ name: 'message-docs', params: { id: command } })
+  } else if (command.startsWith('/debug/')) {
+    console.log('Navigating to debug page:', command)
+    router.push(command)
   } else {
     console.log('Navigating to resource docs:', `/resource-docs/${command}`)
     console.log('Current route:', route.path)
@@ -287,6 +293,15 @@ const getCurrentPath = () => {
         id="header-nav-message-docs"
         label="Message Docs"
         :items="obpMessageDocs"
+        :hover-color="headerLinksHoverColor"
+        :background-color="headerLinksBackgroundColor"
+        @select="handleMore"
+      />
+      <SvelteDropdown
+        class="menu-right"
+        id="header-nav-debug"
+        label="Debug"
+        :items="debugMenuItems"
         :hover-color="headerLinksHoverColor"
         :background-color="headerLinksBackgroundColor"
         @select="handleMore"
@@ -494,7 +509,8 @@ button.login-button-disabled {
 
 /* Custom dropdown containers */
 #header-nav-versions,
-#header-nav-message-docs {
+#header-nav-message-docs,
+#header-nav-debug {
   display: inline-block;
   vertical-align: middle;
 }

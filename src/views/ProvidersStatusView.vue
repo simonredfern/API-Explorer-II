@@ -31,6 +31,13 @@
     <el-alert type="info" :closable="false" style="margin-bottom: 20px">
       <p>This page shows which OAuth2/OIDC identity providers are configured and available for login.</p>
       <p><strong>Note:</strong> Client secrets are masked for security.</p>
+      <p>
+        <strong>Need more details?</strong> Visit the
+        <router-link to="/debug/oidc" style="color: #409eff; text-decoration: underline;">
+          OIDC Debug Page
+        </router-link>
+        for detailed discovery process information.
+      </p>
     </el-alert>
 
     <div v-if="loading" v-loading="loading" class="loading-container">
