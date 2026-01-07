@@ -94,24 +94,38 @@ export class OAuth2ProviderManager {
 
     // Multi-provider mode: fetch from OBP API
     console.log('OAuth2ProviderManager: Fetching well-known URIs from OBP API...')
+    console.log(
+      `OAuth2ProviderManager: Target URL: ${this.obpClientService.getOBPClientConfig().baseUri}/obp/v5.1.0/well-known`
+    )
 
     try {
       // Use OBPClientService to call the API
       const response = await this.obpClientService.get('/obp/v5.1.0/well-known', null)
 
+      console.log(
+        'OAuth2ProviderManager: Raw response from OBP API:',
+        JSON.stringify(response, null, 2)
+      )
+
       if (!response.well_known_uris || response.well_known_uris.length === 0) {
         console.warn('OAuth2ProviderManager: No well-known URIs found in OBP API response')
+        console.warn('OAuth2ProviderManager: Response keys:', Object.keys(response))
         return []
       }
 
       console.log(`OAuth2ProviderManager: Found ${response.well_known_uris.length} providers:`)
       response.well_known_uris.forEach((uri: WellKnownUri) => {
         console.log(`  - ${uri.provider}: ${uri.url}`)
+        console.log(`    Testing accessibility of: ${uri.url}`)
       })
 
       return response.well_known_uris
     } catch (error) {
       console.error('OAuth2ProviderManager: Failed to fetch well-known URIs:', error)
+      console.error(
+        'OAuth2ProviderManager: Error details:',
+        error instanceof Error ? error.message : String(error)
+      )
       console.warn('OAuth2ProviderManager: Falling back to no providers')
       return []
     }
