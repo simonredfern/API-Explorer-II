@@ -219,6 +219,40 @@ router.get('/status/providers', (req: Request, res: Response) => {
 })
 
 /**
+ * POST /status/providers/:providerName/retry
+ * Manually retry initialization for a failed provider
+ */
+router.post('/status/providers/:providerName/retry', async (req: Request, res: Response) => {
+  try {
+    const { providerName } = req.params
+    console.log(`Status: Retrying provider: ${providerName}`)
+
+    const success = await providerManager.retryProvider(providerName)
+
+    if (success) {
+      const status = providerManager.getProviderStatus(providerName)
+      res.json({
+        success: true,
+        message: `Provider ${providerName} successfully initialized`,
+        status
+      })
+    } else {
+      res.status(400).json({
+        success: false,
+        message: `Failed to initialize provider ${providerName}`,
+        error: 'Initialization failed'
+      })
+    }
+  } catch (error) {
+    console.error('Status: Error retrying provider:', error)
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+/**
  * GET /status/oidc-debug
  * Get detailed OIDC discovery information for debugging
  * Shows the full discovery process and configuration for all providers

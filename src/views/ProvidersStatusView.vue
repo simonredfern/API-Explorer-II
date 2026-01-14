@@ -117,9 +117,43 @@
               <label>Last Checked:</label>
               <span>{{ formatDate(provider.lastChecked) }}</span>
             </div>
-            <div v-if="provider.error" class="provider-detail error-detail">
-              <label>Error:</label>
-              <span class="error-message">{{ provider.error }}</span>
+
+            <!-- Enhanced Error Display -->
+            <div v-if="provider.error" class="error-section">
+              <div class="error-header">
+                <el-icon class="error-icon"><WarningFilled /></el-icon>
+                <span class="error-category">{{ getErrorCategory(provider.error) }}</span>
+              </div>
+              <div class="error-message">
+                <strong>Error:</strong> {{ getFormattedError(provider.error) }}
+              </div>
+
+              <!-- Troubleshooting Hints -->
+              <div class="troubleshooting-hints">
+                <div class="hint-title">
+                  <el-icon><InfoFilled /></el-icon>
+                  <strong>Troubleshooting:</strong>
+                </div>
+                <ul class="hint-list">
+                  <li v-for="(hint, index) in getTroubleshootingHints(provider.error)" :key="index">
+                    {{ hint }}
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Retry Button -->
+              <div class="retry-section">
+                <el-button
+                  type="primary"
+                  size="small"
+                  :loading="retryingProviders.has(provider.name)"
+                  @click="retryProvider(provider.name)"
+                >
+                  <el-icon><Refresh /></el-icon>
+                  {{ retryingProviders.has(provider.name) ? 'Retrying...' : 'Retry Now' }}
+                </el-button>
+                <span class="retry-hint">Manual retry to reinitialize this provider</span>
+              </div>
             </div>
           </div>
         </el-card>
@@ -164,7 +198,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Refresh, InfoFilled } from '@element-plus/icons-vue'
+import { Refresh, InfoFilled, WarningFilled } from '@element-plus/icons-vue'
 
 interface ProviderStatus {
   name: string
@@ -195,6 +229,7 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const status = ref<StatusResponse | null>(null)
 const activeCollapse = ref<string[]>(['obpOidc', 'keycloak', 'google', 'github', 'custom'])
+const retryingProviders = ref<Set<string>>(new Set())
 
 const fetchStatus = async () => {
   loading.value = true
@@ -218,6 +253,113 @@ const refreshStatus = async () => {
   ElMessage.info('Refreshing provider status...')
   await fetchStatus()
   ElMessage.success('Provider status refreshed')
+}
+
+const retryProvider = async (providerName: string) => {
+  retryingProviders.value.add(providerName)
+
+  try {
+    const response = await fetch(`/api/status/providers/${providerName}/retry`, {
+      method: 'POST'
+    })
+
+    const result = await response.json()
+
+    if (response.ok && result.success) {
+      ElMessage.success(`Provider ${providerName} successfully initialized!`)
+      await fetchStatus() // Refresh the status
+    } else {
+      ElMessage.error(result.message || `Failed to retry provider ${providerName}`)
+    }
+  } catch (err) {
+    ElMessage.error(`Error retrying provider: ${err instanceof Error ? err.message : 'Unknown error'}`)
+  } finally {
+    retryingProviders.value.delete(providerName)
+  }
+}
+
+const getErrorCategory = (errorMsg: string): string => {
+  if (!errorMsg) return 'Unknown Error'
+
+  const msg = errorMsg.toLowerCase()
+
+  if (msg.includes('http 4') || msg.includes('http 5')) {
+    return 'HTTP Error'
+  } else if (msg.includes('timeout') || msg.includes('network') || msg.includes('fetch')) {
+    return 'Network Error'
+  } else if (msg.includes('not configured') || msg.includes('no well-known')) {
+    return 'Configuration Error'
+  } else if (msg.includes('failed to initialize')) {
+    return 'Initialization Error'
+  } else if (msg.includes('invalid') || msg.includes('parse')) {
+    return 'Validation Error'
+  }
+
+  return 'General Error'
+}
+
+const getFormattedError = (errorMsg: string): string => {
+  if (!errorMsg) return 'Unknown error occurred'
+
+  // Make common errors more user-friendly
+  const msg = errorMsg.toLowerCase()
+
+  if (msg.includes('http 404')) {
+    return 'Provider endpoint not found (HTTP 404). The OIDC configuration endpoint is not accessible.'
+  } else if (msg.includes('http 401') || msg.includes('http 403')) {
+    return 'Access denied (HTTP 401/403). Authentication or authorization required.'
+  } else if (msg.includes('http 500') || msg.includes('http 502') || msg.includes('http 503')) {
+    return 'Provider server error (HTTP 5xx). The identity provider is experiencing issues.'
+  } else if (msg.includes('timeout')) {
+    return 'Connection timeout. The provider is not responding in a timely manner.'
+  } else if (msg.includes('network')) {
+    return 'Network connectivity issue. Cannot reach the provider server.'
+  } else if (msg.includes('no well-known url configured')) {
+    return 'Missing well-known URL. The provider configuration is incomplete.'
+  } else if (msg.includes('failed to initialize')) {
+    return 'Initialization failed. Could not create OAuth2 client for this provider.'
+  }
+
+  return errorMsg
+}
+
+const getTroubleshootingHints = (errorMsg: string): string[] => {
+  if (!errorMsg) return ['Check server logs for more details']
+
+  const msg = errorMsg.toLowerCase()
+  const hints: string[] = []
+
+  if (msg.includes('http 404')) {
+    hints.push('Verify the provider\'s well-known URL is correct in the OBP API configuration')
+    hints.push('Check that the identity provider is properly deployed and accessible')
+    hints.push('Ensure the OIDC discovery endpoint exists at /.well-known/openid-configuration')
+  } else if (msg.includes('http 401') || msg.includes('http 403')) {
+    hints.push('Check if the provider requires authentication for the discovery endpoint')
+    hints.push('Verify API credentials and permissions')
+  } else if (msg.includes('http 5')) {
+    hints.push('The identity provider may be down or restarting')
+    hints.push('Check the provider\'s status page or logs')
+    hints.push('Try again in a few minutes')
+  } else if (msg.includes('timeout') || msg.includes('network')) {
+    hints.push('Verify network connectivity between API Explorer and the identity provider')
+    hints.push('Check firewall rules and DNS resolution')
+    hints.push('Ensure the provider URL is accessible from the server')
+    hints.push('Try accessing the well-known URL manually from the server')
+  } else if (msg.includes('no well-known') || msg.includes('not configured')) {
+    hints.push('Check environment variables for this provider')
+    hints.push('Verify the provider is configured in the OBP API')
+    hints.push('Review the SETUP_MULTI_PROVIDER.md documentation')
+  } else if (msg.includes('failed to initialize')) {
+    hints.push('Check the provider\'s OIDC configuration is valid')
+    hints.push('Verify client ID and client secret are correct')
+    hints.push('Review server logs for detailed error messages')
+  } else {
+    hints.push('Check server logs for detailed error information')
+    hints.push('Verify the provider configuration in environment variables')
+    hints.push('Visit the OIDC Debug page for more details')
+  }
+
+  return hints
 }
 
 const getProviderDisplayName = (key: string): string => {
@@ -412,11 +554,91 @@ h2 {
   align-items: flex-start;
 }
 
-.error-message {
+/* Enhanced Error Section */
+.error-section {
+  background: #fef0f0;
+  padding: 16px;
+  border-radius: 6px;
+  border-left: 4px solid #f56c6c;
+  margin-top: 12px;
+}
+
+.error-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.error-icon {
   color: #f56c6c;
-  font-family: 'Courier New', monospace;
+  font-size: 18px;
+}
+
+.error-category {
+  font-weight: 600;
+  color: #f56c6c;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.error-message {
+  background: #fff;
+  padding: 10px 12px;
+  border-radius: 4px;
+  border: 1px solid #fbc4c4;
+  margin-bottom: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #303133;
+}
+
+.error-message strong {
+  color: #f56c6c;
+}
+
+.troubleshooting-hints {
+  background: #fff;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #e4e7ed;
+  margin-bottom: 12px;
+}
+
+.hint-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: #409eff;
+  font-size: 13px;
+}
+
+.hint-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #606266;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.hint-list li {
+  margin-bottom: 4px;
+}
+
+.retry-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #fbc4c4;
+}
+
+.retry-hint {
   font-size: 12px;
-  word-break: break-all;
+  color: #909399;
+  font-style: italic;
 }
 
 /* Environment Config */
