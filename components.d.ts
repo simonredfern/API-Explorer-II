@@ -45,6 +45,7 @@ declare module 'vue' {
     GlossarySearchNav: typeof import('./src/components/GlossarySearchNav.vue')['default']
     HeaderNav: typeof import('./src/components/HeaderNav.vue')['default']
     Menu: typeof import('./src/components/Menu.vue')['default']
+    MessageDocsJsonSchemaSearchNav: typeof import('./src/components/MessageDocsJsonSchemaSearchNav.vue')['default']
     MessageDocsSearchNav: typeof import('./src/components/MessageDocsSearchNav.vue')['default']
     Preview: typeof import('./src/components/Preview.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

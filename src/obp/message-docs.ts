@@ -43,12 +43,53 @@ export async function getOBPMessageDocs(item: string): Promise<any> {
   return await get(`obp/${OBP_API_VERSION}/message-docs/${item}`)
 }
 
-export function getGroupedMessageDocs(docs: any): Promise<any> {
+// Get Message Docs JSON Schema
+export async function getOBPMessageDocsJsonSchema(item: string): Promise<any> {
+  const logMessage = `Loading message docs JSON schema { connector: ${item} }`
+  console.log(logMessage)
+  updateLoadingInfoMessage(logMessage)
+  return await get(`obp/v6.0.0/message-docs/${item}/json-schema`)
+}
+
+export function getGroupedMessageDocs(docs: any): any {
   return docs.message_docs.reduce((values: any, doc: any) => {
     const tag = doc.adapter_implementation.group.replace('-', '').trim()
     ;(values[tag] = values[tag] || []).push(doc)
     return values
   }, {})
+}
+
+export function getGroupedMessageDocsJsonSchema(docs: any): any {
+  if (!docs.definitions || typeof docs.definitions !== 'object') {
+    return {}
+  }
+
+  // Convert definitions object to array format and group by InBound/OutBound prefix
+  const grouped: any = {}
+  Object.keys(docs.definitions).forEach((methodName: string) => {
+    const schema = docs.definitions[methodName]
+
+    // Determine category based on method name prefix
+    let category = 'Uncategorized'
+    if (methodName.startsWith('InBound')) {
+      category = 'Inbound Methods'
+    } else if (methodName.startsWith('OutBound')) {
+      category = 'Outbound Methods'
+    }
+
+    if (!grouped[category]) {
+      grouped[category] = []
+    }
+
+    grouped[category].push({
+      method_name: methodName,
+      category: category,
+      request_schema: schema,
+      response_schema: schema
+    })
+  })
+
+  return grouped
 }
 
 export async function cacheDoc(cacheStorageOfMessageDocs: any): Promise<any> {
@@ -71,11 +112,30 @@ async function getCacheDoc(cacheStorageOfMessageDocs: any): Promise<any> {
   return await cacheDoc(cacheStorageOfMessageDocs)
 }
 
-export async function cache(
-  cacheStorage: any,
-  cachedResponse: any,
-  worker: any
-): Promise<any> {
+export async function cacheDocJsonSchema(cacheStorageOfMessageDocsJsonSchema: any): Promise<any> {
+  const messageDocsJsonSchema = await connectors.reduce(async (agroup: any, connector: any) => {
+    const logMessage = `Caching message docs JSON schema { connector: ${connector} }`
+    console.log(logMessage)
+    updateLoadingInfoMessage(logMessage)
+    const group = await agroup
+    const docs = await getOBPMessageDocsJsonSchema(connector)
+    if (!Object.keys(docs).includes('code')) {
+      group[connector] = getGroupedMessageDocsJsonSchema(docs)
+    }
+    return group
+  }, Promise.resolve({}))
+  await cacheStorageOfMessageDocsJsonSchema.put(
+    '/',
+    new Response(JSON.stringify(messageDocsJsonSchema))
+  )
+  return messageDocsJsonSchema
+}
+
+async function getCacheDocJsonSchema(cacheStorageOfMessageDocsJsonSchema: any): Promise<any> {
+  return await cacheDocJsonSchema(cacheStorageOfMessageDocsJsonSchema)
+}
+
+export async function cache(cacheStorage: any, cachedResponse: any, worker: any): Promise<any> {
   try {
     worker.postMessage('update-message-docs')
     return await cachedResponse.json()
@@ -85,5 +145,22 @@ export async function cache(
     const isServerActive = await isServerUp()
     if (!isServerActive) throw new Error('API Server is not responding.')
     return await getCacheDoc(cacheStorage)
+  }
+}
+
+export async function cacheJsonSchema(
+  cacheStorage: any,
+  cachedResponse: any,
+  worker: any
+): Promise<any> {
+  try {
+    worker.postMessage('update-message-docs-json-schema')
+    return await cachedResponse.json()
+  } catch (error) {
+    console.warn('No message docs JSON schema cache or malformed cache.')
+    console.log('Caching message docs JSON schema...')
+    const isServerActive = await isServerUp()
+    if (!isServerActive) throw new Error('API Server is not responding.')
+    return await getCacheDocJsonSchema(cacheStorage)
   }
 }

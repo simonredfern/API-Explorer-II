@@ -30,6 +30,8 @@ import GlossaryView from '../views/GlossaryView.vue'
 import HelpView from '../views/HelpView.vue'
 import MessageDocsView from '../views/MessageDocsView.vue'
 import MessageDocsListView from '../views/MessageDocsListView.vue'
+import MessageDocsJsonSchemaView from '../views/MessageDocsJsonSchemaView.vue'
+import MessageDocsJsonSchemaListView from '../views/MessageDocsJsonSchemaListView.vue'
 import BodyView from '../views/BodyView.vue'
 import Content from '../components/Content.vue'
 import Preview from '../components/Preview.vue'
@@ -85,6 +87,16 @@ export default async function router(): Promise<any> {
         path: '/message-docs/:id',
         name: 'message-docs',
         component: isServerActive ? MessageDocsView : InternalServerErrorView
+      },
+      {
+        path: '/message-docs-json-schema',
+        name: 'message-docs-json-schema-list',
+        component: isServerActive ? MessageDocsJsonSchemaListView : InternalServerErrorView
+      },
+      {
+        path: '/message-docs-json-schema/:id',
+        name: 'message-docs-json-schema',
+        component: isServerActive ? MessageDocsJsonSchemaView : InternalServerErrorView
       },
       {
         path: '/resource-docs',

@@ -38,7 +38,12 @@ import { createI18n } from 'vue-i18n'
 import { languages, defaultLocale } from './language'
 
 import { cache as cacheResourceDocs, cacheDoc as cacheResourceDocsDoc } from './obp/resource-docs'
-import { cache as cacheMessageDocs, cacheDoc as cacheMessageDocsDoc } from './obp/message-docs'
+import {
+  cache as cacheMessageDocs,
+  cacheDoc as cacheMessageDocsDoc,
+  cacheJsonSchema as cacheMessageDocsJsonSchema,
+  cacheDocJsonSchema as cacheMessageDocsJsonSchemaDoc
+} from './obp/message-docs'
 import { OBP_API_VERSION, getMyAPICollections, getMyAPICollectionsEndpoint } from './obp'
 import { getOBPGlossary } from './obp/glossary'
 
@@ -47,16 +52,18 @@ import './assets/main.css'
 import '@fontsource/roboto/300.css'
 import '@fontsource/roboto/400.css'
 import '@fontsource/roboto/700.css'
+
+import { getCacheStorageInfo } from './obp/common-functions'
 import {
   obpApiActiveVersionsKey,
   obpApiHostKey,
   obpGlossaryKey,
   obpGroupedMessageDocsKey,
+  obpGroupedMessageDocsJsonSchemaKey,
   obpGroupedResourceDocsKey,
   obpMyCollectionsEndpointKey,
   obpResourceDocsKey
 } from './obp/keys'
-import { getCacheStorageInfo } from './obp/common-functions'
 ;(async () => {
   const app = createApp(App)
   const router = await appRouter()
@@ -272,6 +279,13 @@ async function setupData(app: App<Element>, worker: Worker) {
     const cacheStorageOfMessageDocs = await caches.open('obp-message-docs-cache') // Please note: The global 'caches' read-only property returns the 'CacheStorage' object associated with the current context.
     // 'match': Checks if a given Request is a key in any of the Cache objects that the CacheStorage object tracks, and returns a Promise that resolves to that match.
     const cachedResponseOfMessageDocs = await cacheStorageOfMessageDocs.match('/')
+    // 'open': Returns a Promise that resolves to the Cache object matching the cacheName(obp-message-docs-json-schema-cache) (a new cache is created if it doesn't already exist.)
+    const cacheStorageOfMessageDocsJsonSchema = await caches.open(
+      'obp-message-docs-json-schema-cache'
+    ) // Please note: The global 'caches' read-only property returns the 'CacheStorage' object associated with the current context.
+    // 'match': Checks if a given Request is a key in any of the Cache objects that the CacheStorage object tracks, and returns a Promise that resolves to that match.
+    const cachedResponseOfMessageDocsJsonSchema =
+      await cacheStorageOfMessageDocsJsonSchema.match('/')
 
     // Listen to Web worker
     worker.onmessage = async (event) => {
@@ -286,6 +300,10 @@ async function setupData(app: App<Element>, worker: Worker) {
         await cacheMessageDocsDoc(cacheStorageOfMessageDocs)
         console.log('Message Docs cache was updated.')
       }
+      if (event.data === 'update-message-docs-json-schema') {
+        await cacheMessageDocsJsonSchemaDoc(cacheStorageOfMessageDocsJsonSchema)
+        console.log('Message Docs JSON Schema cache was updated.')
+      }
     }
 
     const { resourceDocs, groupedDocs } = await cacheResourceDocs(
@@ -298,6 +316,11 @@ async function setupData(app: App<Element>, worker: Worker) {
       cachedResponseOfMessageDocs,
       worker
     )
+    const messageDocsJsonSchema = await cacheMessageDocsJsonSchema(
+      cacheStorageOfMessageDocsJsonSchema,
+      cachedResponseOfMessageDocsJsonSchema,
+      worker
+    )
 
     // Provide data to a component's descendants
     // App-level provides are available to all components rendered in the app
@@ -306,6 +329,7 @@ async function setupData(app: App<Element>, worker: Worker) {
     app.provide(obpApiActiveVersionsKey, Object.keys(resourceDocs).sort())
     app.provide(obpGroupedResourceDocsKey, groupedDocs)
     app.provide(obpGroupedMessageDocsKey, messageDocs)
+    app.provide(obpGroupedMessageDocsJsonSchemaKey, messageDocsJsonSchema)
     app.provide(obpApiHostKey, import.meta.env.VITE_OBP_API_HOST)
     const glossary = await getOBPGlossary()
     app.provide(obpGlossaryKey, glossary)
