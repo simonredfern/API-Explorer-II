@@ -44,6 +44,7 @@ declare module 'vue' {
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     GlossarySearchNav: typeof import('./src/components/GlossarySearchNav.vue')['default']
     HeaderNav: typeof import('./src/components/HeaderNav.vue')['default']
+    JsonSchemaViewer: typeof import('./src/components/JsonSchemaViewer.vue')['default']
     Menu: typeof import('./src/components/Menu.vue')['default']
     MessageDocsJsonSchemaSearchNav: typeof import('./src/components/MessageDocsJsonSchemaSearchNav.vue')['default']
     MessageDocsSearchNav: typeof import('./src/components/MessageDocsSearchNav.vue')['default']

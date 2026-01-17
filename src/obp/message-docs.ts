@@ -60,36 +60,74 @@ export function getGroupedMessageDocs(docs: any): any {
 }
 
 export function getGroupedMessageDocsJsonSchema(docs: any): any {
-  if (!docs.definitions || typeof docs.definitions !== 'object') {
-    return {}
+  console.log('getGroupedMessageDocsJsonSchema - Raw docs:', docs)
+
+  // Access messages from the correct path: properties.messages.items
+  const messages = docs.properties?.messages?.items
+  const definitions = docs.definitions || {}
+
+  if (!messages || !Array.isArray(messages)) {
+    console.log('No messages array found, falling back to definitions')
+    // Fallback to old structure if messages array doesn't exist
+    if (!definitions || typeof definitions !== 'object') {
+      console.log('No definitions object found either')
+      return { grouped: {}, definitions: {} }
+    }
+
+    // Convert definitions object to array format and group by InBound/OutBound prefix
+    const grouped: any = {}
+    Object.keys(definitions).forEach((methodName: string) => {
+      const schema = definitions[methodName]
+
+      // Determine category based on method name prefix
+      let category = 'Uncategorized'
+      if (methodName.startsWith('InBound')) {
+        category = 'Inbound Methods'
+      } else if (methodName.startsWith('OutBound')) {
+        category = 'Outbound Methods'
+      }
+
+      if (!grouped[category]) {
+        grouped[category] = []
+      }
+
+      grouped[category].push({
+        method_name: methodName,
+        category: category,
+        outbound_schema: schema,
+        inbound_schema: schema
+      })
+    })
+
+    console.log('Grouped definitions result:', grouped)
+    return { grouped, definitions }
   }
 
-  // Convert definitions object to array format and group by InBound/OutBound prefix
+  // Group messages by adapter_implementation.group
+  console.log('Processing messages array')
   const grouped: any = {}
-  Object.keys(docs.definitions).forEach((methodName: string) => {
-    const schema = docs.definitions[methodName]
-
-    // Determine category based on method name prefix
-    let category = 'Uncategorized'
-    if (methodName.startsWith('InBound')) {
-      category = 'Inbound Methods'
-    } else if (methodName.startsWith('OutBound')) {
-      category = 'Outbound Methods'
-    }
+  messages.forEach((message: any) => {
+    const category =
+      message.adapter_implementation?.group?.replace('-', '').trim() || 'Uncategorized'
 
     if (!grouped[category]) {
       grouped[category] = []
     }
 
+    // Keep original schemas with $refs intact
     grouped[category].push({
-      method_name: methodName,
+      method_name: message.process,
       category: category,
-      request_schema: schema,
-      response_schema: schema
+      description: message.description,
+      outbound_schema: message.outbound_schema,
+      inbound_schema: message.inbound_schema,
+      message_format: message.message_format
     })
   })
 
-  return grouped
+  console.log('Grouped messages result:', grouped)
+  console.log('Definitions:', definitions)
+  return { grouped, definitions }
 }
 
 export async function cacheDoc(cacheStorageOfMessageDocs: any): Promise<any> {
