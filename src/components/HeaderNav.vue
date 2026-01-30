@@ -36,7 +36,7 @@ import {
   HEADER_LINKS_HOVER_COLOR as headerLinksHoverColorSetting,
   HEADER_LINKS_BACKGROUND_COLOR as headerLinksBackgroundColorSetting
 } from '../obp/style-setting'
-import { obpApiActiveVersionsKey, obpGroupedMessageDocsKey, obpMyCollectionsEndpointKey } from '@/obp/keys'
+import { obpApiActiveVersionsKey, obpGroupedMessageDocsKey, obpGroupedMessageDocsJsonSchemaKey, obpMyCollectionsEndpointKey } from '@/obp/keys'
 import SvelteDropdown from './SvelteDropdown.vue'
 
 const route = useRoute()
@@ -51,6 +51,14 @@ const loginUsername = ref('')
 const logoffurl = ref('')
 const obpApiVersions = ref(inject(obpApiActiveVersionsKey) || [])
 const obpMessageDocs = ref(Object.keys(inject(obpGroupedMessageDocsKey) || {}))
+const obpMessageDocsJsonSchema = ref(Object.keys(inject(obpGroupedMessageDocsJsonSchemaKey) || {}))
+
+// Combine message docs with JSON Schema items (with "J Schema" postfix)
+const combinedMessageDocs = computed(() => {
+  const regularDocs = obpMessageDocs.value || []
+  const jsonSchemaDocs = (obpMessageDocsJsonSchema.value || []).map(connector => `${connector} J Schema`)
+  return [...regularDocs, ...jsonSchemaDocs]
+})
 
 // Debug menu items
 const debugMenuItems = ref(['/debug/providers-status', '/debug/oidc'])
@@ -189,8 +197,8 @@ const setActive = (target: HTMLElement | null) => {
   }
 }
 
-const handleMore = (command: string) => {
-  console.log('handleMore called with command:', command)
+const handleMore = (command: string, source?: string) => {
+  console.log('handleMore called with command:', command, 'source:', source)
 
   // Ignore divider
   if (command === '---') {
@@ -201,11 +209,22 @@ const handleMore = (command: string) => {
   if (element !== null) {
     element.textContent = command;
   }
-  if (command === '/message-docs') {
+
+  // Check if command ends with " J Schema" - if so, it's a JSON Schema message doc
+  if (command.endsWith(' J Schema')) {
+    const connector = command.replace(' J Schema', '')
+    console.log('Navigating to message docs JSON schema:', connector)
+    router.push({ name: 'message-docs-json-schema', params: { id: connector } })
+  } else if (command === '/message-docs') {
     // Navigate to message docs list
     console.log('Navigating to message docs list')
     router.push({ name: 'message-docs-list' })
+  } else if (command === '/message-docs-json-schema') {
+    // Navigate to message docs JSON schema list
+    console.log('Navigating to message docs JSON schema list')
+    router.push({ name: 'message-docs-json-schema-list' })
   } else if (command.includes('_')) {
+    // Regular message docs (connector names contain underscores)
     console.log('Navigating to message docs:', command)
     router.push({ name: 'message-docs', params: { id: command } })
   } else if (command.startsWith('/debug/')) {
@@ -292,7 +311,7 @@ const getCurrentPath = () => {
         class="menu-right"
         id="header-nav-message-docs"
         label="Message Docs"
-        :items="obpMessageDocs"
+        :items="combinedMessageDocs"
         :hover-color="headerLinksHoverColor"
         :background-color="headerLinksBackgroundColor"
         @select="handleMore"
