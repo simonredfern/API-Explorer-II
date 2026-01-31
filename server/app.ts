@@ -118,20 +118,10 @@ console.info(
   `Session maxAge configured: ${sessionMaxAgeSeconds} seconds (${sessionMaxAgeSeconds / 60} minutes)`
 )
 app.use(express.json())
-// Session secret - MUST be set in production
-const sessionSecret =
-  process.env.VITE_OBP_SERVER_SESSION_PASSWORD || 'dev-secret-change-in-production'
-if (!process.env.VITE_OBP_SERVER_SESSION_PASSWORD) {
-  console.warn(
-    'WARNING: VITE_OBP_SERVER_SESSION_PASSWORD is not set. Using default secret for development only.'
-  )
-  console.warn('WARNING: Set VITE_OBP_SERVER_SESSION_PASSWORD in your .env file for production!')
-}
-
 let sessionObject = {
   store: redisStore,
   name: 'obp-api-explorer-ii.sid', // CRITICAL: Unique cookie name to prevent conflicts with other apps on localhost
-  secret: sessionSecret,
+  secret: process.env.VITE_OBP_SERVER_SESSION_PASSWORD,
   resave: false,
   saveUninitialized: false, // Don't save empty sessions (better for authenticated apps)
   cookie: {
