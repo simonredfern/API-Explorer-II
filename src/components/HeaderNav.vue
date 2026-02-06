@@ -64,7 +64,7 @@ const combinedMessageDocs = computed(() => {
 const debugMenuItems = ref(['/debug/providers-status', '/debug/oidc'])
 
 // Split versions into main and other
-const mainVersions = ['BGv1.3', 'OBPv5.1.0', 'OBPv6.0.0', 'UKv3.1', 'dynamic-endpoints', 'dynamic-entities', 'OBPdynamic-endpoint', 'OBPdynamic-entity']
+const mainVersions = ['BGv1.3', 'BGv2', 'OBPv5.1.0', 'OBPv6.0.0', 'UKv3.1', 'dynamic-endpoints', 'dynamic-entities', 'OBPdynamic-endpoint', 'OBPdynamic-entity']
 const sortedVersions = computed(() => {
   const all = obpApiVersions.value || []
   console.log('All available versions:', all)
