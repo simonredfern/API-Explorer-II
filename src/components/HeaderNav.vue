@@ -28,7 +28,7 @@
 <script setup lang="ts">
 import { ref, inject, watchEffect, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { OBP_API_DEFAULT_RESOURCE_DOC_VERSION, getCurrentUser } from '../obp'
+import { OBP_API_DEFAULT_RESOURCE_DOC_VERSION, getCurrentUser, getOBPBanks } from '../obp'
 import { getOBPAPIVersions } from '../obp/api-version'
 import {
   LOGO_URL as logoSource,
@@ -60,8 +60,20 @@ const combinedMessageDocs = computed(() => {
   return [...regularDocs, ...jsonSchemaDocs]
 })
 
-// Debug menu items
-const debugMenuItems = ref(['/debug/providers-status', '/debug/oidc'])
+// Help menu items (includes debug pages)
+const helpMenuItems = ref(['/help', '/debug/providers-status', '/debug/oidc'])
+
+// Banks state
+const banks = ref<Array<{ id: string; short_name: string; full_name: string }>>([])
+const bankItems = computed(() => banks.value.map(b => b.short_name || b.id))
+const selectedBankId = ref(localStorage.getItem('obp-selected-bank-id') || '')
+const banksDropdownLabel = computed(() => {
+  if (selectedBankId.value) {
+    const bank = banks.value.find(b => b.id === selectedBankId.value)
+    return bank ? (bank.short_name || bank.id) : 'Banks'
+  }
+  return 'Banks'
+})
 
 // Split versions into main and other
 const mainVersions = ['BGv1.3', 'OBPv5.1.0', 'OBPv6.0.0', 'UKv3.1', 'dynamic-endpoints', 'dynamic-entities', 'OBPdynamic-endpoint', 'OBPdynamic-entity']
@@ -227,6 +239,9 @@ const handleMore = (command: string, source?: string) => {
     // Regular message docs (connector names contain underscores)
     console.log('Navigating to message docs:', command)
     router.push({ name: 'message-docs', params: { id: command } })
+  } else if (command === '/help') {
+    console.log('Navigating to help page')
+    router.push('/help')
   } else if (command.startsWith('/debug/')) {
     console.log('Navigating to debug page:', command)
     router.push(command)
@@ -238,7 +253,24 @@ const handleMore = (command: string, source?: string) => {
   }
 }
 
+const handleBankSelect = (shortName: string) => {
+  const bank = banks.value.find(b => (b.short_name || b.id) === shortName)
+  if (bank) {
+    selectedBankId.value = bank.id
+    localStorage.setItem('obp-selected-bank-id', bank.id)
+  }
+}
+
 onMounted(async () => {
+  // Fetch banks
+  getOBPBanks().then((data) => {
+    if (data && data.banks && Array.isArray(data.banks)) {
+      banks.value = data.banks
+    }
+  }).catch((error) => {
+    console.error('Failed to fetch banks:', error)
+  })
+
   // Fetch available providers
   await fetchAvailableProviders()
 
@@ -292,9 +324,24 @@ const getCurrentPath = () => {
       <RouterLink class="router-link" id="header-nav-glossary" to="/glossary">{{
         $t('header.glossary')
       }}</RouterLink>
-      <RouterLink class="router-link" id="header-nav-help" to="/help">{{
-        $t('header.help')
-      }}</RouterLink>
+      <SvelteDropdown
+        class="menu-right"
+        id="header-nav-help"
+        label="Help"
+        :items="helpMenuItems"
+        :hover-color="headerLinksHoverColor"
+        :background-color="headerLinksBackgroundColor"
+        @select="handleMore"
+      />
+      <SvelteDropdown
+        class="menu-right"
+        id="header-nav-banks"
+        :label="banksDropdownLabel"
+        :items="bankItems"
+        :hover-color="headerLinksHoverColor"
+        :background-color="headerLinksBackgroundColor"
+        @select="handleBankSelect"
+      />
       <a v-if="showObpApiManagerButton && hasObpApiManagerHost" v-bind:href="obpApiManagerHost" class="router-link" id="header-nav-api-manager">
         {{ $t('header.api_manager') }}
       </a>
@@ -312,15 +359,6 @@ const getCurrentPath = () => {
         id="header-nav-message-docs"
         label="Message Docs"
         :items="combinedMessageDocs"
-        :hover-color="headerLinksHoverColor"
-        :background-color="headerLinksBackgroundColor"
-        @select="handleMore"
-      />
-      <SvelteDropdown
-        class="menu-right"
-        id="header-nav-debug"
-        label="Debug"
-        :items="debugMenuItems"
         :hover-color="headerLinksHoverColor"
         :background-color="headerLinksBackgroundColor"
         @select="handleMore"
@@ -529,7 +567,8 @@ button.login-button-disabled {
 /* Custom dropdown containers */
 #header-nav-versions,
 #header-nav-message-docs,
-#header-nav-debug {
+#header-nav-help,
+#header-nav-banks {
   display: inline-block;
   vertical-align: middle;
 }
