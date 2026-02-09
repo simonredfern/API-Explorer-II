@@ -201,5 +201,5 @@ export async function getMyAPICollectionsEndpoint(collectionName: string): Promi
 }
 
 export async function getOBPBanks(): Promise<any> {
-  return await get(`obp/${OBP_API_VERSION}/banks`)
+  return await get(`obp/v6.0.0/banks`)
 }

@@ -64,13 +64,21 @@ const combinedMessageDocs = computed(() => {
 const helpMenuItems = ref(['/help', '/debug/providers-status', '/debug/oidc'])
 
 // Banks state
-const banks = ref<Array<{ id: string; short_name: string; full_name: string }>>([])
-const bankItems = computed(() => banks.value.map(b => b.short_name || b.id))
+const banks = ref<Array<{ bank_id: string; bank_code: string; full_name: string }>>([])
+const bankItems = computed(() =>
+  [...banks.value]
+    .sort((a, b) => (a.full_name || a.bank_id || '').localeCompare(b.full_name || b.bank_id || ''))
+    .map(b => {
+      const name = b.full_name || b.bank_id || ''
+      const id = b.bank_id || ''
+      return name !== id ? `${name} | ${id}` : id
+    })
+)
 const selectedBankId = ref(localStorage.getItem('obp-selected-bank-id') || '')
 const banksDropdownLabel = computed(() => {
   if (selectedBankId.value) {
-    const bank = banks.value.find(b => b.id === selectedBankId.value)
-    return bank ? (bank.short_name || bank.id) : 'Banks'
+    const bank = banks.value.find(b => b.bank_id === selectedBankId.value)
+    return bank ? (bank.full_name || bank.bank_id) : 'Banks'
   }
   return 'Banks'
 })
@@ -253,11 +261,15 @@ const handleMore = (command: string, source?: string) => {
   }
 }
 
-const handleBankSelect = (shortName: string) => {
-  const bank = banks.value.find(b => (b.short_name || b.id) === shortName)
+const handleBankSelect = (item: string) => {
+  // Extract bank_id from display format "full_name | bank_id" or just "bank_id"
+  const parts = item.split(' | ')
+  const bankId = parts[parts.length - 1]
+  const bank = banks.value.find(b => b.bank_id === bankId)
   if (bank) {
-    selectedBankId.value = bank.id
-    localStorage.setItem('obp-selected-bank-id', bank.id)
+    selectedBankId.value = bank.bank_id
+    localStorage.setItem('obp-selected-bank-id', bank.bank_id)
+    window.dispatchEvent(new CustomEvent('obp-bank-selected', { detail: bank.bank_id }))
   }
 }
 
