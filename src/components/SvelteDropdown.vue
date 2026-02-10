@@ -87,16 +87,16 @@ onBeforeUnmount(() => {
 
 // Watch for prop changes and update Svelte component
 watch(
-  () => props.items,
-  (newItems) => {
+  () => [props.items, props.label],
+  ([newItems, newLabel]) => {
     if (svelteComponent && containerRef.value) {
       // Remount with new props
       unmount(svelteComponent)
       svelteComponent = mount(Dropdown, {
         target: containerRef.value,
         props: {
-          label: props.label,
-          items: newItems,
+          label: newLabel as string,
+          items: newItems as string[],
           hoverColor: props.hoverColor,
           backgroundColor: props.backgroundColor
         }

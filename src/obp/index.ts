@@ -199,3 +199,11 @@ export async function getMyAPICollectionsEndpoint(collectionName: string): Promi
     `/obp/${OBP_API_VERSION}/my/api-collections/${collectionName}/api-collection-endpoints`
   )
 }
+
+export async function getAPICollectionEndpoints(collectionId: string): Promise<any> {
+  return await get(`obp/v6.0.0/api-collections/${collectionId}/api-collection-endpoints`)
+}
+
+export async function getOBPBanks(): Promise<any> {
+  return await get(`obp/v6.0.0/banks`)
+}

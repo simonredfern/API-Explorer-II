@@ -50,8 +50,8 @@ const summary = ref('')
 const tags = ref<string[]>([])
 const allTags = ref<string[]>([])
 const resourceDocs = inject(obpResourceDocsKey)
-const displayPrev = ref(true)
-const displayNext = ref(true)
+const displayPrev = ref(false)
+const displayNext = ref(false)
 const prev = ref({ id: 'prev' })
 const next = ref({ id: 'next' })
 const favoriteButtonStyle = ref('favorite favoriteButton')
@@ -319,18 +319,18 @@ onBeforeRouteUpdate(async (to) => {
         <el-divider class="divider" />
         <el-row>
           <el-col :span="12" class="pager-left">
-            <el-icon v-show="displayPrev">
+            <el-icon v-if="displayPrev">
               <ArrowLeftBold />
             </el-icon>
-            <RouterLink v-show="displayPrev" class="pager-router-link"
+            <RouterLink v-if="displayPrev" class="pager-router-link"
               :to="{ name: 'api', params: { version: prev.version }, query: { operationid: prev.id } }">{{ prev.title }}
             </RouterLink>
           </el-col>
           <el-col :span="12" class="pager-right">
-            <RouterLink v-show="displayNext" class="pager-router-link"
+            <RouterLink v-if="displayNext" class="pager-router-link"
               :to="{ name: 'api', params: { version: next.version }, query: { operationid: next.id } }">{{ next.title }}
             </RouterLink>
-            <el-icon v-show="displayNext">
+            <el-icon v-if="displayNext">
               <ArrowRightBold />
             </el-icon>
           </el-col>

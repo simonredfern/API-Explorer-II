@@ -33,6 +33,7 @@ import MessageDocsListView from '../views/MessageDocsListView.vue'
 import MessageDocsJsonSchemaView from '../views/MessageDocsJsonSchemaView.vue'
 import MessageDocsJsonSchemaListView from '../views/MessageDocsJsonSchemaListView.vue'
 import BodyView from '../views/BodyView.vue'
+import CollectionView from '../views/CollectionView.vue'
 import Content from '../components/Content.vue'
 import Preview from '../components/Preview.vue'
 import NotFoundView from '../views/NotFoundView.vue'
@@ -139,6 +140,21 @@ export default async function router(): Promise<any> {
         path: '/callback',
         name: 'callback',
         component: isServerActive ? BodyView : InternalServerErrorView
+      },
+      {
+        path: '/collections/:id',
+        name: 'collection-view',
+        component: isServerActive ? CollectionView : InternalServerErrorView,
+        children: [
+          {
+            path: '',
+            name: 'collection-api',
+            components: {
+              body: Content,
+              preview: Preview
+            }
+          }
+        ]
       },
       { path: '/api-server-error', name: 'apiServerError', component: APIServerErrorView },
       { path: '/:pathMatch(.*)*', name: 'notFound', component: NotFoundView }

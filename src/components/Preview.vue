@@ -26,7 +26,7 @@
   -->
 
 <script setup lang="ts">
-import { ref, reactive, inject, onBeforeMount } from 'vue'
+import { ref, reactive, inject, onBeforeMount, onMounted, onUnmounted } from 'vue'
 import { onBeforeRouteUpdate, useRoute } from 'vue-router'
 import { getOperationDetails } from '../obp/resource-docs'
 import { ElNotification, FormInstance } from 'element-plus'
@@ -73,6 +73,13 @@ const requestForm = reactive({ url: '' })
 const roleFormRef = reactive<FormInstance>({})
 const roleForm = reactive({})
 
+const replaceUrlPlaceholders = () => {
+  const selectedBankId = localStorage.getItem('obp-selected-bank-id')
+  if (selectedBankId && url.value) {
+    url.value = url.value.replace(/BANK_ID/g, selectedBankId)
+  }
+}
+
 const setOperationDetails = (id: string, version: string): void => {
   const operation = getOperationDetails(version, id, resourceDocs)
 
@@ -93,6 +100,7 @@ const setOperationDetails = (id: string, version: string): void => {
   } else {
     url.value = operation?.specified_url
   }
+  replaceUrlPlaceholders()
   method.value = operation?.request_verb
   exampleRequestBody.value = operation.example_request_body
   requiredRoles.value = operation.roles || []
@@ -607,6 +615,21 @@ onBeforeRouteUpdate(async (to) => {
   await refreshEntitlements()
 
   setRoleForm()
+})
+
+const onBankSelected = (event: Event) => {
+  const bankId = (event as CustomEvent).detail
+  if (bankId && url.value) {
+    url.value = url.value.replace(/BANK_ID/g, bankId)
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('obp-bank-selected', onBankSelected)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('obp-bank-selected', onBankSelected)
 })
 
 const copyToClipboard = () => {
