@@ -25,8 +25,10 @@
  *
  */
 
-import { Service } from 'typedi'
+import { Service, Container } from 'typedi'
 import { DEFAULT_OBP_API_VERSION } from '../../src/shared-constants.js'
+import { BerlinGroupSignatureService } from './BerlinGroupSignatureService.js'
+import type { BerlinGroupSessionData } from '../types/berlin-group.js'
 
 // Custom error class to preserve HTTP status codes
 class OBPAPIError extends Error {
@@ -49,6 +51,7 @@ interface APIClientConfig {
   baseUri: string
   version: string
   oauth2?: OAuth2Config
+  berlinGroup?: BerlinGroupSessionData
 }
 
 @Service()
@@ -81,6 +84,14 @@ export default class OBPClientService {
   async get(path: string, clientConfig: any): Promise<any> {
     const config = this.getSessionConfig(clientConfig)
 
+    // Check if this is a Berlin Group path and signing is enabled
+    const bgService = Container.get(BerlinGroupSignatureService)
+    if (BerlinGroupSignatureService.isBerlinGroupPath(path) && bgService.isEnabled()) {
+      return await this.requestWithBerlinGroupHeaders(
+        path, 'GET', '', config, config?.berlinGroup?.consentId
+      )
+    }
+
     // If no config or no access token, make unauthenticated request
     if (!config || !config.oauth2?.accessToken) {
       return await this.getWithoutAuth(path)
@@ -92,6 +103,14 @@ export default class OBPClientService {
   async create(path: string, body: any, clientConfig: any): Promise<any> {
     const config = this.getSessionConfig(clientConfig)
 
+    // Check if this is a Berlin Group path and signing is enabled
+    const bgService = Container.get(BerlinGroupSignatureService)
+    if (BerlinGroupSignatureService.isBerlinGroupPath(path) && bgService.isEnabled()) {
+      return await this.requestWithBerlinGroupHeaders(
+        path, 'POST', JSON.stringify(body), config, config?.berlinGroup?.consentId
+      )
+    }
+
     if (!config || !config.oauth2?.accessToken) {
       throw new Error('Authentication required for creating resources.')
     }
@@ -101,6 +120,14 @@ export default class OBPClientService {
 
   async update(path: string, body: any, clientConfig: any): Promise<any> {
     const config = this.getSessionConfig(clientConfig)
+
+    // Check if this is a Berlin Group path and signing is enabled
+    const bgService = Container.get(BerlinGroupSignatureService)
+    if (BerlinGroupSignatureService.isBerlinGroupPath(path) && bgService.isEnabled()) {
+      return await this.requestWithBerlinGroupHeaders(
+        path, 'PUT', JSON.stringify(body), config, config?.berlinGroup?.consentId
+      )
+    }
 
     if (!config || !config.oauth2?.accessToken) {
       throw new Error('Authentication required for updating resources.')
@@ -112,12 +139,60 @@ export default class OBPClientService {
   async discard(path: string, clientConfig: any): Promise<any> {
     const config = this.getSessionConfig(clientConfig)
 
+    // Check if this is a Berlin Group path and signing is enabled
+    const bgService = Container.get(BerlinGroupSignatureService)
+    if (BerlinGroupSignatureService.isBerlinGroupPath(path) && bgService.isEnabled()) {
+      return await this.requestWithBerlinGroupHeaders(
+        path, 'DELETE', '', config, config?.berlinGroup?.consentId
+      )
+    }
+
     if (!config || !config.oauth2?.accessToken) {
       throw new Error('Authentication required for deleting resources.')
     }
 
     return await this.discardWithBearer(path, config.oauth2.accessToken)
   }
+  /**
+   * Make a request to a Berlin Group API path with TPP signature headers.
+   * OAuth2 Bearer token is included when available alongside signature headers.
+   */
+  private async requestWithBerlinGroupHeaders(
+    path: string,
+    method: string,
+    body: string,
+    clientConfig: APIClientConfig | null,
+    consentId?: string
+  ): Promise<any> {
+    const bgService = Container.get(BerlinGroupSignatureService)
+    const bgHeaders = bgService.generateHeaders(method, body, consentId)
+
+    // Merge with OAuth2 Bearer token if available
+    const headers: Record<string, string> = { ...bgHeaders }
+    if (clientConfig?.oauth2?.accessToken) {
+      headers['Authorization'] = `Bearer ${clientConfig.oauth2.accessToken}`
+    }
+
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`
+    const url = `${this.clientConfig.baseUri}${normalizedPath}`
+    console.log(`OBPClientService: ${method} Berlin Group request to: ${url}`)
+
+    const fetchOptions: RequestInit = { method, headers }
+    if (method === 'POST' || method === 'PUT') {
+      fetchOptions.body = body
+    }
+
+    const response = await fetch(url, fetchOptions)
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`[OBPClientService] Berlin Group ${method} request failed:`, response.status, errorText)
+      throw new OBPAPIError(response.status, errorText)
+    }
+
+    return await response.json()
+  }
+
   private getSessionConfig(clientConfig: APIClientConfig): APIClientConfig {
     return clientConfig || this.clientConfig
   }
