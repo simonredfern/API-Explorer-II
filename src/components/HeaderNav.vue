@@ -61,7 +61,12 @@ const combinedMessageDocs = computed(() => {
 })
 
 // Help menu items (includes debug pages)
-const helpMenuItems = ref(['/help', '/debug/providers-status', '/debug/oidc'])
+const helpMenuRoutes: Record<string, string> = {
+  'Help': '/help',
+  'Providers Status': '/debug/providers-status',
+  'OIDC': '/debug/oidc'
+}
+const helpMenuItems = ref(Object.keys(helpMenuRoutes))
 
 // Banks state
 const banks = ref<Array<{ bank_id: string; bank_code: string; full_name: string }>>([])
@@ -247,12 +252,10 @@ const handleMore = (command: string, source?: string) => {
     // Regular message docs (connector names contain underscores)
     console.log('Navigating to message docs:', command)
     router.push({ name: 'message-docs', params: { id: command } })
-  } else if (command === '/help') {
-    console.log('Navigating to help page')
-    router.push('/help')
-  } else if (command.startsWith('/debug/')) {
-    console.log('Navigating to debug page:', command)
-    router.push(command)
+  } else if (command in helpMenuRoutes) {
+    const route = helpMenuRoutes[command]
+    console.log('Navigating to:', route)
+    router.push(route)
   } else {
     console.log('Navigating to resource docs:', `/resource-docs/${command}`)
     console.log('Current route:', route.path)
