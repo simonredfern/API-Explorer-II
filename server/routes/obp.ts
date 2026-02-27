@@ -54,7 +54,11 @@ router.get('/get', async (req: Request, res: Response) => {
     const path = req.query.path as string
     const session = req.session as any
 
-    const oauthConfig = session.clientConfig
+    const oauthConfig = session.clientConfig || {}
+    const bgConsentId = req.headers['x-bg-consent-id'] as string | undefined
+    if (bgConsentId) {
+      oauthConfig.berlinGroup = { consentId: bgConsentId }
+    }
 
     const result = await obpClientService.get(path, oauthConfig)
     res.json(result)
@@ -85,7 +89,11 @@ router.post('/create', async (req: Request, res: Response) => {
     const data = req.body
     const session = req.session as any
 
-    const oauthConfig = session.clientConfig
+    const oauthConfig = session.clientConfig || {}
+    const bgConsentId = req.headers['x-bg-consent-id'] as string | undefined
+    if (bgConsentId) {
+      oauthConfig.berlinGroup = { consentId: bgConsentId }
+    }
 
     // Debug logging to diagnose authentication issues
     console.log('OBP.create - Debug Info:')
@@ -95,6 +103,7 @@ router.post('/create', async (req: Request, res: Response) => {
     console.log('  oauth2 exists:', oauthConfig?.oauth2 ? 'YES' : 'NO')
     console.log('  accessToken exists:', oauthConfig?.oauth2?.accessToken ? 'YES' : 'NO')
     console.log('  oauth2_user exists:', session?.oauth2_user ? 'YES' : 'NO')
+    console.log('  berlinGroup consentId:', bgConsentId || 'N/A')
 
     const result = await obpClientService.create(path, data, oauthConfig)
     res.json(result)
@@ -120,7 +129,11 @@ router.put('/update', async (req: Request, res: Response) => {
     const data = req.body
     const session = req.session as any
 
-    const oauthConfig = session.clientConfig
+    const oauthConfig = session.clientConfig || {}
+    const bgConsentId = req.headers['x-bg-consent-id'] as string | undefined
+    if (bgConsentId) {
+      oauthConfig.berlinGroup = { consentId: bgConsentId }
+    }
 
     const result = await obpClientService.update(path, data, oauthConfig)
     res.json(result)
@@ -144,7 +157,11 @@ router.delete('/delete', async (req: Request, res: Response) => {
     const path = req.query.path as string
     const session = req.session as any
 
-    const oauthConfig = session.clientConfig
+    const oauthConfig = session.clientConfig || {}
+    const bgConsentId = req.headers['x-bg-consent-id'] as string | undefined
+    if (bgConsentId) {
+      oauthConfig.berlinGroup = { consentId: bgConsentId }
+    }
 
     const result = await obpClientService.discard(path, oauthConfig)
     res.json(result)

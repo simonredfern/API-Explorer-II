@@ -36,6 +36,7 @@ import { Container } from 'typedi'
 import path from 'path'
 import { execSync } from 'child_process'
 import { OAuth2ProviderManager } from './services/OAuth2ProviderManager.js'
+import { BerlinGroupSignatureService } from './services/BerlinGroupSignatureService.js'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 
@@ -166,6 +167,18 @@ let instance: any
   } catch (error) {
     console.error('ERROR Failed to initialize OAuth2 multi-provider:', error)
     console.error('ERROR: Server will start but login will not work')
+  }
+  console.log(`-----------------------------------------------------------------`)
+
+  // Berlin Group TPP Signature Certificate Setup
+  console.log('--- Berlin Group TPP Signature Certificate -----------------------')
+  const bgService = Container.get(BerlinGroupSignatureService)
+  if (bgService.isEnabled()) {
+    console.log('OK Berlin Group TPP Signature Certificate is configured and loaded')
+    console.log(`  API Version: ${bgService.getApiVersion()}`)
+  } else {
+    console.log('Berlin Group TPP Signature Certificate is NOT configured')
+    console.log('  Set VITE_BG_PRIVATE_KEY_PATH and VITE_BG_CERTIFICATE_PATH to enable')
   }
   console.log(`-----------------------------------------------------------------`)
 
