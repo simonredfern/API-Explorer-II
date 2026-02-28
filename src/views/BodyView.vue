@@ -30,6 +30,8 @@ import SearchNav from '../components/SearchNav.vue'
 import Menu from '../components/Menu.vue'
 import AutoLogout from '../components/AutoLogout.vue'
 import ChatWidget from '../components/ChatWidget.vue'
+import { Splitpanes, Pane } from 'splitpanes'
+import 'splitpanes/dist/splitpanes.css'
 import { onMounted, ref, computed } from 'vue'
 import {  getCurrentUser } from '../obp'
 import { useRoute } from 'vue-router'
@@ -53,12 +55,14 @@ const isChatbotEnabled = import.meta.env.VITE_CHATBOT_ENABLED === 'true'
 <template>
 
   <AutoLogout v-if=isLoggedIn />
-  <el-container class="root">
-    <el-aside class="search-nav" width="20%">
-      <!--Left-->
-      <SearchNav />
-    </el-aside>
-    <el-main>
+  <Splitpanes class="root">
+    <Pane :size="20" :min-size="10" :max-size="40">
+      <div class="search-nav">
+        <!--Left-->
+        <SearchNav />
+      </div>
+    </Pane>
+    <Pane :size="80">
       <el-container class="main">
         <!--<el-header class="collections">
           <Collections />
@@ -82,14 +86,13 @@ const isChatbotEnabled = import.meta.env.VITE_CHATBOT_ENABLED === 'true'
         </el-footer>-->
       </el-container>
       <ChatWidget v-if="isChatbotEnabled" />
-    </el-main>
-  </el-container>
+    </Pane>
+  </Splitpanes>
 </template>
 
 <style>
 .root {
   height: 100%;
-  /* min-height: 100vh; */
 }
 .summary {
   max-height: 100%;
@@ -117,5 +120,16 @@ const isChatbotEnabled = import.meta.env.VITE_CHATBOT_ENABLED === 'true'
   margin-right: -20px;
   padding-left: 20px;
   padding-right: 20px;
+}
+
+/* Splitpanes handle styling */
+.splitpanes--vertical > .splitpanes__splitter {
+  width: 5px;
+  background-color: #dcdfe6;
+  border: none;
+  cursor: col-resize;
+}
+.splitpanes--vertical > .splitpanes__splitter:hover {
+  background-color: #409eff;
 }
 </style>
