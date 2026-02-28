@@ -46,6 +46,7 @@ main {
   line-height: 40px;
   display: table;
   border-bottom: solid 1px var(--el-menu-border-color);
+  flex-shrink: 0;
 }
 
 .menu-left {

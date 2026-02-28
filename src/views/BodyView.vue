@@ -63,28 +63,28 @@ const isChatbotEnabled = import.meta.env.VITE_CHATBOT_ENABLED === 'true'
       </div>
     </Pane>
     <Pane :size="80">
-      <el-container class="main">
-        <!--<el-header class="collections">
-          <Collections />
-        </el-header>-->
-        <el-header class="menu">
+      <div class="main">
+        <div class="menu">
           <Menu />
-        </el-header>
-        <el-container class="middle">
-          <el-aside class="summary" :width="hasOperationId ? '50%' : '100%'">
+        </div>
+        <Splitpanes v-if="hasOperationId" class="middle">
+          <Pane :size="50">
+            <div class="summary">
+              <RouterView name="body" />
+            </div>
+          </Pane>
+          <Pane :size="50">
+            <div class="preview">
+              <RouterView name="preview" />
+            </div>
+          </Pane>
+        </Splitpanes>
+        <div v-else class="middle">
+          <div class="summary">
             <RouterView name="body" />
-          </el-aside>
-          <el-main v-if="hasOperationId" class="preview">
-            <!--right -->
-            <RouterView class="preview" name="preview" />
-          </el-main>
-        </el-container>
-
-        <!--<el-footer> -->
-        <!--Bottom -->
-        <!--Footer
-        </el-footer>-->
-      </el-container>
+          </div>
+        </div>
+      </div>
       <ChatWidget v-if="isChatbotEnabled" />
     </Pane>
   </Splitpanes>
@@ -95,10 +95,13 @@ const isChatbotEnabled = import.meta.env.VITE_CHATBOT_ENABLED === 'true'
   height: 100%;
 }
 .summary {
-  max-height: 100%;
+  height: 100%;
+  overflow: auto;
 }
 .main {
   height: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 .search-nav {
@@ -107,13 +110,14 @@ const isChatbotEnabled = import.meta.env.VITE_CHATBOT_ENABLED === 'true'
   overflow: hidden;
 }
 .middle {
-  height: 100%;
+  flex: 1;
   overflow: hidden;
 }
 .preview {
   color: white;
   background-color: #151d30;
-  max-height: 100%;
+  height: 100%;
+  overflow: auto;
 }
 .collections {
   margin-left: -20px;
