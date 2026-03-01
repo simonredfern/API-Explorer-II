@@ -30,6 +30,8 @@ import SearchNav from '../components/SearchNav.vue'
 import Menu from '../components/Menu.vue'
 import AutoLogout from '../components/AutoLogout.vue'
 import ChatWidget from '../components/ChatWidget.vue'
+import { Splitpanes, Pane } from 'splitpanes'
+import 'splitpanes/dist/splitpanes.css'
 import { onMounted, ref, computed } from 'vue'
 import {  getCurrentUser } from '../obp'
 import { useRoute } from 'vue-router'
@@ -53,49 +55,53 @@ const isChatbotEnabled = import.meta.env.VITE_CHATBOT_ENABLED === 'true'
 <template>
 
   <AutoLogout v-if=isLoggedIn />
-  <el-container class="root">
-    <el-aside class="search-nav" width="20%">
-      <!--Left-->
-      <SearchNav />
-    </el-aside>
-    <el-main>
-      <el-container class="main">
-        <!--<el-header class="collections">
-          <Collections />
-        </el-header>-->
-        <el-header class="menu">
+  <Splitpanes class="root">
+    <Pane :size="20" :min-size="10" :max-size="40">
+      <div class="search-nav">
+        <!--Left-->
+        <SearchNav />
+      </div>
+    </Pane>
+    <Pane :size="80">
+      <div class="main">
+        <div class="menu">
           <Menu />
-        </el-header>
-        <el-container class="middle">
-          <el-aside class="summary" :width="hasOperationId ? '50%' : '100%'">
+        </div>
+        <Splitpanes v-if="hasOperationId" class="middle">
+          <Pane :size="50">
+            <div class="summary">
+              <RouterView name="body" />
+            </div>
+          </Pane>
+          <Pane :size="50">
+            <div class="preview">
+              <RouterView name="preview" />
+            </div>
+          </Pane>
+        </Splitpanes>
+        <div v-else class="middle">
+          <div class="summary">
             <RouterView name="body" />
-          </el-aside>
-          <el-main v-if="hasOperationId" class="preview">
-            <!--right -->
-            <RouterView class="preview" name="preview" />
-          </el-main>
-        </el-container>
-
-        <!--<el-footer> -->
-        <!--Bottom -->
-        <!--Footer
-        </el-footer>-->
-      </el-container>
+          </div>
+        </div>
+      </div>
       <ChatWidget v-if="isChatbotEnabled" />
-    </el-main>
-  </el-container>
+    </Pane>
+  </Splitpanes>
 </template>
 
 <style>
 .root {
   height: 100%;
-  /* min-height: 100vh; */
 }
 .summary {
-  max-height: 100%;
+  height: 100%;
+  overflow: auto;
 }
 .main {
   height: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 .search-nav {
@@ -104,18 +110,30 @@ const isChatbotEnabled = import.meta.env.VITE_CHATBOT_ENABLED === 'true'
   overflow: hidden;
 }
 .middle {
-  height: 100%;
+  flex: 1;
   overflow: hidden;
 }
 .preview {
   color: white;
   background-color: #151d30;
-  max-height: 100%;
+  height: 100%;
+  overflow: auto;
 }
 .collections {
   margin-left: -20px;
   margin-right: -20px;
   padding-left: 20px;
   padding-right: 20px;
+}
+
+/* Splitpanes handle styling */
+.splitpanes--vertical > .splitpanes__splitter {
+  width: 5px;
+  background-color: #dcdfe6;
+  border: none;
+  cursor: col-resize;
+}
+.splitpanes--vertical > .splitpanes__splitter:hover {
+  background-color: #409eff;
 }
 </style>
