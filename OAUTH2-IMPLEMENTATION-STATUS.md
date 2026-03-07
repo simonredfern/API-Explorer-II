@@ -250,8 +250,8 @@
 VITE_USE_OAUTH2=false|true
 
 # Client Credentials
-VITE_OBP_OAUTH2_CLIENT_ID=obp-explorer-ii-client
-VITE_OBP_OAUTH2_CLIENT_SECRET=<secret>
+VITE_OBP_OIDC_CLIENT_ID=obp-explorer-ii-client
+VITE_OBP_OIDC_CLIENT_SECRET=<secret>
 VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/oauth2/callback
 
 # OIDC Provider

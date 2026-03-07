@@ -188,8 +188,8 @@ This document tracks the implementation status of multiple OIDC provider support
 
 ```bash
 # OBP-OIDC Provider (Required for OBP-OIDC)
-VITE_OBP_OAUTH2_CLIENT_ID=48ac28e9-9ee3-47fd-8448-69a62764b779
-VITE_OBP_OAUTH2_CLIENT_SECRET=fOTQF7jfg8C74u7ZhSjVQpoBYvD0KpWfM5UsEZBSFFM
+VITE_OBP_OIDC_CLIENT_ID=48ac28e9-9ee3-47fd-8448-69a62764b779
+VITE_OBP_OIDC_CLIENT_SECRET=fOTQF7jfg8C74u7ZhSjVQpoBYvD0KpWfM5UsEZBSFFM
 VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/api/oauth2/callback
 
 # Keycloak Provider (Optional)

@@ -72,10 +72,10 @@ export class OAuth2ProviderFactory {
       process.env.VITE_OAUTH2_REDIRECT_URL || 'http://localhost:5173/api/oauth2/callback'
 
     // OBP-OIDC Strategy
-    if (process.env.VITE_OBP_OAUTH2_CLIENT_ID) {
+    if (process.env.VITE_OBP_OIDC_CLIENT_ID) {
       this.strategies.set('obp-oidc', {
-        clientId: process.env.VITE_OBP_OAUTH2_CLIENT_ID,
-        clientSecret: process.env.VITE_OBP_OAUTH2_CLIENT_SECRET || '',
+        clientId: process.env.VITE_OBP_OIDC_CLIENT_ID,
+        clientSecret: process.env.VITE_OBP_OIDC_CLIENT_SECRET || '',
         redirectUri: sharedRedirectUri,
         scopes: ['openid', 'profile', 'email']
       })
@@ -133,7 +133,7 @@ export class OAuth2ProviderFactory {
       console.warn('OAuth2ProviderFactory: WARNING - No provider strategies configured!')
       console.warn('OAuth2ProviderFactory: Set environment variables for at least one provider')
       console.warn(
-        'OAuth2ProviderFactory: Example: VITE_OBP_OAUTH2_CLIENT_ID, VITE_OBP_OAUTH2_CLIENT_SECRET'
+        'OAuth2ProviderFactory: Example: VITE_OBP_OIDC_CLIENT_ID, VITE_OBP_OIDC_CLIENT_SECRET'
       )
     }
   }

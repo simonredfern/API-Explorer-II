@@ -64,8 +64,8 @@ export class OAuth2Service {
   private wellKnownUrl: string = ''
 
   constructor() {
-    this.clientId = process.env.VITE_OBP_OAUTH2_CLIENT_ID || ''
-    this.clientSecret = process.env.VITE_OBP_OAUTH2_CLIENT_SECRET || ''
+    this.clientId = process.env.VITE_OBP_OIDC_CLIENT_ID || ''
+    this.clientSecret = process.env.VITE_OBP_OIDC_CLIENT_SECRET || ''
     this.redirectUri = process.env.VITE_OBP_OAUTH2_REDIRECT_URL || ''
     this.client = new OAuth2Client(this.clientId, this.clientSecret, this.redirectUri)
   }
@@ -83,8 +83,8 @@ export class OAuth2Service {
 
 ```bash
 VITE_OBP_OAUTH2_WELL_KNOWN_URL=http://127.0.0.1:9000/obp-oidc/.well-known/openid-configuration
-VITE_OBP_OAUTH2_CLIENT_ID=48ac28e9-9ee3-47fd-8448-69a62764b779
-VITE_OBP_OAUTH2_CLIENT_SECRET=fOTQF7jfg8C74u7ZhSjVQpoBYvD0KpWfM5UsEZBSFFM
+VITE_OBP_OIDC_CLIENT_ID=48ac28e9-9ee3-47fd-8448-69a62764b779
+VITE_OBP_OIDC_CLIENT_SECRET=fOTQF7jfg8C74u7ZhSjVQpoBYvD0KpWfM5UsEZBSFFM
 VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/api/oauth2/callback
 ```
 
@@ -727,10 +727,10 @@ export class OAuth2ProviderFactory {
     console.log('OAuth2ProviderFactory: Loading provider strategies...')
 
     // OBP-OIDC Strategy
-    if (process.env.VITE_OBP_OAUTH2_CLIENT_ID) {
+    if (process.env.VITE_OBP_OIDC_CLIENT_ID) {
       this.strategies.set('obp-oidc', {
-        clientId: process.env.VITE_OBP_OAUTH2_CLIENT_ID,
-        clientSecret: process.env.VITE_OBP_OAUTH2_CLIENT_SECRET || '',
+        clientId: process.env.VITE_OBP_OIDC_CLIENT_ID,
+        clientSecret: process.env.VITE_OBP_OIDC_CLIENT_SECRET || '',
         redirectUri:
           process.env.VITE_OBP_OAUTH2_REDIRECT_URL || 'http://localhost:5173/api/oauth2/callback',
         scopes: ['openid', 'profile', 'email']
@@ -1658,8 +1658,8 @@ VITE_OBP_API_VERSION=v5.1.0
 # ============================================
 
 # OBP-OIDC Provider
-VITE_OBP_OAUTH2_CLIENT_ID=48ac28e9-9ee3-47fd-8448-69a62764b779
-VITE_OBP_OAUTH2_CLIENT_SECRET=fOTQF7jfg8C74u7ZhSjVQpoBYvD0KpWfM5UsEZBSFFM
+VITE_OBP_OIDC_CLIENT_ID=48ac28e9-9ee3-47fd-8448-69a62764b779
+VITE_OBP_OIDC_CLIENT_SECRET=fOTQF7jfg8C74u7ZhSjVQpoBYvD0KpWfM5UsEZBSFFM
 VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/api/oauth2/callback
 
 # Keycloak Provider (Optional)

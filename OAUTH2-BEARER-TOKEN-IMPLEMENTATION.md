@@ -120,10 +120,10 @@ export const DEFAULT_OBP_API_VERSION = 'v6.0.0'
 **Changes:**
 ```bash
 # Use actual CLIENT_ID UUID from OBP-OIDC, not the client name
-VITE_OBP_OAUTH2_CLIENT_ID=48ac28e9-9ee3-47fd-8448-69a62764b779
+VITE_OBP_OIDC_CLIENT_ID=48ac28e9-9ee3-47fd-8448-69a62764b779
 
 # Use actual CLIENT_SECRET from OBP-OIDC
-VITE_OBP_OAUTH2_CLIENT_SECRET=fOTQF7jfg8C74u7ZhSjVQpoBYvD0KpWfM5UsEZBSFFM
+VITE_OBP_OIDC_CLIENT_SECRET=fOTQF7jfg8C74u7ZhSjVQpoBYvD0KpWfM5UsEZBSFFM
 
 # Include /api prefix in redirect URL
 VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/api/oauth2/callback
@@ -433,8 +433,8 @@ curl http://localhost:8085/api/status \
 VITE_OBP_OAUTH2_WELL_KNOWN_URL=https://auth.yourdomain.com/.well-known/openid-configuration
 
 # Use production client credentials
-VITE_OBP_OAUTH2_CLIENT_ID=<production-client-uuid>
-VITE_OBP_OAUTH2_CLIENT_SECRET=<production-secret>
+VITE_OBP_OIDC_CLIENT_ID=<production-client-uuid>
+VITE_OBP_OIDC_CLIENT_SECRET=<production-secret>
 
 # Use HTTPS redirect URL
 VITE_OBP_OAUTH2_REDIRECT_URL=https://explorer.yourdomain.com/api/oauth2/callback
