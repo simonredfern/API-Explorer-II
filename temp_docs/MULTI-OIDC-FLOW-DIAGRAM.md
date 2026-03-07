@@ -10,7 +10,7 @@
                               ▼
         ┌─────────────────────────────────────────┐
         │  Load Environment Variables              │
-        │  - VITE_OBP_OAUTH2_CLIENT_ID            │
+        │  - VITE_OBP_OIDC_CLIENT_ID            │
         │  - VITE_KEYCLOAK_CLIENT_ID              │
         │  - VITE_GOOGLE_CLIENT_ID (optional)     │
         └─────────────────────────────────────────┘

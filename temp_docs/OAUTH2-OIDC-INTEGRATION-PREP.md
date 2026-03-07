@@ -513,8 +513,8 @@ export class OAuth2Service {
   private oidcConfig: OIDCConfiguration | null = null
 
   constructor() {
-    const clientId = process.env.VITE_OBP_OAUTH2_CLIENT_ID
-    const clientSecret = process.env.VITE_OBP_OAUTH2_CLIENT_SECRET
+    const clientId = process.env.VITE_OBP_OIDC_CLIENT_ID
+    const clientSecret = process.env.VITE_OBP_OIDC_CLIENT_SECRET
     const redirectUri = process.env.VITE_OBP_OAUTH2_REDIRECT_URL
 
     this.client = new OAuth2Client(clientId, clientSecret, redirectUri)
@@ -832,8 +832,8 @@ VITE_OBP_REDIRECT_URL=http://localhost:5173/api/callback
 VITE_USE_OAUTH2=false
 
 # OAuth2 Client Credentials (from OBP-OIDC)
-VITE_OBP_OAUTH2_CLIENT_ID=obp-explorer-ii-client
-VITE_OBP_OAUTH2_CLIENT_SECRET=<your_secure_secret>
+VITE_OBP_OIDC_CLIENT_ID=obp-explorer-ii-client
+VITE_OBP_OIDC_CLIENT_SECRET=<your_secure_secret>
 VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/oauth2/callback
 
 # OIDC Well-Known Configuration URL
@@ -1106,8 +1106,8 @@ Modern OAuth2 with OpenID Connect support.
 
 ```bash
 VITE_USE_OAUTH2=true
-VITE_OBP_OAUTH2_CLIENT_ID=obp-explorer-ii-client
-VITE_OBP_OAUTH2_CLIENT_SECRET=<your_client_secret>
+VITE_OBP_OIDC_CLIENT_ID=obp-explorer-ii-client
+VITE_OBP_OIDC_CLIENT_SECRET=<your_client_secret>
 VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/oauth2/callback
 VITE_OBP_OAUTH2_WELL_KNOWN_URL=http://127.0.0.1:9000/obp-oidc/.well-known/openid-configuration
 ```
@@ -1157,8 +1157,8 @@ VITE_OBP_OAUTH2_WELL_KNOWN_URL=http://127.0.0.1:9000/obp-oidc/.well-known/openid
 
    ```bash
    VITE_USE_OAUTH2=true
-   VITE_OBP_OAUTH2_CLIENT_ID=obp-explorer-ii-client
-   VITE_OBP_OAUTH2_CLIENT_SECRET=<secret>
+   VITE_OBP_OIDC_CLIENT_ID=obp-explorer-ii-client
+   VITE_OBP_OIDC_CLIENT_SECRET=<secret>
    VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/oauth2/callback
    VITE_OBP_OAUTH2_WELL_KNOWN_URL=http://127.0.0.1:9000/obp-oidc/.well-known/openid-configuration
    ```
@@ -1205,8 +1205,8 @@ If issues occur:
 
    ```bash
    VITE_USE_OAUTH2=true
-   VITE_OBP_OAUTH2_CLIENT_ID=<production_client_id>
-   VITE_OBP_OAUTH2_CLIENT_SECRET=<production_secret>
+   VITE_OBP_OIDC_CLIENT_ID=<production_client_id>
+   VITE_OBP_OIDC_CLIENT_SECRET=<production_secret>
    VITE_OBP_OAUTH2_REDIRECT_URL=https://explorer.yourdomain.com/oauth2/callback
    VITE_OBP_OAUTH2_WELL_KNOWN_URL=https://auth.yourdomain.com/.well-known/openid-configuration
    ```
@@ -1250,7 +1250,7 @@ If issues occur:
 **Cause**: Client credentials invalid
 
 **Solution**:
-- Verify `VITE_OBP_OAUTH2_CLIENT_ID` and `VITE_OBP_OAUTH2_CLIENT_SECRET`
+- Verify `VITE_OBP_OIDC_CLIENT_ID` and `VITE_OBP_OIDC_CLIENT_SECRET`
 - Check client is registered in OBP-OIDC
 - Verify redirect URI matches exactly
 
@@ -1393,8 +1393,8 @@ See: `OBP-API/obp-api/src/main/scripts/sql/OIDC/`
 VITE_USE_OAUTH2=false  # Set to 'true' to enable OAuth2
 
 # OAuth2 Client Configuration
-VITE_OBP_OAUTH2_CLIENT_ID=obp-explorer-ii-client
-VITE_OBP_OAUTH2_CLIENT_SECRET=<secure_secret>
+VITE_OBP_OIDC_CLIENT_ID=obp-explorer-ii-client
+VITE_OBP_OIDC_CLIENT_SECRET=<secure_secret>
 VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/oauth2/callback
 
 # OIDC Provider Configuration
@@ -1748,7 +1748,7 @@ server {
 
 ```bash
 VITE_USE_OAUTH2=true
-VITE_OBP_OAUTH2_CLIENT_ID=obp-explorer-ii-client-dev
+VITE_OBP_OIDC_CLIENT_ID=obp-explorer-ii-client-dev
 VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/oauth2/callback
 VITE_OBP_OAUTH2_WELL_KNOWN_URL=http://localhost:9000/obp-oidc/.well-known/openid-configuration
 NODE_ENV=development
@@ -1758,7 +1758,7 @@ NODE_ENV=development
 
 ```bash
 VITE_USE_OAUTH2=true
-VITE_OBP_OAUTH2_CLIENT_ID=obp-explorer-ii-client-staging
+VITE_OBP_OIDC_CLIENT_ID=obp-explorer-ii-client-staging
 VITE_OBP_OAUTH2_REDIRECT_URL=https://staging-explorer.yourdomain.com/oauth2/callback
 VITE_OBP_OAUTH2_WELL_KNOWN_URL=https://staging-auth.yourdomain.com/.well-known/openid-configuration
 NODE_ENV=production
@@ -1768,7 +1768,7 @@ NODE_ENV=production
 
 ```bash
 VITE_USE_OAUTH2=true
-VITE_OBP_OAUTH2_CLIENT_ID=obp-explorer-ii-client-prod
+VITE_OBP_OIDC_CLIENT_ID=obp-explorer-ii-client-prod
 VITE_OBP_OAUTH2_REDIRECT_URL=https://explorer.yourdomain.com/oauth2/callback
 VITE_OBP_OAUTH2_WELL_KNOWN_URL=https://auth.yourdomain.com/.well-known/openid-configuration
 NODE_ENV=production
@@ -2071,8 +2071,8 @@ No data migration needed because:
 VITE_USE_OAUTH2=true|false
 
 # Client Credentials
-VITE_OBP_OAUTH2_CLIENT_ID=<client_id>
-VITE_OBP_OAUTH2_CLIENT_SECRET=<client_secret>
+VITE_OBP_OIDC_CLIENT_ID=<client_id>
+VITE_OBP_OIDC_CLIENT_SECRET=<client_secret>
 
 # Endpoints
 VITE_OBP_OAUTH2_REDIRECT_URL=<callback_url>

@@ -12,8 +12,8 @@ This document provides a high-level summary of implementing multiple OIDC provid
 
 ```bash
 VITE_OBP_OAUTH2_WELL_KNOWN_URL=http://localhost:9000/obp-oidc/.well-known/openid-configuration
-VITE_OBP_OAUTH2_CLIENT_ID=<client-id>
-VITE_OBP_OAUTH2_CLIENT_SECRET=<client-secret>
+VITE_OBP_OIDC_CLIENT_ID=<client-id>
+VITE_OBP_OIDC_CLIENT_SECRET=<client-secret>
 ```
 
 **Limitations:**
@@ -86,8 +86,8 @@ GET /obp/v5.1.0/well-known
 **Strategy Pattern:**
 ```typescript
 strategies.set('obp-oidc', {
-  clientId: process.env.VITE_OBP_OAUTH2_CLIENT_ID,
-  clientSecret: process.env.VITE_OBP_OAUTH2_CLIENT_SECRET,
+  clientId: process.env.VITE_OBP_OIDC_CLIENT_ID,
+  clientSecret: process.env.VITE_OBP_OIDC_CLIENT_SECRET,
   redirectUri: process.env.VITE_OBP_OAUTH2_REDIRECT_URL
 })
 
@@ -223,8 +223,8 @@ GET /api/oauth2/callback?code=xxx&state=yyy
 
 ```bash
 # OBP-OIDC Provider
-VITE_OBP_OAUTH2_CLIENT_ID=48ac28e9-9ee3-47fd-8448-69a62764b779
-VITE_OBP_OAUTH2_CLIENT_SECRET=fOTQF7jfg8C74u7ZhSjVQpoBYvD0KpWfM5UsEZBSFFM
+VITE_OBP_OIDC_CLIENT_ID=48ac28e9-9ee3-47fd-8448-69a62764b779
+VITE_OBP_OIDC_CLIENT_SECRET=fOTQF7jfg8C74u7ZhSjVQpoBYvD0KpWfM5UsEZBSFFM
 VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/api/oauth2/callback
 
 # Keycloak Provider

@@ -103,8 +103,8 @@ UPDATED:
 Environment Variables (per provider):
 
 # OBP-OIDC
-VITE_OBP_OAUTH2_CLIENT_ID=your-client-id
-VITE_OBP_OAUTH2_CLIENT_SECRET=your-secret
+VITE_OBP_OIDC_CLIENT_ID=your-client-id
+VITE_OBP_OIDC_CLIENT_SECRET=your-secret
 VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/api/oauth2/callback
 
 # Keycloak

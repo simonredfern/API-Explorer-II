@@ -93,8 +93,8 @@ npm install arctic jsonwebtoken @types/jsonwebtoken
 
 # Add to .env:
 VITE_USE_OAUTH2=true
-VITE_OBP_OAUTH2_CLIENT_ID=obp-explorer-ii-client
-VITE_OBP_OAUTH2_CLIENT_SECRET=CHANGE_THIS_TO_EXPLORER_SECRET_2024
+VITE_OBP_OIDC_CLIENT_ID=obp-explorer-ii-client
+VITE_OBP_OIDC_CLIENT_SECRET=CHANGE_THIS_TO_EXPLORER_SECRET_2024
 VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/oauth2/callback
 VITE_OBP_OAUTH2_WELL_KNOWN_URL=http://127.0.0.1:9000/obp-oidc/.well-known/openid-configuration
 ```

@@ -15,8 +15,8 @@ VITE_CHATBOT_ENABLED=false                                                      
 VITE_CHATBOT_URL=http://localhost:5000                                           # Opey chatbot service URL (only needed if chatbot is enabled)
 
 ### OAuth2/OIDC Configuration ###
-VITE_OBP_OAUTH2_CLIENT_ID=48ac28e9-9ee3-47fd-8448-69a62764b779                   # OAuth2 client ID (UUID - must match OIDC server registration)
-VITE_OBP_OAUTH2_CLIENT_SECRET=fOTQF7jfg8C74u7ZhSjVQpoBYvD0KpWfM5UsEZBSFFM        # OAuth2 client secret (keep this secure!)
+VITE_OBP_OIDC_CLIENT_ID=48ac28e9-9ee3-47fd-8448-69a62764b779                   # OAuth2 client ID (UUID - must match OIDC server registration)
+VITE_OBP_OIDC_CLIENT_SECRET=fOTQF7jfg8C74u7ZhSjVQpoBYvD0KpWfM5UsEZBSFFM        # OAuth2 client secret (keep this secure!)
 VITE_OBP_OAUTH2_REDIRECT_URL=http://localhost:5173/api/oauth2/callback          # OAuth2 callback URL (must exactly match OIDC client registration)
 VITE_OBP_OAUTH2_WELL_KNOWN_URL=http://localhost:9000/obp-oidc/.well-known/openid-configuration  # OIDC discovery endpoint URL
 VITE_OBP_OAUTH2_TOKEN_REFRESH_THRESHOLD=300                                     # Seconds before token expiry to trigger refresh (default: 300)
