@@ -30,6 +30,7 @@ import type { Request, Response } from 'express'
 import { Container } from 'typedi'
 import OBPClientService from '../services/OBPClientService.js'
 import { OAuth2ProviderManager } from '../services/OAuth2ProviderManager.js'
+import { OAuth2ProviderFactory } from '../services/OAuth2ProviderFactory.js'
 import { commitId } from '../app.js'
 import {
   RESOURCE_DOCS_API_VERSION,
@@ -42,6 +43,42 @@ const router = Router()
 // Get services from container
 const obpClientService = Container.get(OBPClientService)
 const providerManager = Container.get(OAuth2ProviderManager)
+const providerFactory = Container.get(OAuth2ProviderFactory)
+
+/**
+ * Map provider name to the expected environment variable names
+ */
+function getProviderEnvVarNames(providerName: string): { clientId: string; clientSecret: string } {
+  const mapping: Record<string, { clientId: string; clientSecret: string }> = {
+    'obp-oidc': {
+      clientId: 'VITE_OBP_OIDC_CLIENT_ID',
+      clientSecret: 'VITE_OBP_OIDC_CLIENT_SECRET'
+    },
+    'keycloak': {
+      clientId: 'VITE_KEYCLOAK_CLIENT_ID',
+      clientSecret: 'VITE_KEYCLOAK_CLIENT_SECRET'
+    },
+    'google': {
+      clientId: 'VITE_GOOGLE_CLIENT_ID',
+      clientSecret: 'VITE_GOOGLE_CLIENT_SECRET'
+    },
+    'github': {
+      clientId: 'VITE_GITHUB_CLIENT_ID',
+      clientSecret: 'VITE_GITHUB_CLIENT_SECRET'
+    }
+  }
+
+  if (mapping[providerName]) {
+    return mapping[providerName]
+  }
+
+  // Generic fallback for custom/unknown providers
+  const upperName = providerName.toUpperCase().replace(/-/g, '_')
+  return {
+    clientId: `VITE_${upperName}_CLIENT_ID`,
+    clientSecret: `VITE_${upperName}_CLIENT_SECRET`
+  }
+}
 
 const connectors = [
   'akka_vDec2018',
@@ -199,14 +236,25 @@ router.get('/status/providers', (req: Request, res: Response) => {
       }
     }
 
+    // Get factory-configured strategies (env vars loaded) vs discovered providers
+    const configuredStrategies = providerFactory.getConfiguredProviders()
+
+    // Build per-provider explorer readiness
+    const explorerReadiness = allProviderStatus.map((status) => ({
+      ...status,
+      explorerCredentialsConfigured: providerFactory.hasStrategy(status.name),
+      explorerEnvVars: getProviderEnvVarNames(status.name)
+    }))
+
     res.json({
       summary: {
         totalConfigured: availableProviders.length,
         availableProviders: availableProviders,
         obpApiHost: process.env.VITE_OBP_API_HOST || 'not configured',
-        sharedRedirectUrl: sharedRedirectUrl
+        sharedRedirectUrl: sharedRedirectUrl,
+        explorerConfiguredStrategies: configuredStrategies
       },
-      providerStatus: allProviderStatus,
+      providerStatus: explorerReadiness,
       environmentConfig: envConfig,
       note: 'Credentials are masked for security. Format: first2...last2'
     })
@@ -295,6 +343,8 @@ router.get('/status/oidc-debug', async (req: Request, res: Response) => {
         providerName: provider.provider,
         wellKnownUrl: provider.url,
         success: false,
+        explorerCredentialsConfigured: providerFactory.hasStrategy(provider.provider),
+        explorerEnvVars: getProviderEnvVarNames(provider.provider),
         oidcConfiguration: null as any,
         error: null as string | null,
         endpoints: {
@@ -398,6 +448,8 @@ router.get('/status/oidc-debug', async (req: Request, res: Response) => {
     }
 
     // Compile summary
+    const explorerConfiguredStrategies = providerFactory.getConfiguredProviders()
+
     const summary = {
       timestamp: new Date().toISOString(),
       obpApiReachable: step1.success,
@@ -407,7 +459,8 @@ router.get('/status/oidc-debug', async (req: Request, res: Response) => {
       currentlyAvailable: availableProviders.length,
       configuredInEnvironment: Object.values(envConfig).filter(
         (c) => typeof c === 'object' && 'configured' in c && c.configured
-      ).length
+      ).length,
+      explorerConfiguredStrategies
     }
 
     res.json({

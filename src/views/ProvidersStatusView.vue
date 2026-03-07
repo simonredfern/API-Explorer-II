@@ -76,6 +76,10 @@
             <label>OBP API Host:</label>
             <span class="value">{{ status.summary.obpApiHost }}</span>
           </div>
+          <div class="summary-item">
+            <label>API Explorer Configured Strategies:</label>
+            <span class="value">{{ (status.summary.explorerConfiguredStrategies || []).join(', ') || 'None' }}</span>
+          </div>
         </div>
       </el-card>
 
@@ -91,7 +95,7 @@
           v-for="provider in status.providerStatus"
           :key="provider.name"
           class="provider-card"
-          :class="{ 'provider-healthy': provider.available, 'provider-unhealthy': !provider.available }"
+          :class="{ 'provider-healthy': provider.available && provider.explorerCredentialsConfigured, 'provider-unhealthy': !provider.available || !provider.explorerCredentialsConfigured }"
           shadow="hover"
         >
           <template #header>
@@ -108,14 +112,41 @@
               <span>{{ provider.name }}</span>
             </div>
             <div class="provider-detail">
-              <label>Status:</label>
+              <label>OIDC Provider Reachable:</label>
               <span :class="provider.available ? 'status-ok' : 'status-error'">
-                {{ provider.available ? 'Available' : 'Unavailable' }}
+                {{ provider.available ? 'Yes' : 'No' }}
+              </span>
+            </div>
+            <div class="provider-detail">
+              <label>API Explorer Credentials:</label>
+              <span :class="provider.explorerCredentialsConfigured ? 'status-ok' : 'status-error'">
+                {{ provider.explorerCredentialsConfigured ? 'Configured' : 'Missing' }}
               </span>
             </div>
             <div class="provider-detail">
               <label>Last Checked:</label>
               <span>{{ formatDate(provider.lastChecked) }}</span>
+            </div>
+
+            <!-- Warning if provider is reachable but Explorer has no credentials -->
+            <div v-if="provider.available && !provider.explorerCredentialsConfigured" class="error-section">
+              <div class="error-header">
+                <el-icon class="error-icon"><WarningFilled /></el-icon>
+                <span class="error-category">Configuration Error</span>
+              </div>
+              <div class="error-message">
+                <strong>Warning:</strong> This OIDC provider is reachable, but API Explorer does not have credentials configured for it. Login will not work.
+              </div>
+              <div class="troubleshooting-hints">
+                <div class="hint-title">
+                  <el-icon><InfoFilled /></el-icon>
+                  <strong>Fix:</strong>
+                </div>
+                <ul class="hint-list">
+                  <li>Set <code>{{ provider.explorerEnvVars?.clientId }}</code> and <code>{{ provider.explorerEnvVars?.clientSecret }}</code> in your .env file</li>
+                  <li>Restart the API Explorer server after updating .env</li>
+                </ul>
+              </div>
             </div>
 
             <!-- Enhanced Error Display -->
@@ -206,6 +237,8 @@ interface ProviderStatus {
   status: string
   lastChecked: Date
   error?: string
+  explorerCredentialsConfigured?: boolean
+  explorerEnvVars?: { clientId: string; clientSecret: string }
 }
 
 interface EnvConfig {
@@ -219,6 +252,7 @@ interface StatusResponse {
     totalConfigured: number
     availableProviders: string[]
     obpApiHost: string
+    explorerConfiguredStrategies?: string[]
   }
   providerStatus: ProviderStatus[]
   environmentConfig: EnvConfig
