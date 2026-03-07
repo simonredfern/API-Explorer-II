@@ -97,9 +97,14 @@
             >
               <div class="provider-header">
                 <h3>{{ provider.providerName }}</h3>
-                <el-tag :type="provider.success ? 'success' : 'danger'" size="small">
-                  {{ provider.success ? 'Success' : 'Failed' }}
-                </el-tag>
+                <div class="provider-tags">
+                  <el-tag :type="provider.success ? 'success' : 'danger'" size="small">
+                    OIDC: {{ provider.success ? 'Reachable' : 'Failed' }}
+                  </el-tag>
+                  <el-tag :type="provider.explorerCredentialsConfigured ? 'success' : 'warning'" size="small">
+                    Explorer: {{ provider.explorerCredentialsConfigured ? 'Configured' : 'No Credentials' }}
+                  </el-tag>
+                </div>
               </div>
 
               <div class="provider-details">
@@ -116,6 +121,11 @@
                       Test
                     </el-button>
                   </div>
+                </div>
+
+                <div v-if="provider.success && !provider.explorerCredentialsConfigured" class="warning-message">
+                  <strong>Warning:</strong> OIDC provider is reachable, but API Explorer has no credentials configured for '{{ provider.providerName }}'.
+                  Login via this provider will not work until <code>{{ provider.explorerEnvVars?.clientId }}</code> and <code>{{ provider.explorerEnvVars?.clientSecret }}</code> are set in your .env file.
                 </div>
 
                 <div v-if="provider.error" class="error-message">
@@ -181,6 +191,8 @@ interface DebugInfo {
         jwks: string | null
       }
       issuer: string | null
+      explorerCredentialsConfigured?: boolean
+      explorerEnvVars?: { clientId: string; clientSecret: string }
     }>
   }
 }
@@ -383,12 +395,26 @@ h1 {
   word-break: break-all;
 }
 
+.provider-tags {
+  display: flex;
+  gap: 8px;
+}
+
 .error-message {
   padding: 10px;
   background: #fef0f0;
   border-left: 4px solid #f56c6c;
   border-radius: 4px;
   color: #f56c6c;
+  font-size: 14px;
+}
+
+.warning-message {
+  padding: 10px;
+  background: #fdf6ec;
+  border-left: 4px solid #e6a23c;
+  border-radius: 4px;
+  color: #e6a23c;
   font-size: 14px;
 }
 
