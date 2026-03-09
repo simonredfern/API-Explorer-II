@@ -68,7 +68,7 @@ const clearCacheStorage = () => {
               </tr>
               <tr>
                 <td class="label">Copyright</td>
-                <td>&copy; TESOBE 2011-2026</td>
+                <td>&copy; TESOBE 2010-2026</td>
               </tr>
               <tr>
                 <td class="label">Cache</td>
