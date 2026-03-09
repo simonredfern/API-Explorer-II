@@ -30,12 +30,12 @@ import { reactive, ref, onBeforeMount, inject, watch } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 import { useRoute } from 'vue-router'
 import { SEARCH_LINKS_COLOR as searchLinksColorSetting } from '../obp/style-setting'
-import { connectors } from '../obp/message-docs'
 import { obpGroupedMessageDocsJsonSchemaKey } from '@/obp/keys'
 
-let connector = connectors[0]
 const route = useRoute()
 const groupedMessageDocsJsonSchema = ref(inject(obpGroupedMessageDocsJsonSchemaKey) || {})
+const connectors = Object.keys(groupedMessageDocsJsonSchema.value)
+let connector = connectors[0]
 const docs = ref({})
 const groups = ref({})
 const sortedKeys = ref([])
