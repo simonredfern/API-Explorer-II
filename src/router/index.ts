@@ -44,6 +44,7 @@ import { isServerUp, OBP_API_DEFAULT_RESOURCE_DOC_VERSION } from '../obp'
 import MessageDocsContent from '@/components/CodeBlock.vue'
 import ProvidersStatusView from '../views/ProvidersStatusView.vue'
 import OIDCDebugView from '../views/OIDCDebugView.vue'
+import AboutView from '../views/AboutView.vue'
 
 export default async function router(): Promise<any> {
   const isServerActive = await isServerUp()
@@ -78,6 +79,11 @@ export default async function router(): Promise<any> {
         path: '/help',
         name: 'help',
         component: isServerActive ? HelpView : InternalServerErrorView
+      },
+      {
+        path: '/about',
+        name: 'about',
+        component: AboutView
       },
       {
         path: '/message-docs',
