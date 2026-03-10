@@ -29,13 +29,13 @@
 import { ref, onBeforeMount, inject, watch, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import SearchNav from '../components/MessageDocsJsonSchemaSearchNav.vue'
-import { connectors } from '../obp/message-docs'
 import { obpGroupedMessageDocsJsonSchemaKey } from '@/obp/keys'
 import JsonSchemaViewer from '../components/JsonSchemaViewer.vue'
 
-let connector = connectors[0]
 const route = useRoute()
 const groupedMessageDocsJsonSchema = ref(inject(obpGroupedMessageDocsJsonSchemaKey) || {})
+const connectors = Object.keys(groupedMessageDocsJsonSchema.value)
+let connector = connectors[0]
 const messageDocsJsonSchema = ref(null as any)
 const definitions = ref(null as any)
 const definitionsPanelScrollbar = ref(null as any)

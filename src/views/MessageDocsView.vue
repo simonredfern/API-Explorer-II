@@ -29,14 +29,14 @@
 import { reactive, ref, onBeforeMount, onMounted, inject, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import SearchNav from '../components/MessageDocsSearchNav.vue'
-import { connectors } from '../obp/message-docs'
 import { obpGroupedMessageDocsKey } from '@/obp/keys';
 import MessageDocsSearchNav from '../components/MessageDocsSearchNav.vue';
 import CodeBlock from '../components/CodeBlock.vue';
 
-let connector = connectors[0]
 const route = useRoute()
 const groupedMessageDocs = ref(inject(obpGroupedMessageDocsKey) || {})
+const connectors = Object.keys(groupedMessageDocs.value)
+let connector = connectors[0]
 const messageDocs = ref(null as any)
 
 const activeNames = ref(['1', '2', '3', '4', '5', '6'])
