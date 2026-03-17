@@ -33,6 +33,8 @@ import {
   HEADER_LINKS_BACKGROUND_COLOR as headerLinksBackgroundColorSetting
 } from '../obp/style-setting'
 import { inject, ref, computed, onMounted } from 'vue'
+
+const obpApiHost = ref(import.meta.env.VITE_OBP_API_HOST)
 import { getOBPBanks } from '../obp'
 import SvelteDropdown from './SvelteDropdown.vue'
 
@@ -95,6 +97,7 @@ const handleLocale = (command: string) => {
       <span id="selected-endpoint-tags" class="endpoint-tags"></span>
     </el-col>
     <el-col :span="14" class="menu-right">
+      <a :href="obpApiHost" class="api-host-label" target="_blank">{{ obpApiHost }}</a>
       <SvelteDropdown
         class="menu-right bank-selector"
         id="menu-nav-banks"
@@ -174,6 +177,14 @@ a:hover {
 .endpoint-tags :deep(.tag-link:hover) {
   color: #66b1ff;
   text-decoration: underline;
+}
+
+.api-host-label {
+  font-size: 14px;
+  font-family: 'Roboto';
+  color: #7787a6;
+  margin-right: 10px;
+  vertical-align: middle;
 }
 
 .bank-selector {
