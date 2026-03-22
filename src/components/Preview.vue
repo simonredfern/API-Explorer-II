@@ -59,6 +59,7 @@ const showConnectorMethods = ref(true)
 const isUserLogon = ref(true)
 const userEntitlements = ref([])
 const type = ref('')
+const isLoading = ref(false)
 const resourceDocs = inject(obpResourceDocsKey)
 const footNote = ref({
   operationId: '',
@@ -186,43 +187,48 @@ const setType = (method) => {
 }
 const submitRequest = async () => {
   if (url.value) {
-    switch (method.value) {
-      case 'POST': {
-        highlightCode(
-          await create(
-            url.value,
-            (() => {
-              const rawBody = exampleRequestBody.value
-              const maybeBody = typeof rawBody === 'string' ? rawBody.trim() : rawBody
-              return maybeBody ? maybeBody : undefined
-            })()
+    isLoading.value = true
+    try {
+      switch (method.value) {
+        case 'POST': {
+          highlightCode(
+            await create(
+              url.value,
+              (() => {
+                const rawBody = exampleRequestBody.value
+                const maybeBody = typeof rawBody === 'string' ? rawBody.trim() : rawBody
+                return maybeBody ? maybeBody : undefined
+              })()
+            )
           )
-        )
-        break
-      }
-      case 'PUT': {
-        highlightCode(
-          await update(
-            url.value,
-            (() => {
-              const rawBody = exampleRequestBody.value
-              const maybeBody = typeof rawBody === 'string' ? rawBody.trim() : rawBody
-              return maybeBody ? maybeBody : undefined
-            })()
+          break
+        }
+        case 'PUT': {
+          highlightCode(
+            await update(
+              url.value,
+              (() => {
+                const rawBody = exampleRequestBody.value
+                const maybeBody = typeof rawBody === 'string' ? rawBody.trim() : rawBody
+                return maybeBody ? maybeBody : undefined
+              })()
+            )
           )
-        )
-        break
+          break
+        }
+        case 'DELETE': {
+          highlightCode(await discard(url.value))
+          break
+        }
+        default: {
+          highlightCode(await get(url.value))
+          break
+        }
       }
-      case 'DELETE': {
-        highlightCode(await discard(url.value))
-        break
-      }
-      default: {
-        highlightCode(await get(url.value))
-        break
-      }
+      responseHeaderTitle.value = 'RESPONSE'
+    } finally {
+      isLoading.value = false
     }
-    responseHeaderTitle.value = 'RESPONSE'
   } else {
     ElNotification({
       duration: elMessageDuration,
@@ -243,6 +249,11 @@ const parseDoubleEncodedJson = (obj: any): any => {
 
   // If it's a string, try to parse it as JSON
   if (typeof obj === 'string') {
+    // Skip strings that can't be JSON (must start with { [ or ")
+    const trimmed = obj.trimStart()
+    if (trimmed.length === 0 || (trimmed[0] !== '{' && trimmed[0] !== '[' && trimmed[0] !== '"')) {
+      return obj
+    }
     try {
       const parsed = JSON.parse(obj)
       // Recursively parse the result in case it's triple-encoded or more
@@ -279,20 +290,28 @@ const highlightCode = (json) => {
     return
   }
 
+  let dataToFormat
   if (json.error) {
-    // Parse double-encoded JSON error messages to display them cleanly
-    const errorObj = parseDoubleEncodedJson(json.error)
-
-    // Display the full OBP error object with proper formatting
-    successResponseBody.value = hljs.lineNumbersValue(
-      hljs.highlightAuto(JSON.stringify(errorObj, null, 4), ['JSON']).value
-    )
+    dataToFormat = parseDoubleEncodedJson(json.error)
   } else {
-    // Parse double-encoded JSON in successful responses too
-    const parsedJson = parseDoubleEncodedJson(json)
-    successResponseBody.value = hljs.lineNumbersValue(
-      hljs.highlightAuto(JSON.stringify(parsedJson, null, 4), ['JSON']).value
-    )
+    dataToFormat = parseDoubleEncodedJson(json)
+  }
+
+  const jsonString = JSON.stringify(dataToFormat, null, 4)
+
+  // For large responses, show plain text without highlighting to avoid freezing the UI
+  if (jsonString.length > 50000) {
+    successResponseBody.value = jsonString.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    return
+  }
+
+  const highlighted = hljs.highlight(jsonString, { language: 'json' }).value
+  const lineCount = jsonString.split('\n').length
+
+  if (lineCount > 500) {
+    successResponseBody.value = highlighted
+  } else {
+    successResponseBody.value = hljs.lineNumbersValue(highlighted)
   }
 }
 const submitSingleEntitlement = async (formRole: any, idx: number) => {
@@ -701,6 +720,7 @@ const onError = (error) => {
           />
           <el-button
             :type="type"
+            :loading="isLoading"
             id="search-button"
             @click="submit(requestFormRef, submitRequest)"
             >{{ method }}</el-button
@@ -858,6 +878,7 @@ span {
 pre {
   padding: 0px 30px 0px 30px;
   max-height: 340px;
+  overflow: auto;
   background-color: #253047;
   font-size: 14px;
   margin: 0;
