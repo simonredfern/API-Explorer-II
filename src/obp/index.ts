@@ -32,7 +32,7 @@ import { DEFAULT_OBP_API_VERSION } from '../shared-constants'
 export const OBP_API_VERSION = DEFAULT_OBP_API_VERSION
 // Default to showing v6.0.0 documentation in the UI (can be overridden by env var)
 export const OBP_API_DEFAULT_RESOURCE_DOC_VERSION =
-  import.meta.env.VITE_OBP_API_DEFAULT_RESOURCE_DOC_VERSION ?? 'OBPv6.0.0'
+  import.meta.env.VITE_OBP_API_DEFAULT_RESOURCE_DOC_VERSION ?? 'OBPv7.0.0'
 const default_collection_name = 'Favourites'
 
 export async function serverStatus(): Promise<any> {
