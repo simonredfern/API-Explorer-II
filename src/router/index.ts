@@ -45,6 +45,7 @@ import MessageDocsContent from '@/components/CodeBlock.vue'
 import ProvidersStatusView from '../views/ProvidersStatusView.vue'
 import OIDCDebugView from '../views/OIDCDebugView.vue'
 import AboutView from '../views/AboutView.vue'
+import GrpcServicesView from '../views/GrpcServicesView.vue'
 
 export default async function router(): Promise<any> {
   const isServerActive = await isServerUp()
@@ -84,6 +85,11 @@ export default async function router(): Promise<any> {
         path: '/about',
         name: 'about',
         component: AboutView
+      },
+      {
+        path: '/grpc-services',
+        name: 'grpc-services',
+        component: GrpcServicesView
       },
       {
         path: '/message-docs',

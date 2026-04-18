@@ -48,6 +48,7 @@ import userRoutes from './routes/user.js'
 import statusRoutes from './routes/status.js'
 import obpRoutes from './routes/obp.js'
 import opeyRoutes from './routes/opey.js'
+import grpcRoutes from './routes/grpc.js'
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url)
@@ -190,11 +191,13 @@ let instance: any
   app.use(routePrefix, statusRoutes)
   app.use(routePrefix, obpRoutes)
   app.use(routePrefix, opeyRoutes)
+  app.use(routePrefix, grpcRoutes)
   console.log('OAuth2 routes registered (plain Express)')
   console.log('User routes registered (plain Express)')
   console.log('Status routes registered (plain Express)')
   console.log('OBP routes registered (plain Express)')
   console.log('Opey routes registered (plain Express)')
+  console.log('gRPC routes registered (plain Express)')
   console.log('All routes migrated to plain Express - routing-controllers removed')
 
   instance = app.listen(port)

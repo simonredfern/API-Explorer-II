@@ -67,6 +67,8 @@ const helpMenuRoutes: Record<string, string> = {
   'Providers Status': '/debug/providers-status',
   'OIDC': '/debug/oidc'
 }
+
+const GRPC_SERVICES_ITEM = 'gRPC Services'
 const helpMenuItems = ref(Object.keys(helpMenuRoutes))
 
 // Split versions into main and other
@@ -79,14 +81,18 @@ const sortedVersions = computed(() => {
   const others = all.filter(v => !mainVersions.includes(v)).sort()
   console.log('Other versions:', others)
 
-  // Only add divider if we have both main and other versions
-  if (main.length > 0 && others.length > 0) {
-    return [...main, '---', ...others]
-  } else if (main.length > 0) {
-    return main
-  } else {
-    return others
+  // Insert gRPC Services between main (first set) and other (second set) versions
+  const items: string[] = []
+  if (main.length > 0) {
+    items.push(...main)
+    items.push('---')
   }
+  items.push(GRPC_SERVICES_ITEM)
+  if (others.length > 0) {
+    items.push('---')
+    items.push(...others)
+  }
+  return items
 })
 
 const isShowLoginButton = ref(true)
@@ -214,6 +220,12 @@ const handleMore = (command: string, source?: string) => {
   let element = document.getElementById("selected-api-version")
   if (element !== null) {
     element.textContent = command;
+  }
+
+  if (command === GRPC_SERVICES_ITEM) {
+    console.log('Navigating to gRPC services')
+    router.push('/grpc-services')
+    return
   }
 
   // Check if command ends with " J Schema" - if so, it's a JSON Schema message doc

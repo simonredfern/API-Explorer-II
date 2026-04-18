@@ -47,6 +47,8 @@ const responseHeaderTitle = ref('TYPICAL SUCCESSFUL RESPONSE')
 const exampleBodyTitle = ref('REQUEST BODY')
 const oldExampleBodyContent = ref('')
 const successResponseBody = ref('')
+const isLargeResponse = ref(false)
+const largeResponseJson = ref(null)
 const exampleRequestBody = ref('')
 const requiredRoles = ref([])
 const validations = ref([])
@@ -301,9 +303,14 @@ const highlightCode = (json) => {
 
   // For large responses, show plain text without highlighting to avoid freezing the UI
   if (jsonString.length > 50000) {
+    isLargeResponse.value = true
+    largeResponseJson.value = jsonString
     successResponseBody.value = jsonString.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     return
   }
+
+  isLargeResponse.value = false
+  largeResponseJson.value = null
 
   const highlighted = hljs.highlight(jsonString, { language: 'json' }).value
   const lineCount = jsonString.split('\n').length
@@ -314,6 +321,39 @@ const highlightCode = (json) => {
     successResponseBody.value = hljs.lineNumbersValue(highlighted)
   }
 }
+
+const isFormatting = ref(false)
+
+const formatLargeResponse = () => {
+  if (!largeResponseJson.value) return
+  const jsonString = largeResponseJson.value
+
+  isFormatting.value = true
+
+  const worker = new Worker('/js/worker/highlight-worker.js')
+  worker.onmessage = (event) => {
+    const highlighted = event.data
+    const lineCount = jsonString.split('\n').length
+
+    if (lineCount > 500) {
+      successResponseBody.value = highlighted
+    } else {
+      successResponseBody.value = hljs.lineNumbersValue(highlighted)
+    }
+
+    isLargeResponse.value = false
+    largeResponseJson.value = null
+    isFormatting.value = false
+    worker.terminate()
+  }
+  worker.onerror = (err) => {
+    console.error('Highlight worker error:', err)
+    isFormatting.value = false
+    worker.terminate()
+  }
+  worker.postMessage(jsonString)
+}
+
 const submitSingleEntitlement = async (formRole: any, idx: number) => {
   const role = roleForm[`role${formRole.role}${idx}`]
 
@@ -652,32 +692,48 @@ onUnmounted(() => {
 })
 
 const copyToClipboard = () => {
-  // Create a temporary text area to hold the content
-  const textArea = document.createElement('textarea');
+  let rawJson = '';
 
-  // Parse the HTML content with Cheerio
-  const $ = cheerio.load(successResponseBody.value);
+  // If we have the raw JSON string stored (large response), use it directly
+  if (largeResponseJson.value) {
+    rawJson = largeResponseJson.value;
+  } else {
+    // Parse the HTML content with Cheerio
+    const $ = cheerio.load(successResponseBody.value);
 
-  // Extract all JSON lines
-  const jsonLines: string[] = [];
-  $('.hljs-ln-code').each((_, element) => {
-      jsonLines.push($(element).text());
-  });
+    // Try extracting from line-numbered elements first
+    const jsonLines: string[] = [];
+    $('.hljs-ln-code').each((_, element) => {
+        jsonLines.push($(element).text());
+    });
 
-  // Combine lines to form raw JSON
-  const rawJson = jsonLines.join('\n');
+    if (jsonLines.length > 0) {
+      rawJson = jsonLines.join('\n');
+    } else {
+      // Fallback: extract text from the full content (highlighted without line numbers)
+      rawJson = $.text();
+    }
+  }
 
-  textArea.value = rawJson; // Set the text to copy
-  document.body.appendChild(textArea); // Append the text area to the DOM
-  textArea.select(); // Select the text inside the text area
-  document.execCommand('copy'); // Execute the copy command
-  document.body.removeChild(textArea); // Remove the text area from the DOM
-
-  // Show feedback to the user
-  ElNotification({
-    message: 'Response copied to clipboard!',
-    type: 'success',
-    duration: elMessageDuration
+  navigator.clipboard.writeText(rawJson).then(() => {
+    ElNotification({
+      message: 'Response copied to clipboard!',
+      type: 'success',
+      duration: elMessageDuration
+    });
+  }).catch(() => {
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = rawJson;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    ElNotification({
+      message: 'Response copied to clipboard!',
+      type: 'success',
+      duration: elMessageDuration
+    });
   });
 };
 
@@ -752,6 +808,7 @@ const onError = (error) => {
     <div v-show="successResponseBody" class="success-response-container">
       <div class="success-response-header-container">
         <p class="header-container success-response-header">{{ responseHeaderTitle }}:</p>
+        <button v-if="isLargeResponse" @click="formatLargeResponse" :disabled="isFormatting" class="copy-button icon-md-heavy" title="Format JSON (may be slow for large responses)"><i v-if="!isFormatting" class="material-icons">auto_fix_high</i><i v-else class="material-icons spinning">hourglass_empty</i></button>
         <button @click="copyToClipboard" class="copy-button icon-md-heavy" title="Copy to Clipboard"><i class="material-icons">content_copy</i></button>
       </div>
       <pre>
@@ -1105,5 +1162,14 @@ li:last-child {
 .copy-button:active .material-icons {
   color: #212121;
   transform: scale(0.95);
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>
