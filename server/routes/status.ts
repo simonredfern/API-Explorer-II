@@ -171,31 +171,41 @@ router.get('/status', async (req: Request, res: Response) => {
     const oauthConfig = session.clientConfig
     const version = obpClientService.getOBPVersion()
 
-    // Check if user is authenticated
-    const isAuthenticated = oauthConfig && oauthConfig.oauth2?.accessToken
+    const isAuthenticated = !!(oauthConfig && oauthConfig.oauth2?.accessToken)
 
-    let currentUser = null
-    let apiVersions = false
-    let messageDocs = false
-    let resourceDocs = false
+    // Public OBP endpoints — run regardless of auth so the page shows real
+    // server reachability to anonymous visitors instead of all-red.
+    const [apiVersions, resourceDocs] = await Promise.all([
+      checkApiVersions(oauthConfig, version),
+      checkResourceDocs(oauthConfig, version)
+    ])
 
+    // Auth-gated checks — only meaningful when logged in.
+    let currentUser: boolean | undefined
+    let messageDocs: boolean | undefined
     if (isAuthenticated) {
       try {
-        currentUser = await obpClientService.get(`/obp/${version}/users/current`, oauthConfig)
-        apiVersions = await checkApiVersions(oauthConfig, version)
+        const userResponse = await obpClientService.get(
+          `/obp/${version}/users/current`,
+          oauthConfig
+        )
+        currentUser = !isCodeError(userResponse, `/obp/${version}/users/current`)
         messageDocs = await checkMessageDocs(oauthConfig, version)
-        resourceDocs = await checkResourceDocs(oauthConfig, version)
       } catch (error) {
         console.error('Status: Error fetching authenticated data:', error)
+        currentUser = false
       }
     }
 
+    const overallStatus = isAuthenticated
+      ? apiVersions && resourceDocs && !!messageDocs && !!currentUser
+      : apiVersions && resourceDocs
+
     res.json({
-      status: apiVersions && messageDocs && resourceDocs,
+      status: overallStatus,
       apiVersions,
-      messageDocs,
       resourceDocs,
-      currentUser,
+      ...(isAuthenticated ? { messageDocs, currentUser } : {}),
       isAuthenticated,
       commitId
     })
