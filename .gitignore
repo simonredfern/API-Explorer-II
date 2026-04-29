@@ -16,6 +16,8 @@ coverage
 *.local
 .env
 .env_*
+ai_multi_logon_env
+env_ai
 
 /cypress/videos/
 /cypress/screenshots/
