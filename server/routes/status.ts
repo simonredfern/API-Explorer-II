@@ -154,10 +154,7 @@ async function checkApiVersions(oauthConfig: any, version: string): Promise<bool
  */
 router.get('/health', (req: Request, res: Response) => {
   res.status(200).json({
-    status: 'ok',
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
-    commitId
+    status: 'ok'
   })
 })
 
