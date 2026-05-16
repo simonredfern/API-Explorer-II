@@ -30,6 +30,7 @@ import { OAuth2ProviderFactory } from './OAuth2ProviderFactory.js'
 import { OAuth2ClientWithConfig } from './OAuth2ClientWithConfig.js'
 import OBPClientService from './OBPClientService.js'
 import type { WellKnownUri, WellKnownResponse, ProviderStatus } from '../types/oauth2.js'
+import { V5_1_0 } from '../../src/shared-constants.js'
 
 /**
  * Manager for multiple OAuth2/OIDC providers
@@ -95,12 +96,12 @@ export class OAuth2ProviderManager {
     // Multi-provider mode: fetch from OBP API
     console.log('OAuth2ProviderManager: Fetching well-known URIs from OBP API...')
     console.log(
-      `OAuth2ProviderManager: Target URL: ${this.obpClientService.getOBPClientConfig().baseUri}/obp/v5.1.0/well-known`
+      `OAuth2ProviderManager: Target URL: ${this.obpClientService.getOBPClientConfig().baseUri}/obp/${V5_1_0}/well-known`
     )
 
     try {
       // Use OBPClientService to call the API
-      const response = await this.obpClientService.get('/obp/v5.1.0/well-known', null)
+      const response = await this.obpClientService.get(`/obp/${V5_1_0}/well-known`, null)
 
       console.log(
         'OAuth2ProviderManager: Raw response from OBP API:',
@@ -150,7 +151,7 @@ export class OAuth2ProviderManager {
     if (wellKnownUris.length === 0) {
       console.warn('OAuth2ProviderManager: No providers to initialize')
       console.warn(
-        'OAuth2ProviderManager: Check that OBP API is running and /obp/v5.1.0/well-known endpoint is available'
+        `OAuth2ProviderManager: Check that OBP API is running and /obp/${V5_1_0}/well-known endpoint is available`
       )
       console.log('OAuth2ProviderManager: Will retry fetching providers every 30 seconds...')
       this.startRetryInterval()

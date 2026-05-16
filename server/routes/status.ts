@@ -35,7 +35,8 @@ import { commitId } from '../app.js'
 import {
   RESOURCE_DOCS_API_VERSION,
   MESSAGE_DOCS_API_VERSION,
-  API_VERSIONS_LIST_API_VERSION
+  API_VERSIONS_LIST_API_VERSION,
+  V5_1_0
 } from '../../src/shared-constants.js'
 
 const router = Router()
@@ -333,7 +334,7 @@ router.get('/status/oidc-debug', async (req: Request, res: Response) => {
 
     // Step 1: Get OBP API well-known endpoint info
     const obpApiHost = obpClientService.getOBPClientConfig().baseUri
-    const wellKnownEndpoint = `${obpApiHost}/obp/v5.1.0/well-known`
+    const wellKnownEndpoint = `${obpApiHost}/obp/${V5_1_0}/well-known`
 
     const step1 = {
       description: 'Discovery of OIDC providers from OBP API',
@@ -346,7 +347,7 @@ router.get('/status/oidc-debug', async (req: Request, res: Response) => {
 
     try {
       console.log(`OIDC Debug: Fetching from ${wellKnownEndpoint}`)
-      const wellKnownResponse = await obpClientService.get('/obp/v5.1.0/well-known', null)
+      const wellKnownResponse = await obpClientService.get(`/obp/${V5_1_0}/well-known`, null)
       step1.response = wellKnownResponse
       step1.success = !!(wellKnownResponse && wellKnownResponse.well_known_uris)
       step1.providers = wellKnownResponse.well_known_uris || []

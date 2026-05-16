@@ -141,7 +141,7 @@ export default async function router(): Promise<any> {
       {
         path: '/operationid/:id',
         redirect: (to) => {
-          const version = to.query.version || 'OBPv6.0.0'
+          const version = to.query.version || OBP_API_DEFAULT_RESOURCE_DOC_VERSION
           return {
             path: `/resource-docs/${version}`,
             query: { operationid: to.params.id }

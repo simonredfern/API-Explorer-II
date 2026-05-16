@@ -72,7 +72,7 @@ const GRPC_SERVICES_ITEM = 'gRPC Services'
 const helpMenuItems = ref(Object.keys(helpMenuRoutes))
 
 // Split versions into main and other
-const mainVersions = ['BGv1.3', 'BGv2', 'OBPv5.1.0', 'OBPv6.0.0', 'UKv3.1', 'dynamic-endpoints', 'dynamic-entities', 'OBPdynamic-endpoint', 'OBPdynamic-entity']
+const mainVersions = ['BGv1.3', 'BGv2', 'OBPv5.1.0', 'OBPv6.0.0', 'OBPv7.0.0', 'UKv3.1', 'dynamic-endpoints', 'dynamic-entities', 'OBPdynamic-endpoint', 'OBPdynamic-entity']
 const sortedVersions = computed(() => {
   const all = obpApiVersions.value || []
   console.log('All available versions:', all)

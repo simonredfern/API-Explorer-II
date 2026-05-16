@@ -26,6 +26,7 @@
  */
 
 import { OBP_API_VERSION, get, isServerUp } from '../obp'
+import { V6_0_0 } from '../shared-constants'
 import { updateLoadingInfoMessage } from './common-functions'
 
 // Connectors to exclude from message docs display
@@ -42,7 +43,7 @@ const fallbackConnectors = [
 // Fetch available connectors dynamically from the API
 export async function getConnectors(): Promise<string[]> {
   try {
-    const data = await get('obp/v6.0.0/system/connectors')
+    const data = await get(`obp/${V6_0_0}/system/connectors`)
     if (data && data.connectors && Array.isArray(data.connectors)) {
       const connectorNames = data.connectors
         .map((c: any) => c.connector_name)
@@ -69,7 +70,7 @@ export async function getOBPMessageDocsJsonSchema(item: string): Promise<any> {
   const logMessage = `Loading message docs JSON schema { connector: ${item} }`
   console.log(logMessage)
   updateLoadingInfoMessage(logMessage)
-  return await get(`obp/v6.0.0/message-docs/${item}/json-schema`)
+  return await get(`obp/${V6_0_0}/message-docs/${item}/json-schema`)
 }
 
 export function getGroupedMessageDocs(docs: any): any {
