@@ -131,7 +131,10 @@ export default class OpeyClientService {
         // Get auth headers
         const authHeaders = await this.getConsentAuthHeaders(config)
 
-        
+        // Opey's /stream requires an authenticated session. Establish one with the
+        // Consent-JWT first, then forward the returned session cookie on /stream.
+        const sessionCookie = await this.createOpeySession(config)
+
         try {
 
             const url = `${config.baseUri}${config.paths.stream}`
@@ -140,10 +143,10 @@ export default class OpeyClientService {
             stream_input.stream_tokens = true
 
             console.log(`Posting to Opey with streaming: ${JSON.stringify(stream_input)}\n URL: ${url}`) //DEBUG
-            
+
             const response = await fetch(url, {
                 method: 'POST',
-                headers: authHeaders,
+                headers: { ...authHeaders, 'Cookie': sessionCookie },
                 body: JSON.stringify(stream_input)
             })
             if (!response.body) {
@@ -242,7 +245,7 @@ export default class OpeyClientService {
     }
 
     async getConsentAuthHeaders(opeyConfig: OpeyConfig): Promise<{ [key: string]: string } | undefined> {
-        
+
         if (!opeyConfig.authConfig || !opeyConfig.authConfig.obpConsent) {
             throw new Error('AuthConfig not found or obpConsent missing')
         }
@@ -250,5 +253,35 @@ export default class OpeyClientService {
             'Consent-JWT': opeyConfig.authConfig.obpConsent.jwt,
             'Content-Type': 'application/json'
         }
+    }
+
+    /**
+     * Establish an authenticated Opey session using the OBP Consent-JWT and return
+     * the session cookie ("session=...") to forward on subsequent /stream or /invoke
+     * calls. Opey's chat endpoints require a session (created via /create-session);
+     * driving it server-side keeps the browser same-origin (mirrors the Portal design).
+     */
+    async createOpeySession(opeyConfig: OpeyConfig): Promise<string> {
+        const authHeaders = await this.getConsentAuthHeaders(opeyConfig)
+        const url = `${opeyConfig.baseUri}/create-session`
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: authHeaders,
+            body: JSON.stringify({})
+        })
+        if (!response.ok) {
+            throw new Error(`Failed to create Opey session: ${response.status} ${response.statusText}`)
+        }
+        // undici exposes getSetCookie(); fall back to the combined header otherwise
+        const setCookies: string[] =
+            (response.headers as any).getSetCookie?.() ??
+            ((response.headers.get('set-cookie') ? [response.headers.get('set-cookie') as string] : []))
+        const sessionCookie = setCookies
+            .map(c => c.split(';')[0])
+            .find(c => c.startsWith('session='))
+        if (!sessionCookie) {
+            throw new Error('Opey did not return a session cookie from /create-session')
+        }
+        return sessionCookie
     }
 }

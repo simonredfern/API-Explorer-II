@@ -253,8 +253,13 @@ router.get('/oauth2/callback', async (req: Request, res: Response) => {
       sub: userInfo.sub
     }
 
-    // Also store clientConfig for OBP API calls
+    // Also store clientConfig for OBP API calls.
+    // baseUri/version are required by services that read session.clientConfig directly
+    // (e.g. OBPConsentsService for the Opey consent flow) — without baseUri the consent
+    // request builds an "undefined/obp/..." URL and throws "Invalid URL".
     session.clientConfig = {
+      baseUri: process.env.VITE_OBP_API_HOST,
+      version: process.env.VITE_OBP_API_VERSION,
       oauth2: {
         accessToken: tokens.accessToken,
         tokenType: 'Bearer'
