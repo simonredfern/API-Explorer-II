@@ -45,6 +45,25 @@ The callback URL (if running locally) should be http://localhost:5173/api/callba
 Copy and paste the Consumer Key and Consumer Secret and add it to your .env file here.
 You can use .env.example as a basis of your .env file. 
 
+##### Logout behaviour (`VITE_OBP_LOGOUT_MODE`)
+
+Controls what happens when a user logs out (`GET /api/user/logoff`):
+
+  * **`public`** (default) — Full SSO logout. After clearing the local session,
+    the user is redirected to the provider's `end_session_endpoint`, ending the
+    Keycloak/OIDC session too, so the next login requires credentials. Safe
+    default for public-facing or shared machines.
+  * **`internal`** — Local-only logout. Clears the app session but leaves the
+    provider's SSO session intact, so re-login is silent. Intended for
+    deployments used within a single organisation on trusted machines.
+
+Unset or unrecognised values fall back to `public`.
+
+> **Keycloak setup for `public` mode:** add the app's home URL
+> (`VITE_OBP_API_EXPLORER_HOST`, e.g. `http://localhost:5173`) to the client's
+> **Valid post logout redirect URIs** in the Keycloak admin console, otherwise
+> the provider rejects the post-logout redirect.
+
 ### Testing
 
 Unit tests are located in `server/test` and `src/test`.

@@ -71,6 +71,7 @@ export interface OIDCConfiguration {
   token_endpoint: string
   userinfo_endpoint: string
   jwks_uri: string
+  end_session_endpoint?: string
   registration_endpoint?: string
   scopes_supported?: string[]
   response_types_supported?: string[]
