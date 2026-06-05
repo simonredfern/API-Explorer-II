@@ -35,7 +35,8 @@ import { commitId } from '../app.js'
 import {
   RESOURCE_DOCS_API_VERSION,
   MESSAGE_DOCS_API_VERSION,
-  API_VERSIONS_LIST_API_VERSION
+  API_VERSIONS_LIST_API_VERSION,
+  V5_1_0
 } from '../../src/shared-constants.js'
 
 const router = Router()
@@ -147,6 +148,18 @@ async function checkApiVersions(oauthConfig: any, version: string): Promise<bool
 }
 
 /**
+ * GET /health
+ * Liveness probe for uptime monitors and orchestrators.
+ * Intentionally does not contact Redis or the OBP API so it stays cheap
+ * and reflects only whether this process is up. Use /status for deeper checks.
+ */
+router.get('/health', (req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'ok'
+  })
+})
+
+/**
  * GET /status
  * Get application status and health checks
  */
@@ -156,31 +169,41 @@ router.get('/status', async (req: Request, res: Response) => {
     const oauthConfig = session.clientConfig
     const version = obpClientService.getOBPVersion()
 
-    // Check if user is authenticated
-    const isAuthenticated = oauthConfig && oauthConfig.oauth2?.accessToken
+    const isAuthenticated = !!(oauthConfig && oauthConfig.oauth2?.accessToken)
 
-    let currentUser = null
-    let apiVersions = false
-    let messageDocs = false
-    let resourceDocs = false
+    // Public OBP endpoints — run regardless of auth so the page shows real
+    // server reachability to anonymous visitors instead of all-red.
+    const [apiVersions, resourceDocs] = await Promise.all([
+      checkApiVersions(oauthConfig, version),
+      checkResourceDocs(oauthConfig, version)
+    ])
 
+    // Auth-gated checks — only meaningful when logged in.
+    let currentUser: boolean | undefined
+    let messageDocs: boolean | undefined
     if (isAuthenticated) {
       try {
-        currentUser = await obpClientService.get(`/obp/${version}/users/current`, oauthConfig)
-        apiVersions = await checkApiVersions(oauthConfig, version)
+        const userResponse = await obpClientService.get(
+          `/obp/${version}/users/current`,
+          oauthConfig
+        )
+        currentUser = !isCodeError(userResponse, `/obp/${version}/users/current`)
         messageDocs = await checkMessageDocs(oauthConfig, version)
-        resourceDocs = await checkResourceDocs(oauthConfig, version)
       } catch (error) {
         console.error('Status: Error fetching authenticated data:', error)
+        currentUser = false
       }
     }
 
+    const overallStatus = isAuthenticated
+      ? apiVersions && resourceDocs && !!messageDocs && !!currentUser
+      : apiVersions && resourceDocs
+
     res.json({
-      status: apiVersions && messageDocs && resourceDocs,
+      status: overallStatus,
       apiVersions,
-      messageDocs,
       resourceDocs,
-      currentUser,
+      ...(isAuthenticated ? { messageDocs, currentUser } : {}),
       isAuthenticated,
       commitId
     })
@@ -311,7 +334,7 @@ router.get('/status/oidc-debug', async (req: Request, res: Response) => {
 
     // Step 1: Get OBP API well-known endpoint info
     const obpApiHost = obpClientService.getOBPClientConfig().baseUri
-    const wellKnownEndpoint = `${obpApiHost}/obp/v5.1.0/well-known`
+    const wellKnownEndpoint = `${obpApiHost}/obp/${V5_1_0}/well-known`
 
     const step1 = {
       description: 'Discovery of OIDC providers from OBP API',
@@ -324,7 +347,7 @@ router.get('/status/oidc-debug', async (req: Request, res: Response) => {
 
     try {
       console.log(`OIDC Debug: Fetching from ${wellKnownEndpoint}`)
-      const wellKnownResponse = await obpClientService.get('/obp/v5.1.0/well-known', null)
+      const wellKnownResponse = await obpClientService.get(`/obp/${V5_1_0}/well-known`, null)
       step1.response = wellKnownResponse
       step1.success = !!(wellKnownResponse && wellKnownResponse.well_known_uris)
       step1.providers = wellKnownResponse.well_known_uris || []

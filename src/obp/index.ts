@@ -26,11 +26,11 @@
  */
 
 import superagent from 'superagent'
-import { DEFAULT_OBP_API_VERSION } from '../shared-constants'
+import { DEFAULT_OBP_API_VERSION, V6_0_0 } from '../shared-constants'
 
 // Always use v5.1.0 for application infrastructure - stable and debuggable
 export const OBP_API_VERSION = DEFAULT_OBP_API_VERSION
-// Default to showing v6.0.0 documentation in the UI (can be overridden by env var)
+// Default to showing v7.0.0 documentation in the UI (can be overridden by env var)
 export const OBP_API_DEFAULT_RESOURCE_DOC_VERSION =
   import.meta.env.VITE_OBP_API_DEFAULT_RESOURCE_DOC_VERSION ?? 'OBPv7.0.0'
 const default_collection_name = 'Favourites'
@@ -201,9 +201,9 @@ export async function getMyAPICollectionsEndpoint(collectionName: string): Promi
 }
 
 export async function getAPICollectionEndpoints(collectionId: string): Promise<any> {
-  return await get(`obp/v6.0.0/api-collections/${collectionId}/api-collection-endpoints`)
+  return await get(`obp/${V6_0_0}/api-collections/${collectionId}/api-collection-endpoints`)
 }
 
 export async function getOBPBanks(): Promise<any> {
-  return await get(`obp/v6.0.0/banks`)
+  return await get(`obp/${V6_0_0}/banks`)
 }

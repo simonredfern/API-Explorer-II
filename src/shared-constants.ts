@@ -30,3 +30,10 @@ export const API_VERSIONS_LIST_API_VERSION = 'v7.0.0'
  * Endpoint: GET /obp/{version}/api/glossary
  */
 export const GLOSSARY_API_VERSION = 'v5.1.0'
+
+/**
+ * Plain version-string constants. No semantic meaning — these just represent
+ * a version literal so callers can avoid hardcoding the string.
+ */
+export const V5_1_0 = 'v5.1.0'
+export const V6_0_0 = 'v6.0.0'

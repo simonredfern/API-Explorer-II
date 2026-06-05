@@ -44,6 +44,8 @@ import { isServerUp, OBP_API_DEFAULT_RESOURCE_DOC_VERSION } from '../obp'
 import MessageDocsContent from '@/components/CodeBlock.vue'
 import ProvidersStatusView from '../views/ProvidersStatusView.vue'
 import OIDCDebugView from '../views/OIDCDebugView.vue'
+import AboutView from '../views/AboutView.vue'
+import GrpcServicesView from '../views/GrpcServicesView.vue'
 
 export default async function router(): Promise<any> {
   const isServerActive = await isServerUp()
@@ -78,6 +80,16 @@ export default async function router(): Promise<any> {
         path: '/help',
         name: 'help',
         component: isServerActive ? HelpView : InternalServerErrorView
+      },
+      {
+        path: '/about',
+        name: 'about',
+        component: AboutView
+      },
+      {
+        path: '/grpc-services',
+        name: 'grpc-services',
+        component: GrpcServicesView
       },
       {
         path: '/message-docs',
@@ -129,7 +141,7 @@ export default async function router(): Promise<any> {
       {
         path: '/operationid/:id',
         redirect: (to) => {
-          const version = to.query.version || 'OBPv6.0.0'
+          const version = to.query.version || OBP_API_DEFAULT_RESOURCE_DOC_VERSION
           return {
             path: `/resource-docs/${version}`,
             query: { operationid: to.params.id }

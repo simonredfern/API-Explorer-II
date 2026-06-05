@@ -28,23 +28,64 @@
 <script setup lang="ts">
 import { ArrowDown } from '@element-plus/icons-vue'
 import { SEARCH_LINKS_COLOR as searchLinksColorSetting } from '../obp/style-setting'
-import { inject, ref } from 'vue'
-import { updateServerStatus, clearCacheByName } from '@/obp/common-functions';
-import { obpApiHostKey } from '@/obp/keys';
+import {
+  HEADER_LINKS_HOVER_COLOR as headerLinksHoverColorSetting,
+  HEADER_LINKS_BACKGROUND_COLOR as headerLinksBackgroundColorSetting
+} from '../obp/style-setting'
+import { inject, ref, computed, onMounted } from 'vue'
 
-const APP_VERSION = ref(__APP_VERSION__)
+const obpApiHost = ref(import.meta.env.VITE_OBP_API_HOST)
+import { getOBPBanks } from '../obp'
+import SvelteDropdown from './SvelteDropdown.vue'
+
 const i18n = inject('i18n')
-const OBP_API_HOST = inject(obpApiHostKey)
 const searchLinksColor = ref(searchLinksColorSetting)
+const headerLinksHoverColor = ref(headerLinksHoverColorSetting)
+const headerLinksBackgroundColor = ref(headerLinksBackgroundColorSetting)
+
+// Banks state
+const banks = ref<Array<{ bank_id: string; bank_code: string; full_name: string }>>([])
+const bankItems = computed(() =>
+  [...banks.value]
+    .sort((a, b) => (a.full_name || a.bank_id || '').localeCompare(b.full_name || b.bank_id || ''))
+    .map(b => {
+      const name = b.full_name || b.bank_id || ''
+      const id = b.bank_id || ''
+      return name !== id ? `${name} | ${id}` : id
+    })
+)
+const selectedBankId = ref(localStorage.getItem('obp-selected-bank-id') || '')
+const banksDropdownLabel = computed(() => {
+  if (selectedBankId.value) {
+    const bank = banks.value.find(b => b.bank_id === selectedBankId.value)
+    return bank ? (bank.full_name || bank.bank_id) : 'Banks'
+  }
+  return 'Banks'
+})
+
+const handleBankSelect = (item: string) => {
+  const parts = item.split(' | ')
+  const bankId = parts[parts.length - 1]
+  const bank = banks.value.find(b => b.bank_id === bankId)
+  if (bank) {
+    selectedBankId.value = bank.bank_id
+    localStorage.setItem('obp-selected-bank-id', bank.bank_id)
+    window.dispatchEvent(new CustomEvent('obp-bank-selected', { detail: bank.bank_id }))
+  }
+}
+
+onMounted(() => {
+  getOBPBanks().then((data) => {
+    if (data && data.banks && Array.isArray(data.banks)) {
+      banks.value = data.banks
+    }
+  }).catch((error) => {
+    console.error('Failed to fetch banks:', error)
+  })
+})
+
 const handleLocale = (command: string) => {
   i18n.global.locale.value = command
-}
-const updateStatus = (event: any) => {
-  updateServerStatus()
-}
-const clearCacheStorage = (event: any) => {
-  clearCacheByName('obp-message-docs-cache')
-  clearCacheByName('obp-resource-docs-cache')
 }
 </script>
 
@@ -56,13 +97,16 @@ const clearCacheStorage = (event: any) => {
       <span id="selected-endpoint-tags" class="endpoint-tags"></span>
     </el-col>
     <el-col :span="14" class="menu-right">
-      <span class="host" id="cache-storage-status" @click="clearCacheStorage">App Version: {{ APP_VERSION }}</span>
-      &nbsp;&nbsp;
-      <span class="host"><span id="backend-status" @click="updateStatus">API Host: </span>
-        <a :href="OBP_API_HOST">
-          {{ OBP_API_HOST }}
-        </a>
-      </span>
+      <a :href="obpApiHost" class="api-host-label" target="_blank">{{ obpApiHost }}</a>
+      <SvelteDropdown
+        class="menu-right bank-selector"
+        id="menu-nav-banks"
+        :label="banksDropdownLabel"
+        :items="bankItems"
+        :hover-color="headerLinksHoverColor"
+        :background-color="headerLinksBackgroundColor"
+        @select="handleBankSelect"
+      />
       &nbsp;&nbsp;
       <el-dropdown class="menu-right" @command="handleLocale">
         <span class="el-dropdown-link">
@@ -133,5 +177,19 @@ a:hover {
 .endpoint-tags :deep(.tag-link:hover) {
   color: #66b1ff;
   text-decoration: underline;
+}
+
+.api-host-label {
+  font-size: 14px;
+  font-family: 'Roboto';
+  color: #7787a6;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+.bank-selector {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 10px;
 }
 </style>

@@ -28,7 +28,7 @@
 <script setup lang="ts">
 import { ref, inject, watchEffect, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { OBP_API_DEFAULT_RESOURCE_DOC_VERSION, getCurrentUser, getOBPBanks } from '../obp'
+import { OBP_API_DEFAULT_RESOURCE_DOC_VERSION, getCurrentUser } from '../obp'
 import { getOBPAPIVersions } from '../obp/api-version'
 import {
   LOGO_URL as logoSource,
@@ -63,33 +63,16 @@ const combinedMessageDocs = computed(() => {
 // Help menu items (includes debug pages)
 const helpMenuRoutes: Record<string, string> = {
   'Help': '/help',
+  'About': '/about',
   'Providers Status': '/debug/providers-status',
   'OIDC': '/debug/oidc'
 }
+
+const GRPC_SERVICES_ITEM = 'gRPC Services'
 const helpMenuItems = ref(Object.keys(helpMenuRoutes))
 
-// Banks state
-const banks = ref<Array<{ bank_id: string; bank_code: string; full_name: string }>>([])
-const bankItems = computed(() =>
-  [...banks.value]
-    .sort((a, b) => (a.full_name || a.bank_id || '').localeCompare(b.full_name || b.bank_id || ''))
-    .map(b => {
-      const name = b.full_name || b.bank_id || ''
-      const id = b.bank_id || ''
-      return name !== id ? `${name} | ${id}` : id
-    })
-)
-const selectedBankId = ref(localStorage.getItem('obp-selected-bank-id') || '')
-const banksDropdownLabel = computed(() => {
-  if (selectedBankId.value) {
-    const bank = banks.value.find(b => b.bank_id === selectedBankId.value)
-    return bank ? (bank.full_name || bank.bank_id) : 'Banks'
-  }
-  return 'Banks'
-})
-
 // Split versions into main and other
-const mainVersions = ['BGv1.3', 'BGv2', 'OBPv5.1.0', 'OBPv6.0.0', 'UKv3.1', 'dynamic-endpoints', 'dynamic-entities', 'OBPdynamic-endpoint', 'OBPdynamic-entity']
+const mainVersions = ['BGv1.3', 'BGv2', 'OBPv5.1.0', 'OBPv6.0.0', 'OBPv7.0.0', 'UKv3.1', 'dynamic-endpoints', 'dynamic-entities', 'OBPdynamic-endpoint', 'OBPdynamic-entity']
 const sortedVersions = computed(() => {
   const all = obpApiVersions.value || []
   console.log('All available versions:', all)
@@ -98,14 +81,18 @@ const sortedVersions = computed(() => {
   const others = all.filter(v => !mainVersions.includes(v)).sort()
   console.log('Other versions:', others)
 
-  // Only add divider if we have both main and other versions
-  if (main.length > 0 && others.length > 0) {
-    return [...main, '---', ...others]
-  } else if (main.length > 0) {
-    return main
-  } else {
-    return others
+  // Insert gRPC Services between main (first set) and other (second set) versions
+  const items: string[] = []
+  if (main.length > 0) {
+    items.push(...main)
+    items.push('---')
   }
+  items.push(GRPC_SERVICES_ITEM)
+  if (others.length > 0) {
+    items.push('---')
+    items.push(...others)
+  }
+  return items
 })
 
 const isShowLoginButton = ref(true)
@@ -235,6 +222,12 @@ const handleMore = (command: string, source?: string) => {
     element.textContent = command;
   }
 
+  if (command === GRPC_SERVICES_ITEM) {
+    console.log('Navigating to gRPC services')
+    router.push('/grpc-services')
+    return
+  }
+
   // Check if command ends with " J Schema" - if so, it's a JSON Schema message doc
   if (command.endsWith(' J Schema')) {
     const connector = command.replace(' J Schema', '')
@@ -264,28 +257,7 @@ const handleMore = (command: string, source?: string) => {
   }
 }
 
-const handleBankSelect = (item: string) => {
-  // Extract bank_id from display format "full_name | bank_id" or just "bank_id"
-  const parts = item.split(' | ')
-  const bankId = parts[parts.length - 1]
-  const bank = banks.value.find(b => b.bank_id === bankId)
-  if (bank) {
-    selectedBankId.value = bank.bank_id
-    localStorage.setItem('obp-selected-bank-id', bank.bank_id)
-    window.dispatchEvent(new CustomEvent('obp-bank-selected', { detail: bank.bank_id }))
-  }
-}
-
 onMounted(async () => {
-  // Fetch banks
-  getOBPBanks().then((data) => {
-    if (data && data.banks && Array.isArray(data.banks)) {
-      banks.value = data.banks
-    }
-  }).catch((error) => {
-    console.error('Failed to fetch banks:', error)
-  })
-
   // Fetch available providers
   await fetchAvailableProviders()
 
@@ -327,8 +299,10 @@ const getCurrentPath = () => {
 </script>
 
 <template>
-  <img alt="OBP logo" class="logo" v-show="logo" :src="logo" />
-  <img alt="OBP logo" class="logo" v-show="!logo" src="@/assets/logo2x-1.png" />
+  <a :href="obpApiHybridPost">
+    <img alt="OBP logo" class="logo" v-show="logo" :src="logo" />
+    <img alt="OBP logo" class="logo" v-show="!logo" src="@/assets/logo2x-1.png" />
+  </a>
   <nav id="nav">
     <RouterView name="header">
       <a v-bind:href="obpApiHybridPost" class="router-link" id="header-nav-home">
@@ -347,15 +321,6 @@ const getCurrentPath = () => {
         :hover-color="headerLinksHoverColor"
         :background-color="headerLinksBackgroundColor"
         @select="handleMore"
-      />
-      <SvelteDropdown
-        class="menu-right"
-        id="header-nav-banks"
-        :label="banksDropdownLabel"
-        :items="bankItems"
-        :hover-color="headerLinksHoverColor"
-        :background-color="headerLinksBackgroundColor"
-        @select="handleBankSelect"
       />
       <a v-if="showObpApiManagerButton && hasObpApiManagerHost" v-bind:href="obpApiManagerHost" class="router-link" id="header-nav-api-manager">
         {{ $t('header.api_manager') }}
@@ -582,8 +547,7 @@ button.login-button-disabled {
 /* Custom dropdown containers */
 #header-nav-versions,
 #header-nav-message-docs,
-#header-nav-help,
-#header-nav-banks {
+#header-nav-help {
   display: inline-block;
   vertical-align: middle;
 }
