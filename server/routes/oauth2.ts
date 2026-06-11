@@ -253,10 +253,20 @@ router.get('/oauth2/callback', async (req: Request, res: Response) => {
       sub: userInfo.sub
     }
 
-    // Also store clientConfig for OBP API calls
+    // Also store clientConfig for OBP API calls.
+    // OBP-API validates the Bearer value as a JWT (issuer-based dispatch in OAuth2Login),
+    // but some providers (e.g. Google) issue opaque access tokens (ya29...). For those,
+    // send the id_token to OBP instead — OBP's Google branch expects it (applyIdTokenRules).
+    const isJwt = (token?: string) => !!token && token.split('.').length === 3
+    const obpAccessToken = isJwt(tokens.accessToken) ? tokens.accessToken : tokens.idToken
+    if (obpAccessToken !== tokens.accessToken) {
+      console.log(
+        `OAuth2 Callback: Access token from "${provider}" is not a JWT, using id_token for OBP API calls`
+      )
+    }
     session.clientConfig = {
       oauth2: {
-        accessToken: tokens.accessToken,
+        accessToken: obpAccessToken,
         tokenType: 'Bearer'
       }
     }
