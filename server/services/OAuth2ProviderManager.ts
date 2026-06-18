@@ -159,8 +159,31 @@ export class OAuth2ProviderManager {
     }
 
     let successCount = 0
+    let configuredCount = 0
+    const unconfiguredProviders: string[] = []
 
     for (const providerUri of wellKnownUris) {
+      // Skip providers advertised by the OBP API that have no strategy configured
+      // locally. Strategies are loaded once from environment variables at startup,
+      // so retrying these can never recover them — mark them and move on.
+      if (!this.factory.hasStrategy(providerUri.provider)) {
+        unconfiguredProviders.push(providerUri.provider)
+        this.providerStatus.set(providerUri.provider, {
+          name: providerUri.provider,
+          available: false,
+          configured: false,
+          lastChecked: new Date(),
+          error: 'Not configured locally (no client credentials for this provider)'
+        })
+        console.warn(
+          `OAuth2ProviderManager: Skipping "${providerUri.provider}" - advertised by OBP API but not configured locally. ` +
+            `Set ${this.envHintFor(providerUri.provider)} to enable it.`
+        )
+        continue
+      }
+
+      configuredCount++
+
       try {
         const client = await this.factory.initializeProvider(providerUri)
 
@@ -169,6 +192,7 @@ export class OAuth2ProviderManager {
           this.providerStatus.set(providerUri.provider, {
             name: providerUri.provider,
             available: true,
+            configured: true,
             lastChecked: new Date()
           })
           successCount++
@@ -177,6 +201,7 @@ export class OAuth2ProviderManager {
           this.providerStatus.set(providerUri.provider, {
             name: providerUri.provider,
             available: false,
+            configured: true,
             lastChecked: new Date(),
             error: 'Failed to initialize client'
           })
@@ -187,6 +212,7 @@ export class OAuth2ProviderManager {
         this.providerStatus.set(providerUri.provider, {
           name: providerUri.provider,
           available: false,
+          configured: true,
           lastChecked: new Date(),
           error: errorMessage
         })
@@ -197,20 +223,33 @@ export class OAuth2ProviderManager {
     this.initialized = successCount > 0
 
     console.log(
-      `OAuth2ProviderManager: Initialized ${successCount}/${wellKnownUris.length} providers`
+      `OAuth2ProviderManager: Initialized ${successCount}/${configuredCount} configured provider(s)` +
+        (unconfiguredProviders.length > 0
+          ? ` (${unconfiguredProviders.length} advertised provider(s) not configured locally: ${unconfiguredProviders.join(', ')})`
+          : '')
     )
 
-    if (successCount === 0) {
+    if (configuredCount === 0) {
+      // Every advertised provider lacks local credentials. Retrying is pointless
+      // because strategies don't change after startup — surface a clear message.
+      console.error(
+        'OAuth2ProviderManager: ERROR - None of the advertised providers are configured locally'
+      )
+      console.error(
+        'OAuth2ProviderManager: Users will not be able to log in until at least one provider is configured (set VITE_<PROVIDER>_CLIENT_ID/SECRET)'
+      )
+      console.warn('OAuth2ProviderManager: Not retrying - provider config is read once at startup')
+    } else if (successCount === 0) {
       console.error('OAuth2ProviderManager: ERROR - No providers were successfully initialized')
       console.error(
         'OAuth2ProviderManager: Users will not be able to log in until at least one provider is available'
       )
       console.log('OAuth2ProviderManager: Will retry initialization every 30 seconds...')
       this.startRetryInterval()
-    } else if (successCount < wellKnownUris.length) {
-      // Some providers failed - retry only the failed ones
+    } else if (successCount < configuredCount) {
+      // Some configured providers failed (e.g. transient network) - retry those.
       console.log(
-        `OAuth2ProviderManager: ${wellKnownUris.length - successCount} provider(s) failed, will retry every 30 seconds...`
+        `OAuth2ProviderManager: ${configuredCount - successCount} configured provider(s) failed, will retry every 30 seconds...`
       )
       this.startRetryInterval()
     }
@@ -285,7 +324,11 @@ export class OAuth2ProviderManager {
     const failedProviders: string[] = []
 
     this.providerStatus.forEach((status, name) => {
-      if (!status.available) {
+      // Only retry providers that are configured but currently unavailable.
+      // Unconfigured providers (configured === false) can never recover via
+      // retry, so excluding them lets the retry interval stop once the
+      // genuinely-failed providers come back.
+      if (!status.available && status.configured !== false) {
         failedProviders.push(name)
       }
     })
@@ -322,8 +365,10 @@ export class OAuth2ProviderManager {
       }
     }
 
-    // Check if all providers are now healthy
-    const stillFailed = Array.from(this.providerStatus.values()).filter((s) => !s.available)
+    // Check if all configured providers are now healthy (ignore unconfigured ones)
+    const stillFailed = Array.from(this.providerStatus.values()).filter(
+      (s) => !s.available && s.configured !== false
+    )
     if (stillFailed.length === 0) {
       console.log('OAuth2ProviderManager: All providers recovered, stopping retry interval')
       this.stopRetryInterval()
@@ -472,7 +517,30 @@ export class OAuth2ProviderManager {
    * @param providerName - Provider name to retry
    * @returns True if initialization succeeded
    */
+  /**
+   * Build the environment-variable hint for a provider name, used in log
+   * messages to tell the operator how to configure an unconfigured provider.
+   *
+   * e.g. "obp-oidc" -> "VITE_OBP_OIDC_CLIENT_ID/SECRET"
+   *
+   * @param providerName - Provider name from the OBP API well-known response
+   * @returns Human-readable env var hint
+   */
+  private envHintFor(providerName: string): string {
+    const key = providerName.toUpperCase().replace(/-/g, '_')
+    return `VITE_${key}_CLIENT_ID/SECRET`
+  }
+
   async retryProvider(providerName: string): Promise<boolean> {
+    // No point retrying a provider with no local strategy — config is fixed at startup.
+    if (!this.factory.hasStrategy(providerName)) {
+      console.warn(
+        `OAuth2ProviderManager: Cannot retry "${providerName}" - not configured locally. ` +
+          `Set ${this.envHintFor(providerName)} and restart to enable it.`
+      )
+      return false
+    }
+
     console.log(`OAuth2ProviderManager: Retrying initialization for ${providerName}`)
 
     try {

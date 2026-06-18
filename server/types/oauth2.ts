@@ -58,6 +58,15 @@ export interface ProviderStatus {
   available: boolean
   lastChecked: Date
   error?: string
+  /**
+   * Whether this provider has client credentials configured locally.
+   *
+   * `false` means the provider is advertised by the OBP API but has no
+   * matching strategy (e.g. VITE_<PROVIDER>_CLIENT_ID is unset). Such
+   * providers are not retried, since config is read once at startup.
+   * Absent/`true` means the provider is configured.
+   */
+  configured?: boolean
 }
 
 /**
@@ -71,6 +80,7 @@ export interface OIDCConfiguration {
   token_endpoint: string
   userinfo_endpoint: string
   jwks_uri: string
+  end_session_endpoint?: string
   registration_endpoint?: string
   scopes_supported?: string[]
   response_types_supported?: string[]
