@@ -29,6 +29,9 @@ export interface OpeyConfig {
     baseUri: string,
     paths: OpeyPaths,
     authConfig?: AuthConfig,
+    // Opey session cookie ("session=..."), established once via /create-session and
+    // reused for subsequent /stream and /invoke calls in the same conversation.
+    sessionCookie?: string,
 }
 
 export interface ConsentRequestResponse {
