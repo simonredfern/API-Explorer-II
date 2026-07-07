@@ -103,6 +103,24 @@ export async function answerobpConsentChallenge(answerBody: any) {
   return response
 }
 
+// Runs `task` over `items` with at most `limit` calls in flight at once.
+// One task rejecting does not stop the others (same isolation as Promise.allSettled),
+// since each worker's while-loop simply continues to the next queued item.
+export async function runWithConcurrency<T>(
+  items: readonly T[],
+  limit: number,
+  task: (item: T) => Promise<void>
+): Promise<void> {
+  const queue = [...items]
+  const workers = Array.from({ length: Math.min(limit, queue.length) }, async () => {
+    while (queue.length > 0) {
+      const item = queue.shift() as T
+      await task(item)
+    }
+  })
+  await Promise.all(workers)
+}
+
 export function clearCacheByName(cacheName: string) {
   if ('caches' in window) {
     caches.delete(cacheName).then(function(success) {
