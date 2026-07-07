@@ -27,7 +27,9 @@
 
 import { OBP_API_VERSION, get, isServerUp } from '../obp'
 import { V6_0_0 } from '../shared-constants'
-import { updateLoadingInfoMessage } from './common-functions'
+import { runWithConcurrency, updateLoadingInfoMessage } from './common-functions'
+
+const MESSAGE_DOCS_CONCURRENCY = 4
 
 // Connectors to exclude from message docs display
 const excludedConnectors = ['mapped', 'star', 'proxy', 'internal', 'cardano', 'ethereum']
@@ -154,17 +156,16 @@ export function getGroupedMessageDocsJsonSchema(docs: any): any {
 
 export async function cacheDoc(cacheStorageOfMessageDocs: any): Promise<any> {
   const connectors = await getConnectors()
-  const messageDocs = await connectors.reduce(async (agroup: any, connector: any) => {
+  const messageDocs: any = {}
+  await runWithConcurrency(connectors, MESSAGE_DOCS_CONCURRENCY, async (connector: string) => {
     const logMessage = `Caching message docs { connector: ${connector} }`
     console.log(logMessage)
     updateLoadingInfoMessage(logMessage)
-    const group = await agroup
     const docs = await getOBPMessageDocs(connector)
     if (!Object.keys(docs).includes('code')) {
-      group[connector] = getGroupedMessageDocs(docs)
+      messageDocs[connector] = getGroupedMessageDocs(docs)
     }
-    return group
-  }, Promise.resolve({}))
+  })
   await cacheStorageOfMessageDocs.put('/', new Response(JSON.stringify(messageDocs)))
   return messageDocs
 }
@@ -175,17 +176,16 @@ async function getCacheDoc(cacheStorageOfMessageDocs: any): Promise<any> {
 
 export async function cacheDocJsonSchema(cacheStorageOfMessageDocsJsonSchema: any): Promise<any> {
   const connectors = await getConnectors()
-  const messageDocsJsonSchema = await connectors.reduce(async (agroup: any, connector: any) => {
+  const messageDocsJsonSchema: any = {}
+  await runWithConcurrency(connectors, MESSAGE_DOCS_CONCURRENCY, async (connector: string) => {
     const logMessage = `Caching message docs JSON schema { connector: ${connector} }`
     console.log(logMessage)
     updateLoadingInfoMessage(logMessage)
-    const group = await agroup
     const docs = await getOBPMessageDocsJsonSchema(connector)
     if (!Object.keys(docs).includes('code')) {
-      group[connector] = getGroupedMessageDocsJsonSchema(docs)
+      messageDocsJsonSchema[connector] = getGroupedMessageDocsJsonSchema(docs)
     }
-    return group
-  }, Promise.resolve({}))
+  })
   await cacheStorageOfMessageDocsJsonSchema.put(
     '/',
     new Response(JSON.stringify(messageDocsJsonSchema))
