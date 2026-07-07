@@ -213,8 +213,10 @@ async function getCacheDoc(cacheStorageOfResourceDocs: any): Promise<any> {
 
 export async function cache(cachedStorage: any, cachedResponse: any, worker: any): Promise<any> {
   try {
-    worker.postMessage('update-resource-docs')
     const resourceDocs = await cachedResponse.json()
+    // Only a cache hit should schedule a background refresh; posting before the
+    // read would make a cold cache fetch everything twice via the worker echo.
+    worker.postMessage('update-resource-docs')
     console.log(
       '[CACHE] Loaded cached resource docs, available versions:',
       Object.keys(resourceDocs)

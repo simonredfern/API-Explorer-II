@@ -199,8 +199,11 @@ async function getCacheDocJsonSchema(cacheStorageOfMessageDocsJsonSchema: any): 
 
 export async function cache(cacheStorage: any, cachedResponse: any, worker: any): Promise<any> {
   try {
+    const messageDocs = await cachedResponse.json()
+    // Only a cache hit should schedule a background refresh; posting before the
+    // read would make a cold cache fetch everything twice via the worker echo.
     worker.postMessage('update-message-docs')
-    return await cachedResponse.json()
+    return messageDocs
   } catch (error) {
     console.warn('No message docs cache or malformed cache.')
     console.log('Caching message docs...')
@@ -216,8 +219,11 @@ export async function cacheJsonSchema(
   worker: any
 ): Promise<any> {
   try {
+    const messageDocsJsonSchema = await cachedResponse.json()
+    // Only a cache hit should schedule a background refresh; posting before the
+    // read would make a cold cache fetch everything twice via the worker echo.
     worker.postMessage('update-message-docs-json-schema')
-    return await cachedResponse.json()
+    return messageDocsJsonSchema
   } catch (error) {
     console.warn('No message docs JSON schema cache or malformed cache.')
     console.log('Caching message docs JSON schema...')
