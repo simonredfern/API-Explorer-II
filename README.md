@@ -45,6 +45,80 @@ The callback URL (if running locally) should be http://localhost:5173/api/callba
 Copy and paste the Consumer Key and Consumer Secret and add it to your .env file here.
 You can use .env.example as a basis of your .env file. 
 
+##### OAuth2 / OIDC login providers
+
+At startup the backend asks OBP-API which OIDC providers are available
+(`GET $VITE_OBP_API_HOST/obp/v5.1.0/well-known`) and initializes a login
+strategy for each advertised provider that has credentials configured in
+`.env`. A provider is only offered on the login page when **both** sides
+are configured:
+
+  * **OBP-API side** — the provider must be listed in the
+    `oauth2.oidc_provider` props (e.g. `oauth2.oidc_provider=obp-oidc,keycloak,google`)
+    and its JWKS URL must be present in `oauth2.jwk_set.url` so OBP-API can
+    validate the tokens.
+  * **API Explorer side** — the matching `VITE_<PROVIDER>_CLIENT_ID` /
+    `VITE_<PROVIDER>_CLIENT_SECRET` pair must be set in `.env`
+    (`VITE_OBP_OIDC_*`, `VITE_KEYCLOAK_*`, `VITE_GOOGLE_*`, `VITE_GITHUB_*`,
+    or `VITE_CUSTOM_OIDC_*` — see `.env.example`).
+
+> **Migrating an old `.env`:** the legacy `VITE_OBP_OAUTH2_CLIENT_ID` /
+> `VITE_OBP_OAUTH2_CLIENT_SECRET` variables are no longer read — rename them to
+> `VITE_OBP_OIDC_CLIENT_ID` / `VITE_OBP_OIDC_CLIENT_SECRET`, otherwise the
+> obp-oidc provider fails to initialize with "No strategy found".
+
+All providers share one callback URL: `VITE_OAUTH2_REDIRECT_URL`
+(default `http://localhost:5173/api/oauth2/callback`). Providers that fail to
+initialize (missing credentials, unreachable well-known URL) are logged at
+startup and retried every 30 seconds — look for
+`OAuth2ProviderFactory: Available strategies: ...` in the log to see what loaded.
+
+###### Login with Google
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+   go to **APIs & Services → Credentials → Create Credentials → OAuth client ID**
+   and choose type **Web application**.
+2. Add `VITE_OAUTH2_REDIRECT_URL` (e.g. `http://localhost:5173/api/oauth2/callback`)
+   as an **Authorized redirect URI**. It must match exactly.
+3. Put the generated credentials in `.env`:
+
+   ```
+   VITE_GOOGLE_CLIENT_ID=<your-id>.apps.googleusercontent.com
+   VITE_GOOGLE_CLIENT_SECRET=<your-secret>
+   ```
+4. On the OBP-API instance, make sure the props include:
+
+   ```
+   oauth2.oidc_provider=obp-oidc,keycloak,google
+   oauth2.jwk_set.url=...,https://www.googleapis.com/oauth2/v3/certs
+   ```
+5. Restart `npm run dev` (env vars are read at process start). The startup log
+   should show `OK Google strategy loaded` and `OK google initialized`.
+
+Note: the Explorer sends the Google **id_token** as the Bearer token to
+OBP-API (Google access tokens are opaque, not JWTs). OBP-API validates it
+against Google's JWKS and auto-creates a user keyed by the token's
+`iss` + `sub` claims.
+
+##### Logout behaviour (`VITE_OBP_LOGOUT_MODE`)
+
+Controls what happens when a user logs out (`GET /api/user/logoff`):
+
+  * **`public`** (default) — Full SSO logout. After clearing the local session,
+    the user is redirected to the provider's `end_session_endpoint`, ending the
+    Keycloak/OIDC session too, so the next login requires credentials. Safe
+    default for public-facing or shared machines.
+  * **`internal`** — Local-only logout. Clears the app session but leaves the
+    provider's SSO session intact, so re-login is silent. Intended for
+    deployments used within a single organisation on trusted machines.
+
+Unset or unrecognised values fall back to `public`.
+
+> **Keycloak setup for `public` mode:** add the app's home URL
+> (`VITE_OBP_API_EXPLORER_HOST`, e.g. `http://localhost:5173`) to the client's
+> **Valid post logout redirect URIs** in the Keycloak admin console, otherwise
+> the provider rejects the post-logout redirect.
+
 ### Testing
 
 Unit tests are located in `server/test` and `src/test`.

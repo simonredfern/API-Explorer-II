@@ -44,6 +44,28 @@ function isAuthenticated(session: any): boolean {
 }
 
 /**
+ * Forward an OBP API error to the client. OBPAPIError.message carries the raw
+ * OBP error body (e.g. {"code":401,"message":"OBP-20217: ..."}) - pass it
+ * through unchanged instead of wrapping it in another {code, message} envelope,
+ * which would give clients a nested code/message inside message.
+ */
+function sendOBPError(res: Response, error: any) {
+  const status = error.status || 500
+  try {
+    const body = JSON.parse(error.message)
+    if (body && typeof body === 'object') {
+      return res.status(status).json(body)
+    }
+  } catch {
+    // not a JSON body - fall through to the generic envelope
+  }
+  res.status(status).json({
+    code: status,
+    message: error.message || 'Internal server error'
+  })
+}
+
+/**
  * GET /get
  * Proxy GET requests to OBP API
  * Query params:
@@ -69,10 +91,7 @@ router.get('/get', async (req: Request, res: Response) => {
     } else {
       console.error('OBP: GET request error:', error)
     }
-    res.status(error.status || 500).json({
-      code: error.status || 500,
-      message: error.message || 'Internal server error'
-    })
+    sendOBPError(res, error)
   }
 })
 
@@ -109,10 +128,7 @@ router.post('/create', async (req: Request, res: Response) => {
     res.json(result)
   } catch (error: any) {
     console.error('OBP.create error:', error)
-    res.status(error.status || 500).json({
-      code: error.status || 500,
-      message: error.message || 'Internal server error'
-    })
+    sendOBPError(res, error)
   }
 })
 
@@ -139,10 +155,7 @@ router.put('/update', async (req: Request, res: Response) => {
     res.json(result)
   } catch (error: any) {
     console.error('OBP.update error:', error)
-    res.status(error.status || 500).json({
-      code: error.status || 500,
-      message: error.message || 'Internal server error'
-    })
+    sendOBPError(res, error)
   }
 })
 
@@ -167,10 +180,7 @@ router.delete('/delete', async (req: Request, res: Response) => {
     res.json(result)
   } catch (error: any) {
     console.error('OBP.delete error:', error)
-    res.status(error.status || 500).json({
-      code: error.status || 500,
-      message: error.message || 'Internal server error'
-    })
+    sendOBPError(res, error)
   }
 })
 

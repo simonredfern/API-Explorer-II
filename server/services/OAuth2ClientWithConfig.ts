@@ -195,6 +195,16 @@ export class OAuth2ClientWithConfig extends OAuth2Client {
   }
 
   /**
+   * Get the end session (RP-initiated logout) endpoint from OIDC config, if the
+   * provider advertises one. Optional: not all providers support it.
+   *
+   * @returns End session endpoint URL, or undefined if not available
+   */
+  getEndSessionEndpoint(): string | undefined {
+    return this.OIDCConfig?.end_session_endpoint
+  }
+
+  /**
    * Check if OIDC configuration is initialized
    *
    * @returns True if OIDC config has been loaded

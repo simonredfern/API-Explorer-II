@@ -2,14 +2,15 @@
 export const DEFAULT_OBP_API_VERSION = 'v5.1.0'
 
 // Hardcoded API versions for all application endpoints
-// Using v5.1.0 as the standard stable version - more stable than v6.0.0 and bugs can be fixed
+// Using v7.0.0 for resource-docs and api/versions — both endpoints are migrated to http4s.
 // These versions should NOT change based on user's documentation version selection in the UI
 
 /**
  * Resource documentation endpoint version
  * Endpoint: GET /obp/{version}/resource-docs/{docVersion}/obp
+ * v7.0.0 getResourceDocsObpV700 accepts any valid API version string and delegates to the correct doc set.
  */
-export const RESOURCE_DOCS_API_VERSION = 'v5.1.0'
+export const RESOURCE_DOCS_API_VERSION = 'v7.0.0'
 
 /**
  * Message documentation endpoint version
@@ -20,6 +21,7 @@ export const MESSAGE_DOCS_API_VERSION = 'v5.1.0'
 /**
  * API versions list endpoint version
  * Endpoint: GET /obp/{version}/api/versions
+ * v7.0.0 getScannedApiVersions is migrated to http4s.
  */
 export const API_VERSIONS_LIST_API_VERSION = 'v7.0.0'
 

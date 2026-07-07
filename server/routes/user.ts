@@ -29,14 +29,92 @@ import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { Container } from 'typedi'
 import OBPClientService from '../services/OBPClientService.js'
+import { OAuth2ProviderManager } from '../services/OAuth2ProviderManager.js'
 import { DEFAULT_OBP_API_VERSION } from '../../src/shared-constants.js'
 
 const router = Router()
 
 // Get services from container
 const obpClientService = Container.get(OBPClientService)
+const providerManager = Container.get(OAuth2ProviderManager)
 
 const obpExplorerHome = process.env.VITE_OBP_API_EXPLORER_HOST
+
+/**
+ * Logout behaviour is controlled by the VITE_OBP_LOGOUT_MODE environment variable:
+ *
+ *   public   (default) - Full SSO logout. After clearing the local session we
+ *                        redirect the browser to the provider's
+ *                        end_session_endpoint so the Keycloak/OIDC session is
+ *                        also ended. The user must re-enter credentials on the
+ *                        next login. Safe default for public-facing / shared
+ *                        machines.
+ *
+ *   internal           - Local-only logout. We clear the local app session but
+ *                        leave the provider's SSO session intact, so the next
+ *                        login is silent. Intended for deployments used within
+ *                        a single organisation on trusted machines.
+ *
+ * Any unset/unrecognised value falls back to "public".
+ */
+function getLogoutMode(): 'public' | 'internal' {
+  const mode = process.env.VITE_OBP_LOGOUT_MODE?.trim().toLowerCase()
+  if (mode === 'internal') {
+    return 'internal'
+  }
+  if (mode && mode !== 'public') {
+    console.warn(
+      `User: Unrecognised VITE_OBP_LOGOUT_MODE "${process.env.VITE_OBP_LOGOUT_MODE}", defaulting to "public".`
+    )
+  }
+  return 'public'
+}
+
+/**
+ * Builds the provider's RP-initiated logout (end_session_endpoint) URL for the
+ * given provider/id_token. Returns null when a proper end-session request can't
+ * be built (no provider, no end_session_endpoint, or no id_token), in which case
+ * the caller should fall back to a local-only logout.
+ */
+function buildEndSessionUrl(
+  provider: string | undefined,
+  idToken: string | undefined,
+  req: Request
+): string | null {
+  if (!provider) {
+    console.warn('User: No provider in session; falling back to local logout.')
+    return null
+  }
+
+  const client = providerManager.getProvider(provider)
+  if (!client) {
+    console.warn(`User: Provider "${provider}" not found; falling back to local logout.`)
+    return null
+  }
+
+  const endSessionEndpoint = client.getEndSessionEndpoint()
+  if (!endSessionEndpoint) {
+    console.warn(
+      `User: Provider "${provider}" has no end_session_endpoint; falling back to local logout.`
+    )
+    return null
+  }
+
+  if (!idToken) {
+    console.warn('User: No id_token in session; falling back to local logout.')
+    return null
+  }
+
+  const postLogoutRedirectUri = obpExplorerHome || `${req.protocol}://${req.get('host')}`
+  const endSessionUrl = new URL(endSessionEndpoint)
+  endSessionUrl.searchParams.set('id_token_hint', idToken)
+  endSessionUrl.searchParams.set('post_logout_redirect_uri', postLogoutRedirectUri)
+  if (client.clientId) {
+    endSessionUrl.searchParams.set('client_id', client.clientId)
+  }
+
+  return endSessionUrl.toString()
+}
 
 /**
  * GET /user/current
@@ -109,6 +187,13 @@ router.get('/user/logoff', (req: Request, res: Response) => {
   console.log('User: Logging out user')
   const session = req.session as any
 
+  const logoutMode = getLogoutMode()
+
+  // Capture details needed for full SSO logout before clearing the session
+  const idToken = session.oauth2_id_token
+  const provider = session.oauth2_provider
+  const endSessionUrl = logoutMode === 'public' ? buildEndSessionUrl(provider, idToken, req) : null
+
   // Clear OAuth2 session data
   delete session.oauth2_access_token
   delete session.oauth2_refresh_token
@@ -130,8 +215,16 @@ router.get('/user/logoff', (req: Request, res: Response) => {
       console.log('User: Session destroyed successfully')
     }
 
+    // In "public" mode, end the provider SSO session via RP-initiated logout.
+    // buildEndSessionUrl() returns null when that isn't possible, so we fall
+    // back to the local-only logout redirect below.
+    if (endSessionUrl) {
+      console.log('User: Full SSO logout, redirecting to provider end_session_endpoint')
+      return res.redirect(endSessionUrl)
+    }
+
     const redirectPage = (req.query.redirect as string) || obpExplorerHome || '/'
-    console.log('User: Redirecting to:', redirectPage)
+    console.log(`User: Local logout (mode=${logoutMode}), redirecting to:`, redirectPage)
     res.redirect(redirectPage)
   })
 })
