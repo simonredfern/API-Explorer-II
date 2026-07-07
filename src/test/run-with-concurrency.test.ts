@@ -43,4 +43,39 @@ describe('runWithConcurrency', () => {
 
     expect(processed.length).toBeGreaterThan(0)
   })
+
+  it('attempts every item even when some fail, only rejecting after all settle', async () => {
+    const items = [1, 2, 3, 4, 5, 6]
+    const processed: number[] = []
+
+    await expect(
+      runWithConcurrency(items, 3, async (item) => {
+        if (item % 2 === 0) {
+          throw new Error(`boom-${item}`)
+        }
+        processed.push(item)
+      })
+    ).rejects.toThrow(/boom-/)
+
+    // Every odd item still ran despite the even items throwing.
+    expect(processed.sort((a, b) => a - b)).toEqual([1, 3, 5])
+  })
+
+  it('re-throws only after all items have settled, not as soon as the first fails', async () => {
+    const order: string[] = []
+
+    await expect(
+      runWithConcurrency([1, 2], 2, async (item) => {
+        order.push(`start-${item}`)
+        // item 1 is slower than item 2, so item 2 settles (and throws) first.
+        await new Promise((resolve) => setTimeout(resolve, item === 1 ? 5 : 1))
+        order.push(`end-${item}`)
+        throw new Error(`boom-${item}`)
+      })
+    ).rejects.toThrow('boom-2')
+
+    // Both tasks fully ran (start and end) before the pool rejected — the slower
+    // item 1 was not abandoned mid-flight when item 2 threw first.
+    expect(order).toEqual(['start-1', 'start-2', 'end-2', 'end-1'])
+  })
 })
