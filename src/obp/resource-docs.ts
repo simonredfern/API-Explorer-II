@@ -137,30 +137,21 @@ export async function cacheDoc(cacheStorageOfResourceDocs: any): Promise<any> {
         // we need this to cache the dynamic entities resource doc
         const isDynamicEntity = api_short_version === 'dynamic-entity'
         const version = `${api_standard.toUpperCase()}${api_short_version}`
+        const kind = isDynamicEntity ? 'dynamic resource docs' : 'resource docs'
         try {
-          console.log(
-            isDynamicEntity
-              ? `[CACHE] Attempting to load dynamic resource docs for: ${version}`
-              : `[CACHE] Attempting to load resource docs for: ${version}`
-          )
+          console.log(`[CACHE] Attempting to load ${kind} for: ${version}`)
           const resourceDocs = isDynamicEntity
             ? await getOBPDynamicResourceDocs(version)
             : await getOBPResourceDocs(version)
           if (version && Object.keys(resourceDocs).includes('resource_docs')) {
             resourceDocsMapping[version] = resourceDocs
-            console.log(
-              isDynamicEntity
-                ? `[CACHE] Successfully cached dynamic docs for: ${version}`
-                : `[CACHE] Successfully cached docs for: ${version}`
-            )
+            console.log(`[CACHE] Successfully cached ${kind} for: ${version}`)
           } else {
             console.warn(`[CACHE] WARNING: Response for ${version} missing 'resource_docs' field`)
           }
         } catch (error: any) {
           console.warn(
-            isDynamicEntity
-              ? `[CACHE] WARNING: Skipping dynamic endpoint ${api_standard}${api_short_version}:`
-              : `[CACHE] WARNING: Skipping API version ${api_standard}${api_short_version}:`
+            `[CACHE] WARNING: Skipping ${isDynamicEntity ? 'dynamic endpoint' : 'API version'} ${api_standard}${api_short_version}:`
           )
           console.warn(`   API Version: ${api_short_version}`)
           console.warn(`   API Standard: ${api_standard}`)
