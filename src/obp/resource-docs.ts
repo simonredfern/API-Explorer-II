@@ -31,17 +31,11 @@ import { updateLoadingInfoMessage } from './common-functions'
 import { RESOURCE_DOCS_API_VERSION } from '../shared-constants'
 
 // Get Resource Docs
-// content: optional OBP resource-docs content filter ('static' | 'dynamic'),
-// e.g. 'static' excludes dynamic entity/endpoint docs from the response
-export async function getOBPResourceDocs(
-  apiStandardAndVersion: string,
-  content?: string
-): Promise<any> {
+export async function getOBPResourceDocs(apiStandardAndVersion: string): Promise<any> {
   const logMessage = `Loading API ${apiStandardAndVersion}`
   console.log(logMessage)
   updateLoadingInfoMessage(logMessage)
-  const contentQuery = content ? `?content=${content}` : ''
-  const path = `/obp/${RESOURCE_DOCS_API_VERSION}/resource-docs/${apiStandardAndVersion}/obp${contentQuery}`
+  const path = `/obp/${RESOURCE_DOCS_API_VERSION}/resource-docs/${apiStandardAndVersion}/obp`
   try {
     return await get(path)
   } catch (error: any) {
@@ -134,16 +128,8 @@ export async function cacheDoc(cacheStorageOfResourceDocs: any): Promise<any> {
     )
     const resourceDocsMapping: any = {}
     for (const { api_standard, api_short_version } of activeVersions) {
-      // Dynamic entities only exist in the OBP standard
-      const isOBPStandard = api_standard && api_standard.toLowerCase() === 'obp'
       // we need this to cache the dynamic entities resource doc
       if (api_short_version === 'dynamic-entity') {
-        if (!isOBPStandard) {
-          console.log(
-            `[CACHE] Skipping dynamic-entity for non-OBP standard: ${api_standard}`
-          )
-          continue
-        }
         const logMessage = `Caching Dynamic API { standard: ${api_standard}, version: ${api_short_version} }`
         console.log(logMessage)
         if (api_standard) {
@@ -184,11 +170,7 @@ export async function cacheDoc(cacheStorageOfResourceDocs: any): Promise<any> {
         try {
           const version = `${api_standard.toUpperCase()}${api_short_version}`
           console.log(`[CACHE] Attempting to load resource docs for: ${version}`)
-          // Non-OBP standards must not include dynamic entity/endpoint docs
-          const resourceDocs = await getOBPResourceDocs(
-            version,
-            isOBPStandard ? undefined : 'static'
-          )
+          const resourceDocs = await getOBPResourceDocs(version)
           if (version && Object.keys(resourceDocs).includes('resource_docs')) {
             resourceDocsMapping[version] = resourceDocs
             console.log(`[CACHE] Successfully cached docs for: ${version}`)
