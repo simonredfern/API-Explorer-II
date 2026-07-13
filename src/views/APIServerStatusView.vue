@@ -26,35 +26,93 @@
   -->
 
 <script setup lang="ts">
-import { ref, onBeforeMount } from 'vue'
-import { SuccessFilled, RemoveFilled } from '@element-plus/icons-vue'
+import { ref, computed, onBeforeMount } from 'vue'
+import { SuccessFilled, RemoveFilled, WarningFilled } from '@element-plus/icons-vue'
 import { serverStatus } from './../obp'
-const status = ref({})
+
+interface OIDCProviderHealth {
+  name: string
+  status: 'healthy' | 'unhealthy'
+  error?: string
+  details?: Record<string, string | number>
+}
+
+const status = ref<any>({})
 onBeforeMount(async () => {
   status.value = await serverStatus()
 })
+
+// 'healthy' | 'partial' | 'unhealthy'; fall back to the legacy boolean
+// for a server that doesn't send overallStatus yet.
+const overallStatus = computed<string>(() => {
+  if (status.value.overallStatus) return status.value.overallStatus
+  return status.value.status === true ? 'healthy' : 'unhealthy'
+})
+
+// Core OBP checks are the boolean fields (apiVersions, resourceDocs, ...)
+const coreChecks = computed<Record<string, boolean>>(() =>
+  Object.fromEntries(
+    Object.entries(status.value).filter(
+      ([name, value]) => typeof value === 'boolean' && name !== 'status'
+    )
+  ) as Record<string, boolean>
+)
+
+const oauthProviders = computed<OIDCProviderHealth[]>(() => status.value.oauthProviders ?? [])
 </script>
 
 <template>
   <main>
     <div class="content">
-      <div v-for="(value, name, index) in status" :key="index" v-if="name !== 'commitId'">
-        <div v-if="name === 'status'" class="status">
-          <el-icon v-if="value === true" style="vertical-align: middle; color: green; width: auto"
-            ><SuccessFilled
-          /></el-icon>
-          <el-icon v-else style="vertical-align: middle; color: red"><RemoveFilled /></el-icon>
-          <span class="main-status-label">{{ name }}</span>
-        </div>
-        <div v-else-if="name !== 'commitId'" class="sub-status">
-          <span class="status-label">{{ name }}</span>
-          &nbsp;&nbsp;&nbsp;<el-divider />&nbsp;&nbsp;&nbsp;
-          <el-icon
-            v-if="value === true"
-            style="vertical-align: middle; color: green; font-size: 16px"
-            ><SuccessFilled
-          /></el-icon>
-          <el-icon v-else style="vertical-align: middle; color: red"><RemoveFilled /></el-icon>
+      <div v-if="Object.keys(status).length > 0" class="status" data-testid="overall-status" :data-state="overallStatus">
+        <el-icon
+          v-if="overallStatus === 'healthy'"
+          style="vertical-align: middle; color: green; width: auto"
+          ><SuccessFilled
+        /></el-icon>
+        <el-icon
+          v-else-if="overallStatus === 'partial'"
+          style="vertical-align: middle; color: #e6a23c; width: auto"
+          ><WarningFilled
+        /></el-icon>
+        <el-icon v-else style="vertical-align: middle; color: red"><RemoveFilled /></el-icon>
+        <span class="main-status-label">{{ overallStatus }}</span>
+      </div>
+
+      <div v-for="(value, name) in coreChecks" :key="name" class="sub-status">
+        <span class="status-label">{{ name }}</span>
+        &nbsp;&nbsp;&nbsp;<el-divider />&nbsp;&nbsp;&nbsp;
+        <el-icon
+          v-if="value === true"
+          style="vertical-align: middle; color: green; font-size: 16px"
+          ><SuccessFilled
+        /></el-icon>
+        <el-icon v-else style="vertical-align: middle; color: red"><RemoveFilled /></el-icon>
+      </div>
+
+      <div v-if="oauthProviders.length > 0" class="providers-section">
+        <span class="providers-title">OAuth2 / OIDC Providers</span>
+        <div
+          v-for="provider in oauthProviders"
+          :key="provider.name"
+          class="provider-row"
+          :data-testid="`provider-${provider.name}`"
+          :data-state="provider.status"
+        >
+          <div class="sub-status">
+            <span class="status-label">{{ provider.name }}</span>
+            &nbsp;&nbsp;&nbsp;<el-divider />&nbsp;&nbsp;&nbsp;
+            <el-icon
+              v-if="provider.status === 'healthy'"
+              style="vertical-align: middle; color: green; font-size: 16px"
+              ><SuccessFilled
+            /></el-icon>
+            <el-icon v-else style="vertical-align: middle; color: red"><RemoveFilled /></el-icon>
+          </div>
+          <div v-if="provider.error" class="provider-error">{{ provider.error }}</div>
+          <div v-else-if="provider.details?.token_test" class="provider-detail">
+            token test: {{ provider.details.token_test }}
+          </div>
         </div>
       </div>
     </div>
@@ -102,5 +160,28 @@ span {
   justify-content: center;
   align-items: center;
   width: 100%;
+}
+.providers-section {
+  margin-top: 30px;
+}
+.providers-title {
+  font-size: 16px;
+  font-weight: 500;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 5px;
+}
+.provider-error {
+  font-size: 12px;
+  color: #c45656;
+  text-align: center;
+  overflow-wrap: anywhere;
+  margin: 2px 0 8px;
+}
+.provider-detail {
+  font-size: 12px;
+  color: #7a8499;
+  text-align: center;
+  margin: 2px 0 8px;
 }
 </style>

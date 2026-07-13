@@ -71,14 +71,40 @@ const helpMenuRoutes: Record<string, string> = {
 const GRPC_SERVICES_ITEM = 'gRPC Services'
 const helpMenuItems = ref(Object.keys(helpMenuRoutes))
 
-// Split versions into main and other
-const mainVersions = ['BGv1.3', 'BGv2', 'OBPv5.1.0', 'OBPv6.0.0', 'OBPv7.0.0', 'UKv3.1', 'dynamic-endpoints', 'dynamic-entities', 'OBPdynamic-endpoint', 'OBPdynamic-entity']
+// Split versions into main and other.
+// Main = most recent versions per standard (newest first), then dynamic endpoints/entities.
+const DYNAMIC_ITEMS = ['dynamic-endpoints', 'dynamic-entities', 'OBPdynamic-endpoint', 'OBPdynamic-entity']
+
+const versionNumbers = (v: string): number[] =>
+  v.slice(v.indexOf('v') + 1).split('.').map(Number)
+
+const compareVersionsDesc = (a: string, b: string): number => {
+  const pa = versionNumbers(a)
+  const pb = versionNumbers(b)
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pb[i] ?? 0) - (pa[i] ?? 0)
+    if (diff !== 0) return diff
+  }
+  return 0
+}
+
+const mostRecent = (all: string[], standard: string, count: number): string[] =>
+  all
+    .filter((v) => v.startsWith(`${standard}v`))
+    .sort(compareVersionsDesc)
+    .slice(0, count)
+
 const sortedVersions = computed(() => {
   const all = obpApiVersions.value || []
   console.log('All available versions:', all)
-  const main = mainVersions.filter(v => all.includes(v))
+  const main = [
+    ...mostRecent(all, 'OBP', 3),
+    ...mostRecent(all, 'BG', 2),
+    ...mostRecent(all, 'UK', 2),
+    ...DYNAMIC_ITEMS.filter((v) => all.includes(v))
+  ]
   console.log('Main versions found:', main)
-  const others = all.filter(v => !mainVersions.includes(v)).sort()
+  const others = all.filter(v => !main.includes(v)).sort()
   console.log('Other versions:', others)
 
   // Insert gRPC Services between main (first set) and other (second set) versions

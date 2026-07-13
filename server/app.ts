@@ -54,7 +54,7 @@ import grpcRoutes from './routes/grpc.js'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-const port = 8085
+const port = Number(process.env.PORT ?? 8085)
 const app: Application = express()
 
 // Commit ID variable (declared here to avoid TDZ issues)
