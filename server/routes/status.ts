@@ -31,6 +31,7 @@ import { Container } from 'typedi'
 import OBPClientService from '../services/OBPClientService.js'
 import { OAuth2ProviderManager } from '../services/OAuth2ProviderManager.js'
 import { OAuth2ProviderFactory } from '../services/OAuth2ProviderFactory.js'
+import { checkOIDCProviders } from '../services/OIDCServiceHealth.js'
 import { commitId } from '../app.js'
 import {
   RESOURCE_DOCS_API_VERSION,
@@ -173,9 +174,10 @@ router.get('/status', async (req: Request, res: Response) => {
 
     // Public OBP endpoints — run regardless of auth so the page shows real
     // server reachability to anonymous visitors instead of all-red.
-    const [apiVersions, resourceDocs] = await Promise.all([
+    const [apiVersions, resourceDocs, oauthProviders] = await Promise.all([
       checkApiVersions(oauthConfig, version),
-      checkResourceDocs(oauthConfig, version)
+      checkResourceDocs(oauthConfig, version),
+      checkOIDCProviders()
     ])
 
     // Auth-gated checks — only meaningful when logged in.
@@ -195,16 +197,34 @@ router.get('/status', async (req: Request, res: Response) => {
       }
     }
 
-    const overallStatus = isAuthenticated
+    const coreOk = isAuthenticated
       ? apiVersions && resourceDocs && !!messageDocs && !!currentUser
       : apiVersions && resourceDocs
 
+    // OIDC providers form one login group: users need only one working
+    // provider, so failed providers alongside a healthy one degrade the
+    // overall status to 'partial' rather than 'unhealthy'.
+    const oauthHealthy = oauthProviders.filter((p) => p.status === 'healthy').length
+    const oauthUnhealthy = oauthProviders.filter((p) => p.status === 'unhealthy').length
+
+    let overallStatus: 'healthy' | 'partial' | 'unhealthy'
+    if (!coreOk || (oauthUnhealthy > 0 && oauthHealthy === 0)) {
+      overallStatus = 'unhealthy'
+    } else if (oauthUnhealthy > 0) {
+      overallStatus = 'partial'
+    } else {
+      overallStatus = 'healthy'
+    }
+
     res.json({
-      status: overallStatus,
+      // Kept boolean for existing consumers: core OBP reachability only
+      status: coreOk,
+      overallStatus,
       apiVersions,
       resourceDocs,
       ...(isAuthenticated ? { messageDocs, currentUser } : {}),
       isAuthenticated,
+      oauthProviders,
       commitId
     })
   } catch (error) {
