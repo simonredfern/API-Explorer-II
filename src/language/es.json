@@ -14,6 +14,7 @@
     "required_roles": "RESPUESTA EXITOSA TÍPICA",
     "validations": "VALIDACIONES",
     "possible_errors": "POSIBLES ERRORES",
-    "connector_methods": " MÉTODOS DE CONECTOR"
+    "connector_methods": " MÉTODOS DE CONECTOR",
+    "request_url": "URL DE LA PETICIÓN"
   }
 }
