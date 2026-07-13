@@ -77,7 +77,7 @@
       const route = useRoute();
       const loginUrl = computed(() => {
         const currentPath = route.path;
-        const queryString = new URLSearchParams(route.query as Record<string, string>).toString();
+        const queryString = new URLSearchParams(route.query).toString();
         const fullPath = queryString ? `${currentPath}?${queryString}` : currentPath;
         return `/api/oauth2/connect?redirect=${encodeURIComponent(fullPath)}`;
       });
