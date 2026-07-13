@@ -146,40 +146,19 @@ export const useChat = defineStore('chat', {
         },
 
         async handleAuthentication(): Promise<void> {
-            // Handle authentication
-            // get consent for Opey from user
+            // Establish consent for Opey via the Explorer backend (same-origin proxy).
+            // The backend (`POST /api/opey/consent`) stores the consent in the server-side
+            // session (session.opeyConfig) and authenticates to Opey with the Consent-JWT on
+            // every /stream call. The browser therefore never talks to Opey directly, which
+            // avoids the cross-origin session-cookie problem (mirrors the Portal design).
             const consentResponse = await getobpConsent()
 
-            if (consentResponse) {
-                const consentId = consentResponse.consent_id
-                
-            } else {
+            if (!consentResponse) {
                 throw new Error('Failed to grant consent. Please try again.')
             }
 
-            const consentJwt = consentResponse.jwt
-
-            const opeyBaseUri = import.meta.env.VITE_CHATBOT_URL
-            // Get a session from opey
-            try {
-                const sessionResponse = await fetch(`${opeyBaseUri}/create-session`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Consent-JWT': consentJwt
-                    },
-                })
-
-                if (!sessionResponse.ok) {
-                    throw new Error(`Failed to create session: ${sessionResponse.statusText}`);
-                } else if (sessionResponse.status === 200) {
-                    this.userIsAuthenticated = true
-                }
-
-            } catch (error) {
-                throw new Error(`Failed to create Opey session: ${error}`);
-            }
+            // Consent is now stored server-side; the backend proxy handles the Opey session.
+            this.userIsAuthenticated = true
         },
 
         async stream(input: ChatStreamInput): Promise<void> {
@@ -200,11 +179,11 @@ export const useChat = defineStore('chat', {
             }
             this.addMessage(this.currentAssistantMessage)
 
-            // Set the status to 'loading' before we fetch the stream
-            const opeyBaseUri = import.meta.env.VITE_CHATBOT_URL
-            // Handle stream
+            // Call the Explorer backend proxy (same-origin: browser → Vite /api → Express 8085 → Opey).
+            // The backend attaches the Consent-JWT server-side, so the browser stays same-origin
+            // and never hits Opey's cross-origin session cookie.
             try {
-                const response = await fetch(`${opeyBaseUri}/stream`, {
+                const response = await fetch('/api/opey/stream', {
                     method: 'POST',
                     credentials: 'include',
                     headers: {

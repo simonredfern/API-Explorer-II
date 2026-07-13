@@ -63,7 +63,13 @@ export default class OpeyClientService {
                 };
             }
         }
-        
+
+        // Merge the Opey session cookie if provided, so a session established on an
+        // earlier call is picked up instead of creating a new one every time.
+        if (partialConfig.sessionCookie) {
+            mergedConfig.sessionCookie = partialConfig.sessionCookie;
+        }
+
         return mergedConfig;
     }
 
@@ -131,7 +137,10 @@ export default class OpeyClientService {
         // Get auth headers
         const authHeaders = await this.getConsentAuthHeaders(config)
 
-        
+        // Opey's /stream requires an authenticated session. Reuse one already
+        // established (e.g. by /opey/consent) or create one now, then forward it.
+        const sessionCookie = await this.getOrCreateSessionCookie(config, opeyConfig)
+
         try {
 
             const url = `${config.baseUri}${config.paths.stream}`
@@ -140,10 +149,10 @@ export default class OpeyClientService {
             stream_input.stream_tokens = true
 
             console.log(`Posting to Opey with streaming: ${JSON.stringify(stream_input)}\n URL: ${url}`) //DEBUG
-            
+
             const response = await fetch(url, {
                 method: 'POST',
-                headers: authHeaders,
+                headers: { ...authHeaders, 'Cookie': sessionCookie },
                 body: JSON.stringify(stream_input)
             })
             if (!response.body) {
@@ -185,7 +194,11 @@ export default class OpeyClientService {
 
         // Get auth headers
         const authHeaders = await this.getConsentAuthHeaders(config)
-        
+
+        // Opey's /invoke requires the same authenticated session as /stream (see
+        // createOpeySession's doc comment) — reuse one already established or create it.
+        const sessionCookie = await this.getOrCreateSessionCookie(config, opeyConfig)
+
         const url = `${config.baseUri}${config.paths.invoke}`
 
         console.log(`Posting to Opey, STREAMING OFF: ${JSON.stringify(user_input)}\n URL: ${url}`) //DEBUG
@@ -193,7 +206,7 @@ export default class OpeyClientService {
         try {
             const response = await fetch(url, {
                 method: 'POST',
-                headers: authHeaders,
+                headers: { ...authHeaders, 'Cookie': sessionCookie },
                 body: JSON.stringify(user_input)
             })
             if (response.status === 200) {
@@ -242,7 +255,7 @@ export default class OpeyClientService {
     }
 
     async getConsentAuthHeaders(opeyConfig: OpeyConfig): Promise<{ [key: string]: string } | undefined> {
-        
+
         if (!opeyConfig.authConfig || !opeyConfig.authConfig.obpConsent) {
             throw new Error('AuthConfig not found or obpConsent missing')
         }
@@ -250,5 +263,68 @@ export default class OpeyClientService {
             'Consent-JWT': opeyConfig.authConfig.obpConsent.jwt,
             'Content-Type': 'application/json'
         }
+    }
+
+    /**
+     * Establish an authenticated Opey session using the OBP Consent-JWT and return
+     * the session cookie ("session=...") to forward on subsequent /stream or /invoke
+     * calls. Opey's chat endpoints require a session (created via /create-session);
+     * driving it server-side keeps the browser same-origin (mirrors the Portal design).
+     */
+    /**
+     * Returns an Opey session cookie, reusing `config.sessionCookie` if one was already
+     * established, otherwise creating one via createOpeySession(). A freshly created cookie
+     * is written onto `persistTo` (the caller's own config object, e.g. an Express session's
+     * opeyConfig) so later calls in the same conversation reuse it instead of establishing a
+     * new session per message.
+     */
+    async getOrCreateSessionCookie(config: OpeyConfig, persistTo?: Partial<OpeyConfig>): Promise<string> {
+        if (config.sessionCookie) {
+            return config.sessionCookie
+        }
+        const sessionCookie = await this.createOpeySession(config)
+        if (persistTo) {
+            persistTo.sessionCookie = sessionCookie
+        }
+        return sessionCookie
+    }
+
+    /**
+     * Validates the auth config and eagerly establishes (or reuses) the Opey session,
+     * persisting the cookie onto `opeyConfig`. Intended to be called right after consent
+     * is granted so a broken/rejected consent surfaces immediately instead of only on the
+     * user's first chat message.
+     */
+    async establishSession(opeyConfig: Partial<OpeyConfig>): Promise<string> {
+        const config = await this.getOpeyConfig(opeyConfig)
+        const auth = await this.checkAuthConfig(config)
+        if (!auth.valid) {
+            throw new Error(`AuthConfig not valid: ${auth.reason}`)
+        }
+        return await this.getOrCreateSessionCookie(config, opeyConfig)
+    }
+
+    async createOpeySession(opeyConfig: OpeyConfig): Promise<string> {
+        const authHeaders = await this.getConsentAuthHeaders(opeyConfig)
+        const url = `${opeyConfig.baseUri}/create-session`
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: authHeaders,
+            body: JSON.stringify({})
+        })
+        if (!response.ok) {
+            throw new Error(`Failed to create Opey session: ${response.status} ${response.statusText}`)
+        }
+        // undici exposes getSetCookie(); fall back to the combined header otherwise
+        const setCookies: string[] =
+            (response.headers as any).getSetCookie?.() ??
+            ((response.headers.get('set-cookie') ? [response.headers.get('set-cookie') as string] : []))
+        const sessionCookie = setCookies
+            .map(c => c.split(';')[0])
+            .find(c => c.startsWith('session='))
+        if (!sessionCookie) {
+            throw new Error('Opey did not return a session cookie from /create-session')
+        }
+        return sessionCookie
     }
 }

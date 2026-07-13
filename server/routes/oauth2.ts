@@ -254,6 +254,9 @@ router.get('/oauth2/callback', async (req: Request, res: Response) => {
     }
 
     // Also store clientConfig for OBP API calls.
+    // baseUri/version are required by services that read session.clientConfig directly
+    // (e.g. OBPConsentsService for the Opey consent flow) — without baseUri the consent
+    // request builds an "undefined/obp/..." URL and throws "Invalid URL".
     // OBP-API validates the Bearer value as a JWT (issuer-based dispatch in OAuth2Login),
     // but some providers (e.g. Google) issue opaque access tokens (ya29...). For those,
     // send the id_token to OBP instead — OBP's Google branch expects it (applyIdTokenRules).
@@ -265,6 +268,8 @@ router.get('/oauth2/callback', async (req: Request, res: Response) => {
       )
     }
     session.clientConfig = {
+      baseUri: process.env.VITE_OBP_API_HOST,
+      version: process.env.VITE_OBP_API_VERSION,
       oauth2: {
         accessToken: obpAccessToken,
         tokenType: 'Bearer'

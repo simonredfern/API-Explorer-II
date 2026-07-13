@@ -306,21 +306,23 @@ async function setupData(app: App<Element>, worker: Worker) {
       }
     }
 
-    const { resourceDocs, groupedDocs } = await cacheResourceDocs(
-      cacheStorageOfResourceDocs,
-      cachedResponseOfResourceDocs,
-      worker
-    )
-    const messageDocs = await cacheMessageDocs(
-      cacheStorageOfMessageDocs,
-      cachedResponseOfMessageDocs,
-      worker
-    )
-    const messageDocsJsonSchema = await cacheMessageDocsJsonSchema(
-      cacheStorageOfMessageDocsJsonSchema,
-      cachedResponseOfMessageDocsJsonSchema,
-      worker
-    )
+    // These four startup tasks are mutually independent, so fetch them concurrently.
+    // Promise.all keeps the existing fail-fast behavior: any one failing throws to the error page.
+    const [
+      { resourceDocs, groupedDocs },
+      messageDocs,
+      messageDocsJsonSchema,
+      glossary
+    ] = await Promise.all([
+      cacheResourceDocs(cacheStorageOfResourceDocs, cachedResponseOfResourceDocs, worker),
+      cacheMessageDocs(cacheStorageOfMessageDocs, cachedResponseOfMessageDocs, worker),
+      cacheMessageDocsJsonSchema(
+        cacheStorageOfMessageDocsJsonSchema,
+        cachedResponseOfMessageDocsJsonSchema,
+        worker
+      ),
+      getOBPGlossary()
+    ])
 
     // Provide data to a component's descendants
     // App-level provides are available to all components rendered in the app
@@ -331,7 +333,6 @@ async function setupData(app: App<Element>, worker: Worker) {
     app.provide(obpGroupedMessageDocsKey, messageDocs)
     app.provide(obpGroupedMessageDocsJsonSchemaKey, messageDocsJsonSchema)
     app.provide(obpApiHostKey, import.meta.env.VITE_OBP_API_HOST)
-    const glossary = await getOBPGlossary()
     app.provide(obpGlossaryKey, glossary)
 
     // Try to load user's API collections (requires authentication)

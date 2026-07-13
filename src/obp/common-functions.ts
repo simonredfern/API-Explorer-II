@@ -103,6 +103,37 @@ export async function answerobpConsentChallenge(answerBody: any) {
   return response
 }
 
+// Runs `task` over `items` with at most `limit` calls in flight at once.
+// One task rejecting does not stop the others: every item is still attempted (the
+// worker keeps draining the queue), and the first error is only re-thrown after all
+// items have settled, so partial results already written by other tasks are kept.
+export async function runWithConcurrency<T>(
+  items: readonly T[],
+  limit: number,
+  task: (item: T) => Promise<void>
+): Promise<void> {
+  const queue = [...items]
+  let firstError: unknown
+  let hasError = false
+  const workers = Array.from({ length: Math.min(limit, queue.length) }, async () => {
+    while (queue.length > 0) {
+      const item = queue.shift() as T
+      try {
+        await task(item)
+      } catch (error) {
+        if (!hasError) {
+          hasError = true
+          firstError = error
+        }
+      }
+    }
+  })
+  await Promise.all(workers)
+  if (hasError) {
+    throw firstError
+  }
+}
+
 export function clearCacheByName(cacheName: string) {
   if ('caches' in window) {
     caches.delete(cacheName).then(function(success) {

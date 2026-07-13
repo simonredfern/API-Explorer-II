@@ -27,8 +27,10 @@
 
 import { get, isServerUp, OBP_API_DEFAULT_RESOURCE_DOC_VERSION } from '../obp'
 import { getOBPAPIVersions } from '../obp/api-version'
-import { updateLoadingInfoMessage } from './common-functions'
+import { runWithConcurrency, updateLoadingInfoMessage } from './common-functions'
 import { RESOURCE_DOCS_API_VERSION } from '../shared-constants'
+
+const RESOURCE_DOCS_CONCURRENCY = 5
 
 // Get Resource Docs
 export async function getOBPResourceDocs(apiStandardAndVersion: string): Promise<any> {
@@ -127,66 +129,42 @@ export async function cacheDoc(cacheStorageOfResourceDocs: any): Promise<any> {
       `[CACHE] Found ${scannedAPIVersions.length} total versions, ${activeVersions.length} are active`
     )
     const resourceDocsMapping: any = {}
-    for (const { api_standard, api_short_version } of activeVersions) {
-      // we need this to cache the dynamic entities resource doc
-      if (api_short_version === 'dynamic-entity') {
-        const logMessage = `Caching Dynamic API { standard: ${api_standard}, version: ${api_short_version} }`
-        console.log(logMessage)
-        if (api_standard) {
-          try {
-            const version = `${api_standard.toUpperCase()}${api_short_version}`
-            console.log(`[CACHE] Attempting to load dynamic resource docs for: ${version}`)
-            const resourceDocs = await getOBPDynamicResourceDocs(version)
-            if (version && Object.keys(resourceDocs).includes('resource_docs')) {
-              resourceDocsMapping[version] = resourceDocs
-              console.log(`[CACHE] Successfully cached dynamic docs for: ${version}`)
-            } else {
-              console.warn(`[CACHE] WARNING: Response for ${version} missing 'resource_docs' field`)
-            }
-          } catch (error: any) {
-            console.warn(
-              `[CACHE] WARNING: Skipping dynamic endpoint ${api_standard}${api_short_version}:`
-            )
-            console.warn(`   API Version: ${api_short_version}`)
-            console.warn(`   API Standard: ${api_standard}`)
-            console.warn(
-              `   Constructed version string: ${api_standard.toUpperCase()}${api_short_version}`
-            )
-            console.warn(`   Error status: ${error.status || 'unknown'}`)
-            console.warn(`   Error message: ${error.message || 'No message'}`)
+    const total = activeVersions.length
+    let completed = 0
+
+    const cacheOneVersion = async ({ api_standard, api_short_version }: any): Promise<void> => {
+      if (api_standard) {
+        // we need this to cache the dynamic entities resource doc
+        const isDynamicEntity = api_short_version === 'dynamic-entity'
+        const version = `${api_standard.toUpperCase()}${api_short_version}`
+        const kind = isDynamicEntity ? 'dynamic resource docs' : 'resource docs'
+        try {
+          console.log(`[CACHE] Attempting to load ${kind} for: ${version}`)
+          const resourceDocs = isDynamicEntity
+            ? await getOBPDynamicResourceDocs(version)
+            : await getOBPResourceDocs(version)
+          if (version && Object.keys(resourceDocs).includes('resource_docs')) {
+            resourceDocsMapping[version] = resourceDocs
+            console.log(`[CACHE] Successfully cached ${kind} for: ${version}`)
+          } else {
+            console.warn(`[CACHE] WARNING: Response for ${version} missing 'resource_docs' field`)
+          }
+        } catch (error: any) {
+          console.warn(
+            `[CACHE] WARNING: Skipping ${isDynamicEntity ? 'dynamic endpoint' : 'API version'} ${api_standard}${api_short_version}:`
+          )
+          console.warn(`   API Version: ${api_short_version}`)
+          console.warn(`   API Standard: ${api_standard}`)
+          console.warn(`   Constructed version string: ${version}`)
+          console.warn(`   Error status: ${error.status || 'unknown'}`)
+          console.warn(`   Error message: ${error.message || 'No message'}`)
+          if (isDynamicEntity) {
             if (error.status === 500) {
               console.warn(
                 `   NOTE: This likely means the OBP-API server doesn't have this feature enabled`
               )
             }
-          }
-        }
-        updateLoadingInfoMessage(logMessage)
-        continue
-      }
-      const logMessage = `Caching API { standard: ${api_standard}, version: ${api_short_version} }`
-      console.log(logMessage)
-      if (api_standard) {
-        try {
-          const version = `${api_standard.toUpperCase()}${api_short_version}`
-          console.log(`[CACHE] Attempting to load resource docs for: ${version}`)
-          const resourceDocs = await getOBPResourceDocs(version)
-          if (version && Object.keys(resourceDocs).includes('resource_docs')) {
-            resourceDocsMapping[version] = resourceDocs
-            console.log(`[CACHE] Successfully cached docs for: ${version}`)
-          } else {
-            console.warn(`[CACHE] WARNING: Response for ${version} missing 'resource_docs' field`)
-          }
-        } catch (error: any) {
-          console.warn(`[CACHE] WARNING: Skipping API version ${api_standard}${api_short_version}:`)
-          console.warn(`   API Version: ${api_short_version}`)
-          console.warn(`   API Standard: ${api_standard}`)
-          console.warn(
-            `   Constructed version string: ${api_standard.toUpperCase()}${api_short_version}`
-          )
-          console.warn(`   Error status: ${error.status || 'unknown'}`)
-          console.warn(`   Error message: ${error.message || 'No message'}`)
-          if (error.status === 400) {
+          } else if (error.status === 400) {
             console.warn(`   NOTE: This API version is not enabled on the OBP-API server`)
             console.warn(`   NOTE: Check your OBP-API server configuration for available versions`)
           } else if (error.status === 500) {
@@ -196,8 +174,12 @@ export async function cacheDoc(cacheStorageOfResourceDocs: any): Promise<any> {
           }
         }
       }
-      updateLoadingInfoMessage(logMessage)
+      completed++
+      updateLoadingInfoMessage(`Loading APIs ${completed}/${total}`)
     }
+
+    await runWithConcurrency(activeVersions, RESOURCE_DOCS_CONCURRENCY, cacheOneVersion)
+
     await cacheStorageOfResourceDocs.put('/', new Response(JSON.stringify(resourceDocsMapping)))
     return resourceDocsMapping
   } catch (error) {
@@ -213,8 +195,10 @@ async function getCacheDoc(cacheStorageOfResourceDocs: any): Promise<any> {
 
 export async function cache(cachedStorage: any, cachedResponse: any, worker: any): Promise<any> {
   try {
-    worker.postMessage('update-resource-docs')
     const resourceDocs = await cachedResponse.json()
+    // Only a cache hit should schedule a background refresh; posting before the
+    // read would make a cold cache fetch everything twice via the worker echo.
+    worker.postMessage('update-resource-docs')
     console.log(
       '[CACHE] Loaded cached resource docs, available versions:',
       Object.keys(resourceDocs)
