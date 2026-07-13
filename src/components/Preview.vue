@@ -26,7 +26,7 @@
   -->
 
 <script setup lang="ts">
-import { ref, reactive, inject, onBeforeMount, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, inject, onBeforeMount, onMounted, onUnmounted } from 'vue'
 import { onBeforeRouteUpdate, useRoute } from 'vue-router'
 import { getOperationDetails } from '../obp/resource-docs'
 import { ElNotification, FormInstance } from 'element-plus'
@@ -75,6 +75,16 @@ const requestForm = reactive({ url: '' })
 
 const roleFormRef = reactive<FormInstance>({})
 const roleForm = reactive({})
+
+// Real host the request will actually hit (VITE_ vars are inlined by Vite at build time,
+// so this is safe to read on the client without a server round-trip).
+const resolvedRequestUrl = computed(() => {
+  const host = import.meta.env.VITE_OBP_API_HOST
+  if (!host || !url.value) {
+    return url.value
+  }
+  return `${host}${url.value}`
+})
 
 const replaceUrlPlaceholders = () => {
   const selectedBankId = localStorage.getItem('obp-selected-bank-id')
@@ -914,6 +924,9 @@ const onError = (error) => {
         Implemented in: {{ footNote.version }} by function_name: {{ footNote.functionName }} (operation_id: {{ footNote.operationId }}). Message Tags: {{ footNote.messageTags }}
       </p>
     </div>
+    <div>
+      <p class="footnote">{{ $t('preview.request_url') }}: <a id="resolved-request-url" :href="resolvedRequestUrl" target="_blank" rel="noopener noreferrer">{{ resolvedRequestUrl }}</a></p>
+    </div>
     <br />
   </main>
 </template>
@@ -1038,6 +1051,18 @@ li:last-child {
 .footnote {
   color: var(--el-color-info);
   font-size: 12px;
+}
+#resolved-request-url {
+  /* Override the broad `span { font-size: 28px; }` rule above so this reads
+     the same small size as the rest of the .footnote line it lives in. Color
+     matches the surrounding .footnote text (not the browser's default link
+     blue); underline is the only visual cue that it's clickable. */
+  font-size: inherit;
+  color: inherit;
+  text-decoration: underline;
+}
+#resolved-request-url:hover {
+  color: var(--el-color-primary);
 }
 .divider {
   border-top: 1px #253047 solid;
