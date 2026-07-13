@@ -794,10 +794,6 @@ const onError = (error) => {
         </div>
       </el-form-item>
     </el-form>
-    <el-divider class="divider" />
-    <div>
-      <p>{{ $t('preview.request_url') }}: <span id="resolved-request-url">{{ resolvedRequestUrl }}</span></p>
-    </div>
     <div class="flex-preview-panel">
       <input
         type="text"
@@ -928,6 +924,9 @@ const onError = (error) => {
         Implemented in: {{ footNote.version }} by function_name: {{ footNote.functionName }} (operation_id: {{ footNote.operationId }}). Message Tags: {{ footNote.messageTags }}
       </p>
     </div>
+    <div>
+      <p class="footnote">{{ $t('preview.request_url') }}: <a id="resolved-request-url" :href="resolvedRequestUrl" target="_blank" rel="noopener noreferrer">{{ resolvedRequestUrl }}</a></p>
+    </div>
     <br />
   </main>
 </template>
@@ -1052,6 +1051,18 @@ li:last-child {
 .footnote {
   color: var(--el-color-info);
   font-size: 12px;
+}
+#resolved-request-url {
+  /* Override the broad `span { font-size: 28px; }` rule above so this reads
+     the same small size as the rest of the .footnote line it lives in. Color
+     matches the surrounding .footnote text (not the browser's default link
+     blue); underline is the only visual cue that it's clickable. */
+  font-size: inherit;
+  color: inherit;
+  text-decoration: underline;
+}
+#resolved-request-url:hover {
+  color: var(--el-color-primary);
 }
 .divider {
   border-top: 1px #253047 solid;
