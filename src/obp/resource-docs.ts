@@ -30,38 +30,6 @@ import { getOBPAPIVersions } from '../obp/api-version'
 import { updateLoadingInfoMessage } from './common-functions'
 import { RESOURCE_DOCS_API_VERSION } from '../shared-constants'
 
-// Dynamic entity/endpoint docs only exist in the OBP standard. They must never
-// be shown when browsing any other standard (UK, Berlin Group, ...) — even if
-// the backend returns them (e.g. a cache written before content=static was
-// requested, or a server that ignores the content param).
-// OBP marks all of them with a tag from the Dynamic-* family: 'Dynamic',
-// 'Dynamic-Entity', 'Dynamic-Endpoint', 'Dynamic-Resource-Doc', 'Dynamic-Message-Doc'.
-export function isDynamicResourceDoc(doc: any): boolean {
-  const tags = Array.isArray(doc?.tags) ? doc.tags : []
-  if (tags.some((tag: any) => typeof tag === 'string' && tag.startsWith('Dynamic'))) return true
-  const implementedBy = doc?.implemented_by?.function ?? ''
-  return implementedBy.startsWith('dynamicEntity') || implementedBy.startsWith('dynamicEndpoint')
-}
-
-// Strip dynamic docs from every non-OBP standard in a resource-docs mapping
-// (keys look like 'OBPv6.0.0', 'UKv3.1', 'BGv1.3'). Mutates and returns the mapping.
-export function removeDynamicDocsFromNonOBPStandards(resourceDocsMapping: any): any {
-  if (!resourceDocsMapping || typeof resourceDocsMapping !== 'object') return resourceDocsMapping
-  for (const version of Object.keys(resourceDocsMapping)) {
-    if (version.toUpperCase().startsWith('OBP')) continue
-    const docs = resourceDocsMapping[version]?.resource_docs
-    if (!Array.isArray(docs)) continue
-    const filtered = docs.filter((doc: any) => !isDynamicResourceDoc(doc))
-    if (filtered.length !== docs.length) {
-      console.log(
-        `[FILTER] Removed ${docs.length - filtered.length} dynamic doc(s) from non-OBP standard ${version}`
-      )
-      resourceDocsMapping[version].resource_docs = filtered
-    }
-  }
-  return resourceDocsMapping
-}
-
 // Get Resource Docs
 // content: optional OBP resource-docs content filter ('static' | 'dynamic'),
 // e.g. 'static' excludes dynamic entity/endpoint docs from the response
@@ -248,9 +216,6 @@ export async function cacheDoc(cacheStorageOfResourceDocs: any): Promise<any> {
       }
       updateLoadingInfoMessage(logMessage)
     }
-    // Defense in depth: even though non-OBP standards are fetched with
-    // content=static, never persist or return dynamic docs for them.
-    removeDynamicDocsFromNonOBPStandards(resourceDocsMapping)
     await cacheStorageOfResourceDocs.put('/', new Response(JSON.stringify(resourceDocsMapping)))
     return resourceDocsMapping
   } catch (error) {
@@ -267,9 +232,7 @@ async function getCacheDoc(cacheStorageOfResourceDocs: any): Promise<any> {
 export async function cache(cachedStorage: any, cachedResponse: any, worker: any): Promise<any> {
   try {
     worker.postMessage('update-resource-docs')
-    // Sanitize whatever is in the cache — it may have been written by an older
-    // build that still stored dynamic docs under non-OBP standards.
-    const resourceDocs = removeDynamicDocsFromNonOBPStandards(await cachedResponse.json())
+    const resourceDocs = await cachedResponse.json()
     console.log(
       '[CACHE] Loaded cached resource docs, available versions:',
       Object.keys(resourceDocs)
