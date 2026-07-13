@@ -29,7 +29,6 @@
 import { ref, onBeforeMount } from 'vue'
 import { SuccessFilled, RemoveFilled } from '@element-plus/icons-vue'
 import { serverStatus } from './../obp'
-const version = ref(__APP_VERSION__)
 const status = ref({})
 onBeforeMount(async () => {
   status.value = await serverStatus()
@@ -60,8 +59,6 @@ onBeforeMount(async () => {
       </div>
     </div>
   </main>
-  <span>App Version: {{ version }}</span>
-  <span>Commit ID: {{ status.commitId }}</span>
 </template>
 
 <style scoped>

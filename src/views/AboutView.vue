@@ -26,13 +26,23 @@
   -->
 
 <script setup lang="ts">
-import { ref, inject } from 'vue'
+import { ref, inject, onBeforeMount } from 'vue'
 import { obpApiHostKey } from '@/obp/keys'
 import { clearCacheByName } from '@/obp/common-functions'
+import { serverStatus } from '@/obp'
 
 const APP_VERSION = ref(__APP_VERSION__)
 const OBP_API_HOST = inject(obpApiHostKey)
 const cacheCleared = ref(false)
+const commitId = ref('')
+
+onBeforeMount(async () => {
+  try {
+    commitId.value = (await serverStatus()).commitId ?? ''
+  } catch {
+    commitId.value = ''
+  }
+})
 
 const clearCacheStorage = () => {
   clearCacheByName('obp-message-docs-cache')
@@ -55,9 +65,19 @@ const clearCacheStorage = () => {
                 <td>{{ APP_VERSION }}</td>
               </tr>
               <tr>
+                <td class="label">Commit ID</td>
+                <td>{{ commitId || '-' }}</td>
+              </tr>
+              <tr>
                 <td class="label">API Host</td>
                 <td>
                   <a :href="OBP_API_HOST">{{ OBP_API_HOST }}</a>
+                </td>
+              </tr>
+              <tr>
+                <td class="label">Status</td>
+                <td>
+                  <RouterLink to="/status">Status</RouterLink>
                 </td>
               </tr>
               <tr>
