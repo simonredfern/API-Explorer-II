@@ -26,7 +26,7 @@
   -->
 
 <script setup lang="ts">
-import { ref, reactive, inject, onBeforeMount, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, inject, onBeforeMount, onMounted, onUnmounted } from 'vue'
 import { onBeforeRouteUpdate, useRoute } from 'vue-router'
 import { getOperationDetails } from '../obp/resource-docs'
 import { ElNotification, FormInstance } from 'element-plus'
@@ -75,6 +75,16 @@ const requestForm = reactive({ url: '' })
 
 const roleFormRef = reactive<FormInstance>({})
 const roleForm = reactive({})
+
+// Real host the request will actually hit (VITE_ vars are inlined by Vite at build time,
+// so this is safe to read on the client without a server round-trip).
+const resolvedRequestUrl = computed(() => {
+  const host = import.meta.env.VITE_OBP_API_HOST
+  if (!host || !url.value) {
+    return url.value
+  }
+  return `${host}${url.value}`
+})
 
 const replaceUrlPlaceholders = () => {
   const selectedBankId = localStorage.getItem('obp-selected-bank-id')
@@ -784,6 +794,10 @@ const onError = (error) => {
         </div>
       </el-form-item>
     </el-form>
+    <el-divider class="divider" />
+    <div>
+      <p>{{ $t('preview.request_url') }}: <span id="resolved-request-url">{{ resolvedRequestUrl }}</span></p>
+    </div>
     <div class="flex-preview-panel">
       <input
         type="text"
