@@ -256,6 +256,10 @@ router.post('/opey/consent', async (req: Request, res: Response) => {
       // If we have a consent id, we can get the consent from OBP
       const consent = await obpConsentsService.getConsentByConsentId(session, consentId)
 
+      // Establish (or confirm) the Opey session now, so a consent that OBP accepts but
+      // Opey rejects surfaces here instead of failing silently on the first chat message.
+      await opeyClientService.establishSession(session.opeyConfig)
+
       return res.status(200).json({ consent_id: consent.consent_id, jwt: consent.jwt })
     } else {
       console.log('No existing consent ID found')
@@ -264,6 +268,10 @@ router.post('/opey/consent', async (req: Request, res: Response) => {
     await obpConsentsService.createConsent(session)
 
     console.log('Consent at controller: ', session.opeyConfig)
+
+    // Establish the Opey session now (see comment above) rather than deferring it to
+    // the first stream()/invoke() call.
+    await opeyClientService.establishSession(session.opeyConfig)
 
     const authConfig = session.opeyConfig?.authConfig
 

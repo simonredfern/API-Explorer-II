@@ -27,7 +27,9 @@
 
 import { OBP_API_VERSION, get, isServerUp } from '../obp'
 import { V6_0_0 } from '../shared-constants'
-import { updateLoadingInfoMessage } from './common-functions'
+import { runWithConcurrency, updateLoadingInfoMessage } from './common-functions'
+
+const MESSAGE_DOCS_CONCURRENCY = 4
 
 // Connectors to exclude from message docs display
 const excludedConnectors = ['mapped', 'star', 'proxy', 'internal', 'cardano', 'ethereum']
@@ -40,21 +42,37 @@ const fallbackConnectors = [
   'rabbitmq_vOct2024'
 ]
 
+// cacheDoc and cacheDocJsonSchema each call getConnectors() and, since this PR, can run
+// concurrently (see main.ts's Promise.all) — share one in-flight request instead of firing
+// two near-simultaneous GETs to the same endpoint. Reset once it settles so a later
+// background re-warm still sees a fresh connector list.
+let connectorsRequest: Promise<string[]> | null = null
+
 // Fetch available connectors dynamically from the API
 export async function getConnectors(): Promise<string[]> {
-  try {
-    const data = await get(`obp/${V6_0_0}/system/connectors`)
-    if (data && data.connectors && Array.isArray(data.connectors)) {
-      const connectorNames = data.connectors
-        .map((c: any) => c.connector_name)
-        .filter((name: string) => !excludedConnectors.some(exc => name === exc || name.startsWith(exc + '_')))
-      console.log('Fetched connectors from API:', connectorNames)
-      return connectorNames
-    }
-  } catch (error) {
-    console.warn('Failed to fetch connectors from API, using fallback list:', error)
+  if (connectorsRequest) {
+    return connectorsRequest
   }
-  return fallbackConnectors
+  connectorsRequest = (async () => {
+    try {
+      const data = await get(`obp/${V6_0_0}/system/connectors`)
+      if (data && data.connectors && Array.isArray(data.connectors)) {
+        const connectorNames = data.connectors
+          .map((c: any) => c.connector_name)
+          .filter((name: string) => !excludedConnectors.some(exc => name === exc || name.startsWith(exc + '_')))
+        console.log('Fetched connectors from API:', connectorNames)
+        return connectorNames
+      }
+    } catch (error) {
+      console.warn('Failed to fetch connectors from API, using fallback list:', error)
+    }
+    return fallbackConnectors
+  })()
+  try {
+    return await connectorsRequest
+  } finally {
+    connectorsRequest = null
+  }
 }
 
 // Get Message Docs
@@ -154,17 +172,20 @@ export function getGroupedMessageDocsJsonSchema(docs: any): any {
 
 export async function cacheDoc(cacheStorageOfMessageDocs: any): Promise<any> {
   const connectors = await getConnectors()
-  const messageDocs = await connectors.reduce(async (agroup: any, connector: any) => {
+  const messageDocs: any = {}
+  await runWithConcurrency(connectors, MESSAGE_DOCS_CONCURRENCY, async (connector: string) => {
     const logMessage = `Caching message docs { connector: ${connector} }`
     console.log(logMessage)
     updateLoadingInfoMessage(logMessage)
-    const group = await agroup
-    const docs = await getOBPMessageDocs(connector)
-    if (!Object.keys(docs).includes('code')) {
-      group[connector] = getGroupedMessageDocs(docs)
+    try {
+      const docs = await getOBPMessageDocs(connector)
+      if (!Object.keys(docs).includes('code')) {
+        messageDocs[connector] = getGroupedMessageDocs(docs)
+      }
+    } catch (error: any) {
+      console.warn(`[CACHE] WARNING: Skipping message docs for connector ${connector}:`, error.message || error)
     }
-    return group
-  }, Promise.resolve({}))
+  })
   await cacheStorageOfMessageDocs.put('/', new Response(JSON.stringify(messageDocs)))
   return messageDocs
 }
@@ -175,17 +196,20 @@ async function getCacheDoc(cacheStorageOfMessageDocs: any): Promise<any> {
 
 export async function cacheDocJsonSchema(cacheStorageOfMessageDocsJsonSchema: any): Promise<any> {
   const connectors = await getConnectors()
-  const messageDocsJsonSchema = await connectors.reduce(async (agroup: any, connector: any) => {
+  const messageDocsJsonSchema: any = {}
+  await runWithConcurrency(connectors, MESSAGE_DOCS_CONCURRENCY, async (connector: string) => {
     const logMessage = `Caching message docs JSON schema { connector: ${connector} }`
     console.log(logMessage)
     updateLoadingInfoMessage(logMessage)
-    const group = await agroup
-    const docs = await getOBPMessageDocsJsonSchema(connector)
-    if (!Object.keys(docs).includes('code')) {
-      group[connector] = getGroupedMessageDocsJsonSchema(docs)
+    try {
+      const docs = await getOBPMessageDocsJsonSchema(connector)
+      if (!Object.keys(docs).includes('code')) {
+        messageDocsJsonSchema[connector] = getGroupedMessageDocsJsonSchema(docs)
+      }
+    } catch (error: any) {
+      console.warn(`[CACHE] WARNING: Skipping message docs JSON schema for connector ${connector}:`, error.message || error)
     }
-    return group
-  }, Promise.resolve({}))
+  })
   await cacheStorageOfMessageDocsJsonSchema.put(
     '/',
     new Response(JSON.stringify(messageDocsJsonSchema))
@@ -199,8 +223,11 @@ async function getCacheDocJsonSchema(cacheStorageOfMessageDocsJsonSchema: any): 
 
 export async function cache(cacheStorage: any, cachedResponse: any, worker: any): Promise<any> {
   try {
+    const messageDocs = await cachedResponse.json()
+    // Only a cache hit should schedule a background refresh; posting before the
+    // read would make a cold cache fetch everything twice via the worker echo.
     worker.postMessage('update-message-docs')
-    return await cachedResponse.json()
+    return messageDocs
   } catch (error) {
     console.warn('No message docs cache or malformed cache.')
     console.log('Caching message docs...')
@@ -216,8 +243,11 @@ export async function cacheJsonSchema(
   worker: any
 ): Promise<any> {
   try {
+    const messageDocsJsonSchema = await cachedResponse.json()
+    // Only a cache hit should schedule a background refresh; posting before the
+    // read would make a cold cache fetch everything twice via the worker echo.
     worker.postMessage('update-message-docs-json-schema')
-    return await cachedResponse.json()
+    return messageDocsJsonSchema
   } catch (error) {
     console.warn('No message docs JSON schema cache or malformed cache.')
     console.log('Caching message docs JSON schema...')
