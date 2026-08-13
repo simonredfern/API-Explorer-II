@@ -29,10 +29,11 @@ import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { credentials } from '@grpc/grpc-js'
 import { Client as ReflectionClient } from 'grpc-reflection-js'
+import { resolveGrpcHost } from '../utils/grpcHost.js'
 
 const router = Router()
 
-const GRPC_HOST = process.env.VITE_OBP_GRPC_HOST || 'localhost:50051'
+const GRPC_HOST = resolveGrpcHost(process.env)
 
 const REFLECTION_SERVICE_NAMES = new Set([
   'grpc.reflection.v1.ServerReflection',
