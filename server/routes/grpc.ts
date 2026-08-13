@@ -29,11 +29,13 @@ import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { credentials } from '@grpc/grpc-js'
 import { Client as ReflectionClient } from 'grpc-reflection-js'
-import { resolveGrpcHost } from '../utils/grpcHost.js'
+import { resolveGrpcTarget } from '../utils/grpcHost.js'
 
 const router = Router()
 
-const GRPC_HOST = resolveGrpcHost(process.env)
+const GRPC_TARGET = resolveGrpcTarget(process.env)
+const GRPC_HOST = GRPC_TARGET.host
+const GRPC_CREDENTIALS = GRPC_TARGET.tls ? credentials.createSsl() : credentials.createInsecure()
 
 const REFLECTION_SERVICE_NAMES = new Set([
   'grpc.reflection.v1.ServerReflection',
@@ -81,7 +83,7 @@ router.get('/grpc/services', async (_req: Request, res: Response) => {
   let client: ReflectionClient | null = null
   try {
     console.log(`gRPC: Reflecting against ${GRPC_HOST}`)
-    client = new ReflectionClient(GRPC_HOST, credentials.createInsecure())
+    client = new ReflectionClient(GRPC_HOST, GRPC_CREDENTIALS)
 
     const serviceNames = await client.listServices()
     const services: ServiceInfo[] = []
