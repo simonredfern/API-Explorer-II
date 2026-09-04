@@ -282,7 +282,6 @@ router.get('/status/providers', (req: Request, res: Response) => {
     // Get env configuration (masked)
     const envConfig = {
       obpOidc: {
-        consumerId: process.env.VITE_OBP_CONSUMER_KEY || 'not configured',
         clientId: maskCredential(process.env.VITE_OBP_OIDC_CLIENT_ID)
       },
       keycloak: {

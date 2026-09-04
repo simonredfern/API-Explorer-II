@@ -138,9 +138,25 @@ const oauthProviders = computed<OIDCProviderHealth[]>(() => status.value.oauthPr
             <el-icon v-else style="vertical-align: middle; color: red"><RemoveFilled /></el-icon>
           </div>
           <div v-if="provider.error" class="provider-error">{{ provider.error }}</div>
-          <div v-else-if="provider.details?.token_test" class="provider-detail">
-            token test: {{ provider.details.token_test }}
-          </div>
+          <template v-else-if="provider.details?.token_test">
+            <div class="provider-detail">token test: {{ provider.details.token_test }}</div>
+            <div
+              v-if="provider.details.consumer_id"
+              class="provider-detail"
+              :data-testid="`provider-${provider.name}-consumer`"
+            >
+              consumer: {{ provider.details.consumer_name }}
+              (<a
+                v-if="provider.details.consumer_id_url"
+                :href="String(provider.details.consumer_id_url)"
+                class="provider-link"
+                >{{ provider.details.consumer_id }}</a
+              ><span v-else>{{ provider.details.consumer_id }}</span>)
+            </div>
+            <div v-else-if="provider.details.consumer" class="provider-detail">
+              consumer: {{ provider.details.consumer }}
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -211,5 +227,9 @@ span {
   color: #7a8499;
   text-align: center;
   margin: 2px 0 8px;
+}
+.provider-link {
+  color: inherit;
+  text-decoration: underline;
 }
 </style>
