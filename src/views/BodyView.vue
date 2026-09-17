@@ -56,13 +56,13 @@ const isChatbotEnabled = import.meta.env.VITE_CHATBOT_ENABLED === 'true'
 
   <AutoLogout v-if=isLoggedIn />
   <Splitpanes class="root">
-    <Pane :size="20" :min-size="10" :max-size="40">
+    <Pane :size="28" :min-size="10" :max-size="45">
       <div class="search-nav">
         <!--Left-->
         <SearchNav />
       </div>
     </Pane>
-    <Pane :size="80">
+    <Pane :size="72">
       <div class="main">
         <div class="menu">
           <Menu />

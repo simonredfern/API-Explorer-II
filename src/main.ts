@@ -54,6 +54,7 @@ import '@fontsource/roboto/400.css'
 import '@fontsource/roboto/700.css'
 
 import { getCacheStorageInfo } from './obp/common-functions'
+import { getOBPAPIVersions } from './obp/api-version'
 import {
   obpApiActiveVersionsKey,
   obpApiHostKey,
@@ -312,7 +313,8 @@ async function setupData(app: App<Element>, worker: Worker) {
       { resourceDocs, groupedDocs },
       messageDocs,
       messageDocsJsonSchema,
-      glossary
+      glossary,
+      apiVersions
     ] = await Promise.all([
       cacheResourceDocs(cacheStorageOfResourceDocs, cachedResponseOfResourceDocs, worker),
       cacheMessageDocs(cacheStorageOfMessageDocs, cachedResponseOfMessageDocs, worker),
@@ -321,14 +323,28 @@ async function setupData(app: App<Element>, worker: Worker) {
         cachedResponseOfMessageDocsJsonSchema,
         worker
       ),
-      getOBPGlossary()
+      getOBPGlossary(),
+      getOBPAPIVersions()
     ])
+
+    // The versions the API says it serves, from GET /obp/{v}/api/versions. Deriving the list
+    // from the resource-doc cache instead would drop every version whose docs failed to load,
+    // so the menu would quietly disagree with the server.
+    const scannedVersions: string[] = (apiVersions?.scanned_api_versions ?? [])
+      .filter((version: any) => version?.is_active !== false)
+      .map((version: any) => String(version?.fully_qualified_version ?? ''))
+      .filter((version: string) => version.length > 0)
+      .sort()
 
     // Provide data to a component's descendants
     // App-level provides are available to all components rendered in the app
     // Info: https://vuejs.org/guide/components/provide-inject.html
     app.provide(obpResourceDocsKey, resourceDocs)
-    app.provide(obpApiActiveVersionsKey, Object.keys(resourceDocs).sort())
+    app.provide(
+      obpApiActiveVersionsKey,
+      // Fall back to the cached catalogues only if the endpoint could not be read at all.
+      scannedVersions.length > 0 ? scannedVersions : Object.keys(resourceDocs).sort()
+    )
     app.provide(obpGroupedResourceDocsKey, groupedDocs)
     app.provide(obpGroupedMessageDocsKey, messageDocs)
     app.provide(obpGroupedMessageDocsJsonSchemaKey, messageDocsJsonSchema)
